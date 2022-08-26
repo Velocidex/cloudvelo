@@ -1,0 +1,19 @@
+# Credentials for accessing opensearch server
+username: admin
+password: admin
+disable_ssl_security: true
+addresses:
+  - https://127.0.0.1:9200/
+# Alternaive proxy endpoint for protocol inspection.
+#  - http://127.0.0.1:9201/
+
+# S3 details for uploads.
+bucket: velociraptor
+# Endpoint for s3 emulation.
+endpoint: "https://localhost:4566/"
+# Alternaive proxy endpoint for protocol inspection.
+#endpoint: "http://localhost:9999/"
+aws_region: "us-east-1"
+credentials_key: test
+credentials_secret: test
+no_verify_cert: true

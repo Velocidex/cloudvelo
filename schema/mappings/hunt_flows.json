@@ -1,0 +1,11 @@
+{
+    "mappings": {
+        "properties": {
+            "hunt_id":    { "type": "keyword" },
+            "timestamp":  { "type": "integer" },
+            "status":     { "type": "keyword" },
+            "client_id":  { "type": "keyword" },
+            "flow_id":    { "type": "keyword" }
+        }
+    }
+}

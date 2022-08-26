@@ -1,0 +1,15 @@
+{
+    "mappings": {
+        "properties": {
+            "notebook_id":   { "type": "keyword" },
+            "cell_id":       { "type": "keyword" },
+            "notebook":      { "type": "binary" },
+            "notebook_cell": { "type": "binary" },
+            "public":        { "type": "boolean" },
+            "creator":       { "type": "keyword" },
+            "shared":        { "type": "keyword" },
+            "type":        { "type": "keyword" },
+            "timestamp":     { "type": "long" }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+name: Client.Info.Updates
+description: |
+  An event version of the Generic.Client.Info. This will send the
+  client information once when starting
+
+type: CLIENT_EVENT
+
+sources:
+  - query: |
+        LET Interfaces = SELECT format(format='%02x:%02x:%02x:%02x:%02x:%02x',
+            args=HardwareAddr) AS MAC
+        FROM interfaces()
+        WHERE HardwareAddr
+
+        SELECT config.Version.Name AS Name,
+               config.Version.BuildTime as BuildTime,
+               config.Version.Version as Version,
+               config.Version.ci_build_url AS build_url,
+               config.Labels AS Labels,
+               Hostname, OS, Architecture,
+               Platform, PlatformVersion, KernelVersion, Fqdn,
+               Interfaces.MAC AS MACAddresses
+        FROM info()

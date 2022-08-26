@@ -1,0 +1,15 @@
+{
+    "mappings": {
+        "properties": {
+            "client_id":    { "type": "keyword" },
+            "artifact":     { "type": "keyword" },
+            "flow_id":      { "type": "keyword" },
+            "data":         { "type": "binary"  },
+            "start_row":    { "type": "long" },
+            "end_row":      { "type": "long" },
+            "total_rows":   { "type": "long" },
+            "timestamp":   { "type": "long" },
+            "vfs_path":     { "type": "keyword" }
+        }
+    }
+}

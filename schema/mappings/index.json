@@ -1,0 +1,9 @@
+{
+    "mappings": {
+        "properties": {
+            "term":      { "type": "keyword" },
+            "entity":    { "type": "keyword" },
+            "timestamp": { "type": "long"  }
+        }
+    }
+}

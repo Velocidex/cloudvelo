@@ -1,0 +1,17 @@
+{
+    "mappings": {
+        "properties": {
+            "client_id":           { "type": "keyword" },
+            "session_id":          { "type": "keyword" },
+            "create_time":         { "type": "long" },
+            "start_time":          { "type": "long" },
+            "total_uploaded_files":{ "type": "long" },
+            "total_expected_uploaded_bytes":{ "type": "long" },
+            "state":               { "type": "long" },
+            "names_with_response": { "type": "keyword" },
+            "total_logs":          { "type": "long" },
+            "total_collected_rows":{ "type": "long" },
+            "raw":                 { "type": "binary" }
+        }
+    }
+}

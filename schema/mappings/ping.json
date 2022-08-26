@@ -1,0 +1,8 @@
+{
+    "mappings": {
+        "properties": {
+            "client_id":  { "type": "keyword" },
+            "timestamp":  { "type": "long" }
+        }
+    }
+}

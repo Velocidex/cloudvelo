@@ -1,0 +1,8 @@
+{
+    "mappings": {
+        "properties": {
+            "username":    { "type": "keyword" },
+            "gui_options": { "type": "binary" }
+        }
+    }
+}

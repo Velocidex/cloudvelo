@@ -1,0 +1,7 @@
+{
+    "mappings": {
+        "properties": {
+             "acl":      { "type": "binary" }
+        }
+    }
+}

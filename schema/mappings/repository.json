@@ -1,0 +1,8 @@
+{
+    "mappings": {
+        "properties": {
+            "name":         { "type": "keyword" },
+            "definition":   { "type": "binary" }
+        }
+    }
+}
