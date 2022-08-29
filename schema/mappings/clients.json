@@ -1,14 +1,17 @@
 {
     "mappings": {
         "properties": {
-            "client_id":    { "type": "keyword" },
-            "hostname":     { "type": "keyword" },
-            "system":       { "type": "keyword"  },
-            "ping":         { "type": "long" },
-            "first_seen_at":{ "type": "long" },
-            "labels":       { "type": "keyword" },
-            "lower_labels": { "type": "keyword" },
-            "mac_addresses":{ "type": "keyword" }
+            "client_id":                 { "type": "keyword" },
+            "hostname":                  { "type": "keyword" },
+            "system":                    { "type": "keyword"  },
+            "ping":                      { "type": "long" },
+            "first_seen_at":             { "type": "long" },
+            "labels":                    { "type": "keyword" },
+            "lower_labels":              { "type": "keyword" },
+            "labels_timestamp":          { "type": "long" },
+            "mac_addresses":             { "type": "keyword" },
+            "last_hunt_timestamp":       { "type": "long" },
+            "last_event_table_version" : { "type": "long" }
         }
     }
 }

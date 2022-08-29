@@ -50,14 +50,13 @@ func StartClientServices(
 		return nil, err
 	}
 
-	exe, err := executor.NewClientExecutor(
-		ctx, writeback.ClientId, config_obj)
+	exe, err := executor.NewClientExecutor(ctx, writeback.ClientId, config_obj)
 	if err != nil {
 		return nil, fmt.Errorf("Can not create executor: %w", err)
 	}
 
 	uploads.SetUploaderService(
-		writeback.ClientId, exe, int(config_obj.Frontend.BindPort))
+		config_obj, writeback.ClientId, exe)
 
 	// Wait for all services to properly start
 	// before we begin the comms.

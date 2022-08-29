@@ -24,7 +24,10 @@ type ClientInfoUpdate struct {
 }
 
 // Register a new client - update the client record and update it's
-// client event table.
+// client event table. NOTE: This happens automatically every time the
+// client starts up so we get to refresh the record each time. This
+// way there is no need to run an interrogation flow specifically - it
+// just happens automatically.
 func (self ElasticIngestor) HandleClientInfoUpdates(
 	ctx context.Context,
 	message *crypto_proto.VeloMessage) error {
@@ -60,6 +63,9 @@ func (self ElasticIngestor) HandleClientInfoUpdates(
 			return err
 		}
 
+		// TODO: This should be an update operation but it does not
+		// happen too often (only when client is started) and we do
+		// not need to lock the record so it might be ok for now.
 		old_client_info, err := client_info_manager.Get(ctx, message.Source)
 		if err != nil {
 			old_client_info = &services.ClientInfo{actions_proto.ClientInfo{

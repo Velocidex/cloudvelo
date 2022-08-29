@@ -18,8 +18,6 @@ func (self HuntDispatcher) ModifyHuntObject(hunt_id string,
 		return services.HuntUnmodified
 	}
 
-	old_state := hunt.State
-
 	modification := cb(hunt)
 	if modification != services.HuntUnmodified {
 		err := self.SetHunt(hunt)
@@ -27,21 +25,6 @@ func (self HuntDispatcher) ModifyHuntObject(hunt_id string,
 			return services.HuntUnmodified
 		}
 	}
-
-	// Hunt was started - kick it off.
-	if old_state == api_proto.Hunt_PAUSED &&
-		hunt.State == api_proto.Hunt_RUNNING {
-
-		// Do this in the background because it can take a while.
-		go scheduleClientsForHunt(self.ctx, self.config_obj, hunt)
-	}
-
-	// Hunt was stopped - FIXME: how do we do this?
-	if old_state == api_proto.Hunt_RUNNING &&
-		hunt.State != api_proto.Hunt_RUNNING {
-
-	}
-
 	return modification
 }
 

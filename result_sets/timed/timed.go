@@ -20,6 +20,7 @@ type TimedResultSetRecord struct {
 	Artifact  string `json:"artifact"`
 	Type      string `json:"type"`
 	Timestamp int64  `json:"timestamp"`
+	Date      int64  `json:"date"` // Timestamp rounded down to the UTC day
 	VFSPath   string `json:"vfs_path"`
 	JSONData  string `json:"data"`
 }
@@ -27,6 +28,14 @@ type TimedResultSetRecord struct {
 // Examine the pathspec and construct a new Elastic record.
 func NewTimedResultSetRecord(
 	path_manager api.PathManager) *TimedResultSetRecord {
+	filename, _ := path_manager.GetPathForWriting()
+	vfs_path := ""
+	if filename != nil {
+		vfs_path = filename.AsClientPath()
+	}
+
+	now := time.Now()
+	day := now.Truncate(24 * time.Hour).Unix()
 
 	switch t := path_manager.(type) {
 	case *artifacts.ArtifactPathManager:
@@ -35,7 +44,9 @@ func NewTimedResultSetRecord(
 			FlowId:    t.FlowId,
 			Artifact:  t.FullArtifactName,
 			Type:      "results",
-			Timestamp: time.Now().UnixNano(),
+			VFSPath:   vfs_path,
+			Timestamp: now.UnixNano(),
+			Date:      day,
 		}
 
 	case *artifacts.ArtifactLogPathManager:
@@ -44,14 +55,16 @@ func NewTimedResultSetRecord(
 			FlowId:    t.FlowId,
 			Artifact:  t.FullArtifactName,
 			Type:      "logs",
+			VFSPath:   vfs_path,
 			Timestamp: time.Now().UnixNano(),
+			Date:      day,
 		}
 
 	default:
-		filename, _ := path_manager.GetPathForWriting()
 		return &TimedResultSetRecord{
 			Timestamp: time.Now().UnixNano(),
-			VFSPath:   filename.AsClientPath(),
+			Date:      day,
+			VFSPath:   vfs_path,
 		}
 	}
 }

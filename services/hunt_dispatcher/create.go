@@ -97,6 +97,8 @@ func (self HuntDispatcher) CreateHunt(
 		return "", errors.New("No compiled requests!")
 	}
 
+	// Add a special hunt message to trigger stats update by the
+	// client ingestor.
 	compiled = append([]*actions_proto.VQLCollectorArgs{
 		{
 			QueryId:      -1,
@@ -123,14 +125,16 @@ func (self HuntDispatcher) CreateHunt(
 			Hunt:      string(serialized),
 		})
 
-	if hunt.State == api_proto.Hunt_RUNNING {
-		scheduleClientsForHunt(ctx, config_obj, hunt)
-	}
-
+	// The actual hunt scheduling is done by the foreman.
+	/*
+		if hunt.State == api_proto.Hunt_RUNNING {
+			scheduleClientsForHunt(ctx, config_obj, hunt)
+		}
+	*/
 	return hunt_id, nil
 }
 
-func scheduleClientsForHunt(
+func XXXscheduleClientsForHunt(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	hunt *api_proto.Hunt) error {

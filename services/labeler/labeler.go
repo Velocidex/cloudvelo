@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -56,6 +57,7 @@ const (
 if(!ctx._source.lower_labels.contains(params.lower_label)) {
   ctx._source.labels.add(params.label);
   ctx._source.lower_labels.add(params.lower_label);
+  ctx._source.labels_timestamp = params.now;
 }
 `
 
@@ -66,6 +68,7 @@ if(!ctx._source.lower_labels.contains(params.lower_label)) {
         "lang": "painless",
         "params": {
           "label": %q,
+          "now": %q,
           "lower_label": %q
        }
     }
@@ -87,7 +90,7 @@ func (self Labeler) SetClientLabel(
 	return cvelo_services.UpdateIndex(self.config_obj.OrgId,
 		"clients", client_id,
 		json.Format(label_update_query, all_label_painless, label,
-			strings.ToLower(label)))
+			time.Now().UnixNano(), strings.ToLower(label)))
 }
 
 const (
@@ -96,6 +99,7 @@ for (int i=ctx._source.lower_labels.length-1; i>=0; i--) {
    if (ctx._source.lower_labels[i] == params.lower_label) {
       ctx._source.labels.remove(i);
       ctx._source.lower_labels.remove(i);
+      ctx._source.labels_timestamp = params.now;
    }
 }
 `
@@ -112,7 +116,7 @@ func (self Labeler) RemoveClientLabel(
 	return cvelo_services.UpdateIndex(self.config_obj.OrgId,
 		"clients", client_id,
 		json.Format(label_update_query, remove_label_painless, label,
-			strings.ToLower(label)))
+			time.Now().UnixNano(), strings.ToLower(label)))
 }
 
 // Gets all the labels in a client.

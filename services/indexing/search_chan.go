@@ -69,7 +69,7 @@ func (self *Indexer) searchWithTermsChan(
 			getAllClientsQuery, strings.Join(terms, ","), "")
 
 		hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
-			self.config_obj.OrgId, "clients", query, "")
+			config_obj.OrgId, "clients", query, "")
 		if err != nil {
 			return
 		}

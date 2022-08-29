@@ -5,6 +5,7 @@ import (
 	"embed"
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"strings"
 
@@ -65,7 +66,10 @@ func Initialize(ctx context.Context,
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Created index: %v\n", response)
+		response_data, _ := ioutil.ReadAll(response.Body)
+		if !strings.Contains(string(response_data), "resource_already_exists_exception") {
+			fmt.Printf("Created index: %v\n", string(response_data))
+		}
 	}
 
 	return nil

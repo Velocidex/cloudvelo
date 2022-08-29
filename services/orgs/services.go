@@ -2,10 +2,13 @@ package orgs
 
 import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
+	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
+	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
 	"www.velocidex.com/golang/cloudvelo/schema"
 	"www.velocidex.com/golang/cloudvelo/services/repository"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
+	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
@@ -54,6 +57,12 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 
 	// Register a filestore for this org
 	file_store.OverrideFilestoreImplementation(org_config, file_store_obj)
+
+	// Register result set factories
+	// Register our result set implementations
+	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
+	result_sets.RegisterTimedResultSetFactory(timed.TimedFactory{})
+
 	err = schema.Initialize(self.ctx, org_id, "", false /* reset */)
 	if err != nil {
 		return nil, err
