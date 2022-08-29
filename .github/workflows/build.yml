@@ -41,7 +41,9 @@ jobs:
         export PATH=$PATH:~/go/bin/
         cd velociraptor/
         make linux
-        cd ..
+        ls -l
+        pwd
+        cd ../
         make
 
     - name: StoreBinaries
