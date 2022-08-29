@@ -1,0 +1,51 @@
+# Only trigger when a PR is committed.
+name: Linux Build All Arches
+on: [pull_request]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.18'
+    - run: go version
+
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+        sudo apt-get install mingw-w64-x86-64-dev gcc-mingw-w64-x86-64 gcc-mingw-w64
+
+    - name: Use Node.js v12
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12
+
+    - name: npm install gui
+      run: |
+            cd velociraptor/gui/velociraptor/
+            npm ci
+            npm run build
+            cd ../../../
+
+    - name: Build All Architectures
+      # Uncomment the architectures you want here. NOTE: DarwinBase
+      # does not include yara or modules with C compilers needed.
+      run: |
+        export PATH=$PATH:~/go/bin/
+        cd velociraptor/
+        make linux
+        cd ../
+        make
+
+    - name: StoreBinaries
+      uses: actions/upload-artifact@v1
+      with:
+        name: Binaries
+        path: output
