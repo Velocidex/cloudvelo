@@ -23,6 +23,13 @@ debug_gui:
 frontend:
 	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml frontend -v --debug
 
+.PHONY: foreman
+foreman:
+	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml foreman -v --debug
+
+debug_foreman:
+	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml foreman -v --debug
+
 debug_frontend:
 	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml frontend -v --debug
 

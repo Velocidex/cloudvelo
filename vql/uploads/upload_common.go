@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -20,7 +21,9 @@ import (
 	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
+	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
 // Initial request specifies the destination and receives an upload
@@ -241,17 +244,38 @@ func (self *Uploader) Close() error {
 	return nil
 }
 
+func (self *UploaderFactory) GetURL() (string, error) {
+	if len(self.config_obj.Client.ServerUrls) == 0 {
+		return "", errors.New("No server URLs configured")
+	}
+
+	// Choose a random url to upload to from the configured URLs.
+	idx := http_comms.GetRand()(len(self.config_obj.Client.ServerUrls))
+	return self.config_obj.Client.ServerUrls[idx], nil
+}
+
 func (self *UploaderFactory) NewUploader(
 	ctx context.Context,
 	session_id, accessor string,
 	path *accessors.OSPath) (*Uploader, error) {
+
+	// Choose a random URL to upload to
+	base_url, err := self.GetURL()
+	if err != nil {
+		return nil, err
+	}
+
+	http_client, err := networking.GetDefaultHTTPClient(
+		self.config_obj.Client, "")
+	if err != nil {
+		return nil, err
+	}
+
 	result := &Uploader{
-		start_url:  fmt.Sprintf("http://localhost:%d/upload/start", self.port),
-		put_url:    fmt.Sprintf("http://localhost:%d/upload/put", self.port),
-		commit_url: fmt.Sprintf("http://localhost:%d/upload/commit", self.port),
-		client: &http.Client{
-			Timeout: time.Duration(60) * time.Second,
-		},
+		start_url:       fmt.Sprintf("%supload/start", base_url),
+		put_url:         fmt.Sprintf("%supload/put", base_url),
+		commit_url:      fmt.Sprintf("%supload/commit", base_url),
+		client:          http_client,
 		md5_sum:         md5.New(),
 		sha_sum:         sha256.New(),
 		part:            1,

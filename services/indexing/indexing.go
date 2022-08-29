@@ -3,6 +3,7 @@ package indexing
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -10,6 +11,7 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
+	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
 )
@@ -36,17 +38,59 @@ func (self Indexer) UnsetIndex(client_id, term string) error {
 	return errors.New("Not implemented")
 }
 
+func (self Indexer) getIndexRecords(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	query string, output_chan chan *api_proto.IndexRecord) {
+	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
+		config_obj.OrgId, "clients", query, cvelo_services.NoSortField)
+	if err != nil {
+		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+		logger.Error("getIndexRecords: %v", err)
+		return
+	}
+
+	for hit := range hits {
+		record := &api_proto.ClientMetadata{}
+		err = json.Unmarshal(hit, record)
+		if err == nil {
+			select {
+			case <-ctx.Done():
+				return
+			case output_chan <- &api_proto.IndexRecord{Entity: record.ClientId}:
+			}
+		}
+	}
+}
+
 // Search the index for clients matching the term
 func (self Indexer) SearchIndexWithPrefix(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	prefix string) <-chan *api_proto.IndexRecord {
 	output_chan := make(chan *api_proto.IndexRecord)
+
 	go func() {
 		defer close(output_chan)
 
-	}()
+		operator, term := splitIntoOperatorAndTerms(prefix)
+		switch operator {
+		case "all":
+			query := `{"query": {"match_all" : {}}, "_source": {"includes": ["client_id"]}}`
+			self.getIndexRecords(ctx, config_obj, query, output_chan)
+			return
 
+		case "label":
+			terms := []string{json.Format(fieldSearchQuery, "lower_labels", term)}
+			query := json.Format(
+				getAllClientsQuery, strings.Join(terms, ","),
+				`,{"_source":{"includes":["client_id"]}}`)
+			self.getIndexRecords(ctx, config_obj, query, output_chan)
+			return
+
+		default:
+		}
+	}()
 	return output_chan
 }
 
@@ -122,15 +166,14 @@ func _makeApiClient(client_info *actions_proto.ClientInfo) *api_proto.ApiClient 
 		LastIp:                      client_info.IpAddress,
 		LastInterrogateFlowId:       client_info.LastInterrogateFlowId,
 		LastInterrogateArtifactName: client_info.LastInterrogateArtifactName,
+		LastHuntTimestamp:           client_info.LastHuntTimestamp,
+		LastEventTableVersion:       client_info.LastEventTableVersion,
+		LastLabelTimestamp:          client_info.LabelsTimestamp,
 	}
 }
 
 func NewIndexingService(ctx context.Context, wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (*Indexer, error) {
-
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
-	logger.Info("<green>Starting</> Indexing Service.")
-
 	indexer := &Indexer{
 		config_obj: config_obj,
 	}

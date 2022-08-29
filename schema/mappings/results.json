@@ -8,7 +8,8 @@
             "start_row":    { "type": "long" },
             "end_row":      { "type": "long" },
             "total_rows":   { "type": "long" },
-            "timestamp":   { "type": "long" },
+            "timestamp":    { "type": "long" },
+            "date":         { "type": "long" },
             "vfs_path":     { "type": "keyword" }
         }
     }

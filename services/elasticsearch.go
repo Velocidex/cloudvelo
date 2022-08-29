@@ -34,6 +34,8 @@ import (
 const (
 	AsyncDelete = false
 	SyncDelete  = true
+
+	NoSortField = ""
 )
 
 var (
@@ -228,8 +230,8 @@ type _ElasticHits struct {
 }
 
 type _AggBucket struct {
-	Key   string `json:"key"`
-	Count int    `json:"doc_count"`
+	Key   interface{} `json:"key"`
+	Count int         `json:"doc_count"`
 }
 
 type _AggResults struct {
@@ -440,8 +442,6 @@ func QueryElasticAggregations(
 		return nil, err
 	}
 
-	fmt.Println(string(data))
-
 	// There was an error so we need to relay it
 	if res.IsError() {
 		response := ordereddict.NewDict()
@@ -461,7 +461,13 @@ func QueryElasticAggregations(
 
 	var results []string
 	for _, hit := range parsed.Aggregations.Results.Buckets {
-		results = append(results, hit.Key)
+		switch t := hit.Key.(type) {
+		case string:
+			results = append(results, t)
+
+		default:
+			results = append(results, string(json.MustMarshalIndent(hit.Key)))
+		}
 	}
 
 	return results, nil
@@ -470,6 +476,8 @@ func QueryElasticAggregations(
 func QueryElasticRaw(
 	ctx context.Context,
 	org_id, index, query string) ([]json.RawMessage, error) {
+
+	Debug("QueryElasticRaw %v\n", index)
 
 	es, err := GetElasticClient()
 	if err != nil {

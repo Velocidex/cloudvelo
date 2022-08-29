@@ -19,14 +19,17 @@ var (
 )
 
 type ClientInfo struct {
-	ClientId     string   `json:"client_id"`
-	Hostname     string   `json:"hostname"`
-	System       string   `json:"system"`
-	FirstSeenAt  uint64   `json:"first_seen_at"`
-	Ping         uint64   `json:"ping"`
-	Labels       []string `json:"labels"`
-	LowerLabels  []string `json:"lower_labels"`
-	MacAddresses []string `json:"mac_addresses"`
+	ClientId              string   `json:"client_id"`
+	Hostname              string   `json:"hostname"`
+	System                string   `json:"system"`
+	FirstSeenAt           uint64   `json:"first_seen_at"`
+	Ping                  uint64   `json:"ping"`
+	Labels                []string `json:"labels"`
+	LowerLabels           []string `json:"lower_labels"`
+	MacAddresses          []string `json:"mac_addresses"`
+	LastHuntTimestamp     uint64   `json:"last_hunt_timestamp"`
+	LastEventTableVersion uint64   `json:"last_event_table_version"`
+	LastLabelTimestamp    uint64   `json:"labels_timestamp"`
 }
 
 type ClientInfoManager struct {
@@ -44,14 +47,17 @@ func (self *ClientInfoManager) Set(
 	return cvelo_services.SetElasticIndex(
 		self.config_obj.OrgId,
 		"clients", client_info.ClientId, &ClientInfo{
-			ClientId:     client_info.ClientId,
-			Hostname:     client_info.Hostname,
-			System:       client_info.System,
-			FirstSeenAt:  client_info.FirstSeenAt,
-			Ping:         client_info.Ping,
-			Labels:       client_info.Labels,
-			LowerLabels:  lower_labels,
-			MacAddresses: client_info.MacAddresses,
+			ClientId:              client_info.ClientId,
+			Hostname:              client_info.Hostname,
+			System:                client_info.System,
+			FirstSeenAt:           client_info.FirstSeenAt,
+			Ping:                  client_info.Ping,
+			Labels:                client_info.Labels,
+			LowerLabels:           lower_labels,
+			MacAddresses:          client_info.MacAddresses,
+			LastHuntTimestamp:     client_info.LastHuntTimestamp,
+			LastEventTableVersion: client_info.LastEventTableVersion,
+			LastLabelTimestamp:    client_info.LabelsTimestamp,
 		})
 }
 

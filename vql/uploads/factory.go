@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/executor"
-	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 )
 
 var (
@@ -29,11 +29,9 @@ type SessionTracker struct {
 }
 
 type UploaderFactory struct {
-	port      int
-	client_id string
-	exe       *executor.ClientExecutor
-
-	file_store_path path_specs.FSPathSpec
+	config_obj *config_proto.Config
+	client_id  string
+	exe        *executor.ClientExecutor
 
 	mu              sync.Mutex
 	session_tracker map[string]*SessionTracker
@@ -86,14 +84,14 @@ func (self *UploaderFactory) ReturnTracker(tracker *SessionTracker) int {
 }
 
 func SetUploaderService(
+	config_obj *config_proto.Config,
 	client_id string,
-	exe *executor.ClientExecutor,
-	port int) {
+	exe *executor.ClientExecutor) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	gUploaderFactory = &UploaderFactory{
-		port:            port,
+		config_obj:      config_obj,
 		exe:             exe,
 		client_id:       client_id,
 		session_tracker: make(map[string]*SessionTracker),

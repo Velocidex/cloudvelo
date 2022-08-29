@@ -180,8 +180,15 @@ func (self *UserManager) GetUserOptions(username string) (
 	if user_record.GUIOptions == "" {
 		return result, nil
 	}
-	return result, json.Unmarshal(
+	err = json.Unmarshal(
 		[]byte(user_record.GUIOptions), result)
+
+	if result.Customizations == nil {
+		result.Customizations = &api_proto.GUICustomizations{}
+	}
+
+	result.Customizations.DisableServerEvents = true
+	return result, err
 }
 
 func (self *UserManager) GetFavorites(

@@ -5,14 +5,12 @@ import (
 
 	cvelo_datastore "www.velocidex.com/golang/cloudvelo/datastore"
 	"www.velocidex.com/golang/cloudvelo/filestore"
-	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/users"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/datastore"
 	"www.velocidex.com/golang/velociraptor/file_store"
-	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
@@ -40,9 +38,6 @@ func StartToolServices(
 		return nil, err
 	}
 	file_store.OverrideFilestoreImplementation(config_obj, file_store_obj)
-
-	// Register our result set implementations
-	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
 
 	err = cvelo_services.StartElasticSearchService(
 		config_obj, elastic_config_path)
