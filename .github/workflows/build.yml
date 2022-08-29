@@ -41,8 +41,6 @@ jobs:
         export PATH=$PATH:~/go/bin/
         cd velociraptor/
         make linux
-        ls -l
-        pwd
         cd ../
         make
 
