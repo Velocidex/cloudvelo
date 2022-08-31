@@ -4,14 +4,17 @@ import (
 	"crypto/tls"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
+	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
@@ -38,6 +41,7 @@ func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, erro
 	result := &S3Writer{
 		key:            PathspecToKey(self.config_obj, filename),
 		elastic_config: self.elastic_config,
+		config_obj:     self.config_obj,
 		session:        self.session,
 		part_number:    1,
 	}
@@ -49,7 +53,7 @@ func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, erro
 func (self S3Filestore) WriteFileWithCompletion(
 	filename api.FSPathSpec,
 	completion func()) (api.FileWriter, error) {
-	return nil, errors.New("Not implemented")
+	return self.WriteFile(filename)
 }
 
 func (self S3Filestore) StatFile(filename api.FSPathSpec) (api.FileInfo, error) {
@@ -57,11 +61,53 @@ func (self S3Filestore) StatFile(filename api.FSPathSpec) (api.FileInfo, error) 
 }
 
 func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, error) {
-	return nil, nil
+	svc := s3.New(self.session)
+
+	// Get the list of items
+	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: aws.String(self.bucket),
+		Prefix: aws.String(PathspecToKey(self.config_obj,
+			dirname.SetType(api.PATH_TYPE_DATASTORE_DIRECTORY))),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []api.FileInfo
+	for _, object := range resp.Contents {
+		components := strings.Split(*object.Key, "/")
+		name := components[len(components)-1]
+
+		name_type, name := api.GetFileStorePathTypeFromExtension(name)
+		result = append(result, &S3FileInfo{
+			pathspec: dirname.AddUnsafeChild(
+				utils.UnsanitizeComponent(name)).
+				SetType(name_type),
+			size:     *object.Size,
+			mod_time: *object.LastModified,
+		})
+	}
+
+	return result, nil
 }
 
 func (self S3Filestore) Delete(filename api.FSPathSpec) error {
-	return errors.New("Not implemented")
+
+	key := PathspecToKey(self.config_obj, filename)
+
+	svc := s3.New(self.session)
+	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(self.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return err
+	}
+
+	return svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(self.bucket),
+		Key:    aws.String(key),
+	})
 }
 
 func (self S3Filestore) Move(src, dest api.FSPathSpec) error {

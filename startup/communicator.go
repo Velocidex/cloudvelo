@@ -27,13 +27,13 @@ func StartCommunicatorServices(
 		}
 	}
 
+	sm := services.NewServiceManager(ctx, config_obj)
 	err := cvelo_services.StartElasticSearchService(
 		config_obj, elastic_config_path)
 	if err != nil {
-		return nil, err
+		return sm, err
 	}
 
-	sm := services.NewServiceManager(ctx, config_obj)
 	_, err = orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
 	if err != nil {
 		return sm, err

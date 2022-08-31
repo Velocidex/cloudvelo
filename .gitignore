@@ -40,3 +40,6 @@ nb-configuration.xml
 # Go Output Folder
 output/
 testdata/pool_writebacks/*
+
+__debug_bin
+.localstack

@@ -8,7 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/logging"
 )
 
 const (
@@ -17,8 +19,10 @@ const (
 
 type S3Writer struct {
 	elastic_config *elastic_datastore.ElasticConfiguration
+	config_obj     *config_proto.Config
 	session        *session.Session
 	key            string
+	buf            []byte
 	parts          []*s3.CompletedPart
 	size           int64
 	upload_id      string
@@ -54,6 +58,21 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 		return 0, nil
 	}
 
+	self.buf = append(self.buf, data...)
+	if len(self.buf) > 1000000 {
+		_, err := self.writeBuf()
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return len(data), nil
+}
+
+func (self *S3Writer) writeBuf() (size int, err error) {
+	data := self.buf[:]
+	self.buf = nil
+
 	svc := s3.New(self.session)
 	partInput := &s3.UploadPartInput{
 		Body:          bytes.NewReader(data),
@@ -87,15 +106,41 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 }
 
 func (self *S3Writer) Truncate() error {
-	return errors.New("Not implemented")
+	self.buf = nil
+
+	svc := s3.New(self.session)
+	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(self.elastic_config.Bucket),
+		Key:    aws.String(self.key),
+	})
+	if err != nil {
+		return err
+	}
+
+	return svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(self.elastic_config.Bucket),
+		Key:    aws.String(self.key),
+	})
 }
 
 func (self *S3Writer) Close() error {
-	return self.Flush()
+	err := self.Flush()
+	if err != nil {
+		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger.Error("S3Writer %v Close error: %v", self.key, err)
+	}
+	return err
 }
 
 // Force the writer to be flushed to disk immediately.
 func (self *S3Writer) Flush() error {
+	if len(self.buf) > 0 {
+		_, err := self.writeBuf()
+		if err != nil {
+			return err
+		}
+	}
+
 	svc := s3.New(self.session)
 	completeInput := &s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(self.elastic_config.Bucket),
