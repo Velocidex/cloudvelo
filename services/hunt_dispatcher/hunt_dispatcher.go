@@ -85,6 +85,10 @@ func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
 		TotalClientsWithResults: hunt_entry.Completed,
 		TotalClientsWithErrors:  hunt_entry.Errors,
 	}
+
+	hunt_info.Stats.AvailableDownloads, _ = availableHuntDownloadFiles(
+		self.config_obj, hunt_id)
+
 	return hunt_info, true
 }
 

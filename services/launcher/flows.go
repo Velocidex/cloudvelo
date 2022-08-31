@@ -3,13 +3,17 @@ package launcher
 import (
 	"context"
 	"errors"
+	"time"
 
-	"www.velocidex.com/golang/cloudvelo/schema/api"
+	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/file_store"
+	"www.velocidex.com/golang/velociraptor/file_store/api"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/paths"
 )
 
 var (
@@ -49,10 +53,10 @@ func (self Launcher) GetFlows(
 
 	result := &api_proto.ApiFlowResponse{}
 	for _, hit := range hits {
-		item := &api.ArtifactCollectorContext{}
+		item := &cvelo_schema_api.ArtifactCollectorContext{}
 		err = json.Unmarshal(hit, &item)
 		if err == nil {
-			flow, err := api.ArtifactCollectorContextToProto(item)
+			flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(item)
 			if err == nil {
 				cleanUpContext(flow)
 				result.Items = append(result.Items, flow)
@@ -92,22 +96,77 @@ func (self *Launcher) GetFlowDetails(
 		return nil, NotFoundError
 	}
 
-	item := &api.ArtifactCollectorContext{}
+	item := &cvelo_schema_api.ArtifactCollectorContext{}
 	err = json.Unmarshal(hits[0], item)
 	if err != nil {
 		return nil, err
 	}
 
-	flow, err := api.ArtifactCollectorContextToProto(item)
+	flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(item)
 	if err != nil {
 		return nil, err
 	}
 	cleanUpContext(flow)
 
+	availableDownloads, _ := availableDownloadFiles(config_obj, client_id, flow_id)
 	return &api_proto.FlowDetails{
-		Context: flow,
-		// AvailableDownloads: availableDownloads,
+		Context:            flow,
+		AvailableDownloads: availableDownloads,
 	}, nil
+}
+
+// availableDownloads returns the prepared zip downloads available to
+// be fetched by the user at this moment.
+func availableDownloadFiles(config_obj *config_proto.Config,
+	client_id string, flow_id string) (*api_proto.AvailableDownloads, error) {
+
+	flow_path_manager := paths.NewFlowPathManager(client_id, flow_id)
+	download_dir := flow_path_manager.GetDownloadsDirectory()
+
+	return getAvailableDownloadFiles(config_obj, download_dir)
+}
+
+func getAvailableDownloadFiles(config_obj *config_proto.Config,
+	download_dir api.FSPathSpec) (*api_proto.AvailableDownloads, error) {
+	result := &api_proto.AvailableDownloads{}
+
+	file_store_factory := file_store.GetFileStore(config_obj)
+	files, err := file_store_factory.ListDirectory(download_dir)
+	if err != nil {
+		return nil, err
+	}
+
+	is_complete := func(name string) bool {
+		for _, item := range files {
+			ps := item.PathSpec()
+			// If there is a lock file we are not done.
+			if ps.Base() == name &&
+				ps.Type() == api.PATH_TYPE_FILESTORE_LOCK {
+				return false
+			}
+		}
+		return true
+	}
+
+	for _, item := range files {
+		ps := item.PathSpec()
+
+		// Skip lock files
+		if ps.Type() == api.PATH_TYPE_FILESTORE_LOCK {
+			continue
+		}
+
+		result.Files = append(result.Files, &api_proto.AvailableDownloadFile{
+			Name:     item.Name(),
+			Type:     api.GetExtensionForFilestore(ps),
+			Path:     ps.AsClientPath(),
+			Size:     uint64(item.Size()),
+			Date:     item.ModTime().UTC().Format(time.RFC3339),
+			Complete: is_complete(ps.Base()),
+		})
+	}
+
+	return result, nil
 }
 
 func cleanUpContext(item *flows_proto.ArtifactCollectorContext) {

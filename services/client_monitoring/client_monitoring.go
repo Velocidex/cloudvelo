@@ -104,6 +104,7 @@ func (self ClientMonitoringManager) makeDefaultClientMonitoringLabel() *flows_pr
 	logger.Info("Creating default Client Monitoring Service")
 
 	return &flows_proto.ClientEventTable{
+		Version: uint64(time.Now().UnixNano()),
 		Artifacts: &flows_proto.ArtifactCollectorArgs{
 			Artifacts: self.config_obj.Frontend.DefaultClientMonitoringArtifacts,
 		},
@@ -126,7 +127,9 @@ func (self ClientMonitoringManager) GetClientMonitoringState() *flows_proto.Clie
 	serialized, err := cvelo_services.GetElasticRecord(
 		ctx, self.config_obj.OrgId, "config", "client_monitoring")
 	if err != nil {
-		return self.makeDefaultClientMonitoringLabel()
+		table := self.makeDefaultClientMonitoringLabel()
+		self.SetClientMonitoringState(ctx, self.config_obj, "", table)
+		return table
 	}
 
 	entry := &ConfigEntry{}

@@ -1,0 +1,119 @@
+version: '2'
+services:
+  opensearch:
+    image: opensearchproject/opensearch:1.1.0
+    profiles:
+      - dev
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+    networks:
+      - velociraptor-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - opensearch-data1:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+      - 9600:9600 # required for Performance Analyzer
+    networks:
+      - velociraptor-network
+  localstack:
+    profiles:
+      - dev
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - "4566-4599:4566-4599"
+      - "9177:8080"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - KINESIS_PROVIDER=kinesalite
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - "./.localstack:/tmp/localstack"
+      - ./aws:/docker-entrypoint-initaws.d:rw
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - velociraptor-network
+  velociraptor-server:
+    profiles:
+      - debug
+    container_name: velociraptor-server
+    image: velociraptor-server:0.6.5
+    depends_on:
+      - opensearch
+    environment:
+      - VELOCIRAPTOR_CONFIG=/velociraptor/config/server.config.yaml
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    ports:
+      - '8889:8889'
+      - '2222:2345'
+    volumes:
+      - ./velociraptor/server/config:/velociraptor/config/:rw
+      - ./velociraptor/server/binary/:/velociraptor/binary/:rw
+      - ./velociraptor/server/entry:/velociraptor/entry/:rw
+    networks:
+      - velociraptor-network
+  velociraptor-client:
+    profiles:
+      - debug
+    container_name: velociraptor-client
+    image: velociraptor-client:0.6.5
+    depends_on:
+      - opensearch
+      - velociraptor-server
+    environment:
+      - VELOCIRAPTOR_CONFIG=/velociraptor/config/server.config.yaml
+    ports:
+      - "8000:8000"
+      - '2221:2345'
+    volumes:
+      - ./velociraptor/client/config:/velociraptor/config/:rw
+      - ./velociraptor/client/binary/:/velociraptor/binary/:rw
+      - ./velociraptor/client/entry:/velociraptor/entry/:rw
+      - ./velociraptor/client/ssl:/velociraptor/ssl/:rw
+      - velociraptor-client-data:/tmp:rw
+      - velociraptor-client-data2:/tmp/buckets/bucket/:rw
+    networks:
+      - velociraptor-network
+  velociraptor-executor:
+    profiles:
+      - debug
+
+    container_name: velociraptor-executor
+    image: rapid7/velociraptor-executor:0.1.0-SNAPSHOT
+    ports:
+      - "6969:8080"
+      - "6970:5005"
+    environment:
+      - _JAVA_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      - JAVA_OPTS=-Dquarkus.docker.network=host -Djava.net.preferIPv4Stack=true -Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+      - JAVA_APP_JAR=/deployments/quarkus-run.jar
+    volumes:
+      - ./velociraptor-executor:/config:rw
+    networks:
+      - velociraptor-network
+
+volumes:
+  app_dynamodb:
+    driver: local
+  opensearch-data1:
+  velociraptor-client-data:
+  velociraptor-client-data2:
+
+networks:
+  velociraptor-network:
