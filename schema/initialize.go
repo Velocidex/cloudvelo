@@ -13,8 +13,49 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services"
 )
 
+const (
+	RESET_INDEX        = true
+	DO_NOT_RESET_INDEX = false
+
+	NO_FILTER = ""
+)
+
 //go:embed mappings/*.json
 var fs embed.FS
+
+// Just remove the index but do not create one
+func Delete(ctx context.Context,
+	org_id, filter string) error {
+
+	client, err := services.GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	files, err := fs.ReadDir("mappings")
+	if err != nil {
+		return err
+	}
+	for _, filename := range files {
+		index_name := strings.Split(filename.Name(), ".")[0]
+
+		if filter != "" && !strings.HasPrefix(index_name, filter) {
+			continue
+		}
+
+		full_index_name := services.GetIndex(org_id, index_name)
+
+		// Delete previously created index.
+		res, err := opensearchapi.IndicesDeleteRequest{
+			Index: []string{full_index_name},
+		}.Do(ctx, client)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Deleted index: %v\n", res)
+	}
+	return nil
+}
 
 // Initialize and ensure elastic indexes exist.
 func Initialize(ctx context.Context,

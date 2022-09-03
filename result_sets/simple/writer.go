@@ -1,6 +1,8 @@
 package simple
 
 import (
+	"context"
+	"strconv"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
@@ -18,6 +20,12 @@ type ElasticSimpleResultSetWriter struct {
 	start_row     int64
 
 	org_id string
+
+	// Marks if the file is truncated or the offset was specifically
+	// set. If it is not then we need to find the last start row
+	// before writing anything (which is another database round trip
+	// and can be expensive).
+	truncated bool
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
@@ -54,11 +62,53 @@ func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
 // this row count.
 func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) {
 	self.start_row = start_row
+	self.truncated = true
+}
+
+const getLargestRowId = `
+{
+  "query": {
+     "bool": {
+       "must": [
+            {"match": {"vfs_path": %q}}
+       ]}
+  },
+  "size": 0,
+  "aggs": {
+    "genres": {
+      "max": {"field": "end_row"}
+    }
+  }
+}
+`
+
+func (self *ElasticSimpleResultSetWriter) getLastRow() error {
+	ctx := context.Background()
+	query := json.Format(getLargestRowId, self.log_path.AsClientPath())
+	hits, err := services.QueryElasticAggregations(
+		ctx, self.org_id, "results", query)
+
+	if err != nil {
+		return err
+	}
+
+	for _, hit := range hits {
+		end_row, err := strconv.ParseInt(hit, 10, 64)
+		if err == nil {
+			self.start_row = end_row
+		}
+		self.truncated = true
+	}
+	return nil
 }
 
 func (self *ElasticSimpleResultSetWriter) Flush() {
 	if self.buffered_rows == 0 {
 		return
+	}
+
+	if !self.truncated {
+		self.getLastRow()
 	}
 
 	self.WriteJSONL(self.buff, uint64(self.buffered_rows))
@@ -67,6 +117,10 @@ func (self *ElasticSimpleResultSetWriter) Flush() {
 
 	// Make sure the results are visible immediately
 	cvelo_services.FlushIndex(self.org_id, "results")
+
+	// No need to find the last start row as we assume we are the only
+	// writers.
+	self.truncated = true
 }
 
 func (self *ElasticSimpleResultSetWriter) Close() {

@@ -71,9 +71,9 @@ func NewRepositoryManager(
 	config_obj *config_proto.Config) (*RepositoryManager, error) {
 
 	// The root org gets an in memory repository which contains all
-	// the build in set. It will be reflected in all the child orgs
+	// the built-in set. It will be reflected in all the child orgs
 	// automatically and is immutable.
-	if config_obj.OrgId == "" {
+	if utils.IsRootOrg(config_obj.OrgId) {
 		return &RepositoryManager{
 			global_repository: &repository.Repository{
 				Data: make(map[string]*artifacts_proto.Artifact),

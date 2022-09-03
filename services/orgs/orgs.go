@@ -2,7 +2,9 @@ package orgs
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 	cvelo_datastore "www.velocidex.com/golang/cloudvelo/datastore"
@@ -16,6 +18,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type OrgContext struct {
@@ -62,8 +65,8 @@ func (self *OrgManager) GetOrg(org_id string) (*api_proto.OrgRecord, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	if org_id == "root" {
-		org_id = ""
+	if utils.IsRootOrg(org_id) {
+		org_id = services.ROOT_ORG_ID
 	}
 
 	result, pres := self.orgs[org_id]
@@ -103,7 +106,9 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 		Nonce: NewNonce(),
 	}
 
-	return org_record, nil
+	// Write the org into the index.
+	return org_record, cvelo_services.SetElasticIndex(services.ROOT_ORG_ID,
+		"orgs", org_record.OrgId, org_record)
 }
 
 func (self *OrgManager) makeNewConfigObj(
@@ -111,15 +116,10 @@ func (self *OrgManager) makeNewConfigObj(
 
 	result := proto.Clone(self.config_obj).(*config_proto.Config)
 
-	// The Root org is untouched.
-	if record.OrgId == "" {
-		return result
-	}
+	result.OrgId = record.OrgId
+	result.OrgName = record.Name
 
 	if result.Client != nil {
-		result.OrgId = record.OrgId
-		result.OrgName = record.Name
-
 		// Client config does not leak org id! We use the nonce to tie
 		// org id back to the org.
 		result.Client.Nonce = record.Nonce
@@ -129,6 +129,40 @@ func (self *OrgManager) makeNewConfigObj(
 }
 
 func (self *OrgManager) Scan() error {
+	hits, err := cvelo_services.QueryElasticRaw(
+		self.ctx, services.ROOT_ORG_ID,
+		"orgs", `{"query": {"match_all" : {}}}`)
+	if err != nil {
+		return err
+	}
+
+	for _, hit := range hits {
+		record := &api_proto.OrgRecord{}
+		err = json.Unmarshal(hit, record)
+		if err == nil {
+			self.mu.Lock()
+			if utils.IsRootOrg(record.OrgId) {
+				record.OrgId = "root"
+				record.Name = "<root>"
+			}
+
+			_, pres := self.orgs[record.OrgId]
+			self.mu.Unlock()
+
+			if !pres {
+				org_context, err := self.makeNewOrgContext(record.OrgId)
+				if err != nil {
+					continue
+				}
+
+				self.mu.Lock()
+				self.orgs[record.OrgId] = org_context
+				self.org_id_by_nonce[record.Nonce] = record.OrgId
+				self.mu.Unlock()
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -159,6 +193,8 @@ func (self *OrgManager) Start(
 	if err != nil {
 		return err
 	}
+
+	// Filestore implementation uses s3 as a backend.
 	file_store.OverrideFilestoreImplementation(config_obj, file_store_obj)
 
 	// Register our result set implementations
@@ -169,8 +205,31 @@ func (self *OrgManager) Start(
 	if err != nil {
 		return err
 	}
-
 	self.root_repo = manager
+
+	// Do first scan inline so we have valid data on exit.
+	err = self.Scan()
+	if err != nil {
+		return err
+	}
+
+	// Start syncing the mutation_manager
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case <-time.After(10 * time.Second):
+				self.Scan()
+			}
+		}
+
+	}()
+
 	return nil
 }
 

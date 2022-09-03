@@ -10,11 +10,16 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 func (self *OrgManager) getContext(org_id string) (*OrgContext, error) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
+
+	if org_id == "" {
+		org_id = "root"
+	}
 
 	org_context, pres := self.orgs[org_id]
 	if !pres {
@@ -34,6 +39,11 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 	record := &api_proto.OrgRecord{
 		OrgId: org_id,
 		Name:  org_id,
+	}
+
+	if utils.IsRootOrg(org_id) {
+		record.OrgId = "root"
+		record.Name = "<root>"
 	}
 
 	org_config := self.makeNewConfigObj(record)
@@ -63,7 +73,8 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
 	result_sets.RegisterTimedResultSetFactory(timed.TimedFactory{})
 
-	err = schema.Initialize(self.ctx, org_id, "", false /* reset */)
+	err = schema.Initialize(self.ctx,
+		org_id, schema.NO_FILTER, schema.DO_NOT_RESET_INDEX)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +93,7 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 	}
 
 	// The Root org will contain all the built in artifacts
-	if org_id == "" {
+	if utils.IsRootOrg(org_id) {
 		self.root_repo = repo_manager
 
 		// Assume the built in artifacts are OK so we dont need to

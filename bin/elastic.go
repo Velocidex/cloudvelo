@@ -38,7 +38,7 @@ func doResetElastic() error {
 
 	return schema.Initialize(ctx,
 		*elastic_command_reset_org_id,
-		*elastic_command_reset_filter, true /* reset */)
+		*elastic_command_reset_filter, schema.RESET_INDEX)
 }
 
 func init() {

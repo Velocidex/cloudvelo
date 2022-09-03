@@ -116,10 +116,9 @@ const (
 )
 
 func (self *reporter) really_delete(type_, index, key, prefix string) {
-	ctx := context.Background()
 	var error_message string
 
-	err := cvelo_services.DeleteByQuery(ctx, self.config_obj.OrgId, index,
+	err := cvelo_services.DeleteByQuery(self.ctx, self.config_obj.OrgId, index,
 		json.Format(deletionQuery, key, prefix))
 	if err != nil {
 		error_message = err.Error()
@@ -140,8 +139,7 @@ func (self *reporter) delete_index(type_, index, key, prefix string) {
 		return
 	}
 
-	ctx := context.Background()
-	hits, err := cvelo_services.QueryElasticRaw(ctx, self.config_obj.OrgId, index,
+	hits, err := cvelo_services.QueryElasticRaw(self.ctx, self.config_obj.OrgId, index,
 		json.Format(deletionQuery, key, prefix))
 	if err != nil {
 		self.responses = append(self.responses, &services.DeleteFlowResponse{

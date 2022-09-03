@@ -236,6 +236,7 @@ type _AggBucket struct {
 
 type _AggResults struct {
 	Buckets []_AggBucket `json:"buckets"`
+	Value   interface{}  `json:"value"`
 }
 
 type _ElasticAgg struct {
@@ -460,17 +461,27 @@ func QueryElasticAggregations(
 	}
 
 	var results []string
-	for _, hit := range parsed.Aggregations.Results.Buckets {
-		switch t := hit.Key.(type) {
-		case string:
-			results = append(results, t)
+	// Handle value aggregates
+	if !utils.IsNil(parsed.Aggregations.Results.Value) {
+		results = append(results, to_string(parsed.Aggregations.Results.Value))
+		return results, nil
+	}
 
-		default:
-			results = append(results, string(json.MustMarshalIndent(hit.Key)))
-		}
+	for _, hit := range parsed.Aggregations.Results.Buckets {
+		results = append(results, to_string(hit.Key))
 	}
 
 	return results, nil
+}
+
+func to_string(a interface{}) string {
+	switch t := a.(type) {
+	case string:
+		return t
+
+	default:
+		return string(json.MustMarshalIndent(a))
+	}
 }
 
 func QueryElasticRaw(

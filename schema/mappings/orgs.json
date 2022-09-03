@@ -1,0 +1,9 @@
+{
+    "mappings": {
+        "properties": {
+            "org_id":    { "type": "keyword" },
+            "nonce":     { "type": "keyword" },
+            "name":      { "type": "keyword" }
+        }
+    }
+}
