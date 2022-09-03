@@ -47,7 +47,28 @@ func (self *UserManager) SetUser(user_record *api_proto.VelociraptorUser) error 
 }
 
 func (self *UserManager) ListUsers() ([]*api_proto.VelociraptorUser, error) {
-	return nil, errors.New("Not implemented")
+	hits, err := cvelo_services.QueryElasticRaw(self.ctx, services.ROOT_ORG_ID,
+		"users", `{"query": {"match_all": {}}}`)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*api_proto.VelociraptorUser, 0, len(hits))
+	for _, hit := range hits {
+		record := &UserRecord{}
+		err := json.Unmarshal(hit, record)
+		if err != nil {
+			continue
+		}
+
+		user_record := &api_proto.VelociraptorUser{}
+		err = json.Unmarshal([]byte(record.Record), user_record)
+		if err == nil {
+			result = append(result, user_record)
+		}
+	}
+
+	return result, nil
 }
 
 func (self *UserManager) GetUserFromContext(ctx context.Context) (
@@ -99,8 +120,25 @@ func (self *UserManager) GetUserWithHashes(username string) (
 		Name: user_record.Username,
 	}
 
-	return result, json.Unmarshal(
+	err = json.Unmarshal(
 		[]byte(user_record.Record), result)
+	if err != nil {
+		return nil, err
+	}
+
+	org_manager, err := services.GetOrgManager()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, org := range result.Orgs {
+		org_config_obj, err := org_manager.GetOrgConfig(org.Id)
+		if err == nil {
+			org.Name = org_config_obj.OrgName
+		}
+	}
+
+	return result, err
 }
 
 func (self *UserManager) GetUser(username string) (
@@ -188,6 +226,15 @@ func (self *UserManager) GetUserOptions(username string) (
 	}
 
 	result.Customizations.DisableServerEvents = true
+
+	// Add any links in the config file to the user's preferences.
+	if self.config_obj.GUI != nil {
+		result.Links = users.MergeGUILinks(result.Links, self.config_obj.GUI.Links)
+	}
+
+	// Add the defaults.
+	result.Links = users.MergeGUILinks(result.Links, users.DefaultLinks)
+
 	return result, err
 }
 

@@ -3,7 +3,9 @@ package startup
 import (
 	"context"
 
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
+	"www.velocidex.com/golang/cloudvelo/services/server_artifacts"
 	"www.velocidex.com/golang/cloudvelo/services/users"
 	"www.velocidex.com/golang/velociraptor/api"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -51,6 +53,9 @@ func StartFrontendServices(
 	if err != nil {
 		return sm, err
 	}
+
+	cvelo_services.RegisterServerArtifactsService(
+		server_artifacts.NewServerArtifactService(sm.Ctx, sm.Wg, config_obj))
 
 	// Start the listening server
 	server_builder, err := api.NewServerBuilder(sm.Ctx, config_obj, sm.Wg)

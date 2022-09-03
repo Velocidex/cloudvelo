@@ -123,6 +123,6 @@ func (self *contextManager) Save() error {
 
 	// Store the collection_context first, then queue all the tasks.
 	return cvelo_services.SetElasticIndex(
-		"collections", self.context.SessionId,
+		self.config_obj.OrgId, "collections", self.context.SessionId,
 		api.ArtifactCollectorContextFromProto(self.context))
 }

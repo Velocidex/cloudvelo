@@ -12,7 +12,9 @@ import (
 	"www.velocidex.com/golang/velociraptor/services/server_artifacts"
 )
 
-type ServerArtifactsService struct{}
+type ServerArtifactsService struct {
+	ctx context.Context
+}
 
 func (self ServerArtifactsService) LaunchServerArtifact(
 	config_obj *config_proto.Config,
@@ -24,10 +26,9 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 	}
 
 	runner := server_artifacts.NewServerArtifactRunner(config_obj)
-	ctx := context.Background()
 	go func() {
 		collection_context_manager, err := NewCollectionContextManager(
-			ctx, config_obj, collection_context)
+			self.ctx, config_obj, collection_context)
 		if err != nil {
 			return
 		}
@@ -40,7 +41,7 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 
 		for _, task := range tasks {
 			runner.ProcessTask(
-				ctx, config_obj, task, collection_context_manager, logger)
+				self.ctx, config_obj, task, collection_context_manager, logger)
 		}
 
 		collection_context_manager.Close()
@@ -53,7 +54,9 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 func NewServerArtifactService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) (services.ServerArtifactsService, error) {
+	config_obj *config_proto.Config) services.ServerArtifactsService {
 
-	return &ServerArtifactsService{}, nil
+	return &ServerArtifactsService{
+		ctx: ctx,
+	}
 }

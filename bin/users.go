@@ -47,7 +47,7 @@ func doOrgUserAdd() error {
 	}
 
 	user_manager := services.GetUserManager()
-	record, err := user_manager.GetUser(*orgs_user_add_user)
+	record, err := user_manager.GetUserWithHashes(*orgs_user_add_user)
 	if err != nil {
 		return err
 	}

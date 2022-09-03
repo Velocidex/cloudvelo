@@ -23,6 +23,7 @@ import (
 
 type Launcher struct {
 	launcher.Launcher
+	ctx        context.Context
 	config_obj *config_proto.Config
 }
 
@@ -167,8 +168,7 @@ func (self *Launcher) GetFlowRequests(
 	config_obj *config_proto.Config,
 	client_id string, flow_id string,
 	offset uint64, count uint64) (*api_proto.ApiFlowRequestDetails, error) {
-	ctx := context.Background()
-	hits, err := cvelo_services.QueryElastic(ctx, self.config_obj.OrgId,
+	hits, err := cvelo_services.QueryElastic(self.ctx, self.config_obj.OrgId,
 		"collection_tasks", json.Format(`
 {"query": {"bool": {"must": [
   {"match": {"client_id": %q}},
@@ -192,5 +192,8 @@ func NewLauncherService(
 	wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (services.Launcher, error) {
 
-	return &Launcher{config_obj: config_obj}, nil
+	return &Launcher{
+		ctx:        ctx,
+		config_obj: config_obj,
+	}, nil
 }

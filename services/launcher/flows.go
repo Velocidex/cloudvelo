@@ -1,7 +1,6 @@
 package launcher
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -44,7 +43,7 @@ func (self Launcher) GetFlows(
 		length = 1000
 	}
 
-	hits, err := cvelo_services.QueryElasticRaw(context.Background(),
+	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.config_obj.OrgId, "collections",
 		json.Format(getFlowsQuery, client_id, offset, length))
 	if err != nil {
@@ -85,7 +84,7 @@ func (self *Launcher) GetFlowDetails(
 		return &api_proto.FlowDetails{}, nil
 	}
 
-	hits, err := cvelo_services.QueryElasticRaw(context.Background(),
+	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.config_obj.OrgId, "collections",
 		json.Format(getFlowDetailsQuery, client_id, flow_id))
 	if err != nil {

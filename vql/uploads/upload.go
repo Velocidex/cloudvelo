@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"www.velocidex.com/golang/velociraptor/accessors"
+	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/vfilter"
@@ -28,7 +29,14 @@ func Upload(
 	reader accessors.ReadSeekCloser) (*uploads.UploadResponse, error) {
 
 	if gUploaderFactory == nil {
-		return nil, errors.New("Uploader not configured")
+		// Try to get an uploader from the scope.
+		uploader, ok := artifacts.GetUploader(scope)
+		if !ok {
+			return nil, errors.New("Uploader not configured")
+		}
+
+		return uploader.Upload(ctx, scope, ospath, accessor, name,
+			size, mtime, atime, ctime, btime, reader)
 	}
 
 	dest := ospath
