@@ -2,7 +2,7 @@
     "mappings": {
         "properties": {
             "hunt_id":   { "type": "keyword" },
-            "timestamp": { "type": "integer" },
+            "timestamp": { "type": "long" },
             "scheduled": { "type": "integer" },
             "completed": { "type": "integer" },
             "errors" :   { "type": "integer" },
