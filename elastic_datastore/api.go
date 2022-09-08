@@ -19,15 +19,4 @@ type ElasticConfiguration struct {
 	Endpoint          string `json:"endpoint"`
 	NoVerifyCert      bool   `json:"no_verify_cert"`
 	Bucket            string `json:"bucket"`
-
-	// Redis hostname and port
-	RedisHost                      string `json:"redis_host"`
-	RedisLocalCacheSize            int    `json:"redis_local_cache_size"`
-	RedisLocalCacheDurationMinutes int    `json:"redis_local_cache_duration_minutes"`
-	RedisCacheDurationMinutes      int    `json:"redis_cache_duration_minutes"`
-
-	PublicKeyBucket string `json:"public_key_bucket"`
-
-	LogoffRedirectURL string `json:"logoff_redirect_url"`
-	DispatchUrl       string `json:"dispatch_url"`
 }

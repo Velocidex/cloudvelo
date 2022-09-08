@@ -81,6 +81,9 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 	}
 
 	user_record.CurrentOrg = grpc_user_info.CurrentOrg
+	if len(grpc_user_info.Orgs) > 0 {
+		user_record.Orgs = grpc_user_info.Orgs
+	}
 
 	// Fetch the appropriate config file fro the org manager.
 	org_manager, err := services.GetOrgManager()
