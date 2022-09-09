@@ -41,3 +41,9 @@ reset_elastic:
 
 linux_m1:
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -gcflags "all=-N -l" -tags 'server_vql extras release yara' -o output/velociraptor ./bin/
+
+linux_musl:
+	go run make.go -v LinuxMusl
+
+docker:
+	go run make.go -v DockerImage

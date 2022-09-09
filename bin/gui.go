@@ -29,7 +29,7 @@ func doGUI() error {
 	defer cancel()
 
 	// Now start the frontend services
-	sm, err := startup.StartFrontendServices(ctx, config_obj, *elastic_config)
+	sm, err := startup.StartGUIServices(ctx, config_obj, *elastic_config)
 	if err != nil {
 		return fmt.Errorf("starting frontend: %w", err)
 	}

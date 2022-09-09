@@ -1,6 +1,8 @@
 package orgs
 
 import (
+	"fmt"
+
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
@@ -23,27 +25,24 @@ func (self *OrgManager) getContext(org_id string) (*OrgContext, error) {
 
 	org_context, pres := self.orgs[org_id]
 	if !pres {
-		org_context, err := self.makeNewOrgContext(org_id)
-		if err != nil {
-			return nil, err
-		}
-		self.orgs[org_id] = org_context
-		return org_context, nil
+		return nil, fmt.Errorf("Unknown org id: %v", org_id)
 	}
 
 	return org_context, nil
 }
 
-func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
+func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgContext, error) {
 	// Create a new service container and cache it for next time
 	record := &api_proto.OrgRecord{
 		OrgId: org_id,
-		Name:  org_id,
+		Name:  name,
+		Nonce: nonce,
 	}
 
 	if utils.IsRootOrg(org_id) {
 		record.OrgId = "root"
 		record.Name = "<root>"
+		record.Nonce = self.config_obj.Client.Nonce
 	}
 
 	org_config := self.makeNewConfigObj(record)
@@ -59,27 +58,31 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 		service:    service_manager,
 	}
 
-	file_store_obj, err := filestore.NewS3Filestore(
-		org_config, self.elastic_config_path)
-	if err != nil {
-		return nil, err
+	// Set up the indexes for the new org.
+	if self.elastic_config_path != "" {
+		file_store_obj, err := filestore.NewS3Filestore(
+			org_config, self.elastic_config_path)
+		if err != nil {
+			return nil, err
+		}
+
+		// Register a filestore for this org
+		file_store.OverrideFilestoreImplementation(org_config, file_store_obj)
+
+		// Register result set factories
+		// Register our result set implementations
+		result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
+		result_sets.RegisterTimedResultSetFactory(timed.TimedFactory{})
+
+		// TODO: This needs to be very quick.
+		err = schema.Initialize(self.ctx,
+			org_id, schema.NO_FILTER, schema.DO_NOT_RESET_INDEX)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Register a filestore for this org
-	file_store.OverrideFilestoreImplementation(org_config, file_store_obj)
-
-	// Register result set factories
-	// Register our result set implementations
-	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
-	result_sets.RegisterTimedResultSetFactory(timed.TimedFactory{})
-
-	err = schema.Initialize(self.ctx,
-		org_id, schema.NO_FILTER, schema.DO_NOT_RESET_INDEX)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a repository manager
+	// Create a repository manager for the org.
 	repo_manager, err := repository.NewRepositoryManager(
 		self.ctx, self.wg, org_config)
 	if err != nil {
@@ -129,6 +132,7 @@ func (self *OrgManager) makeNewOrgContext(org_id string) (*OrgContext, error) {
 func (self *OrgManager) Services(org_id string) services.ServiceContainer {
 	context, err := self.getContext(org_id)
 	if err != nil {
+		fmt.Printf("Error %v: %v\n", org_id, err.Error())
 		panic(err)
 	}
 	return context.service

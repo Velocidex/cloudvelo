@@ -35,5 +35,6 @@ func (self *OrgManager) DeleteOrg(org_id string) error {
 	self.mu.Unlock()
 
 	// Drop all the org's indexes
-	return schema.Delete(self.ctx, org_id, services.ROOT_ORG_ID)
+	return schema.Delete(self.ctx, self.config_obj,
+		org_id, services.ROOT_ORG_ID)
 }

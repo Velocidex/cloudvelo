@@ -59,13 +59,13 @@ API:
   pinned_gw_name: GRPC_GW
 GUI:
   initial_users:
-    - name: mic
-      password_hash: d9275f647f73c636aabf6971bef850294a9e5f745ebf00a8286e0c5f8d1d1b01
-      password_salt: 975f17324232206cfb9e4d5f35c7da17d51991ea247ce2de751060b1962a89b4
+    - name: admin
+      password_hash: 5058b4b63149663ff0b4e8b4924b999248a43363cd64b302b5b34ea8e68283be
+      password_salt: c85fecf44ca8c1352a2c9bf0987c01426f734fe7228a0d14611d35c9cda880cd
   initial_orgs:
     - name: MyOrg
       org_id: O123
-  bind_address: 127.0.0.1
+  bind_address: 0.0.0.0
   bind_port: 8889
   gw_certificate: |
     -----BEGIN CERTIFICATE-----

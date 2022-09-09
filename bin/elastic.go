@@ -36,9 +36,16 @@ func doResetElastic() error {
 		return err
 	}
 
-	return schema.Initialize(ctx,
+	if *elastic_command_reset_org_id == "" {
+		return schema.DeleteAllOrgs(ctx,
+			config_obj, *elastic_command_reset_filter)
+
+	}
+
+	return schema.Delete(ctx,
+		config_obj,
 		*elastic_command_reset_org_id,
-		*elastic_command_reset_filter, schema.RESET_INDEX)
+		*elastic_command_reset_filter)
 }
 
 func init() {

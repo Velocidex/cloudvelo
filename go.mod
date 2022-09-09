@@ -3,11 +3,13 @@ module www.velocidex.com/golang/cloudvelo
 go 1.18
 
 require (
+	github.com/Velocidex/cryptozip v0.0.0-20200812111814-37033c799bd9
 	github.com/Velocidex/ordereddict v0.0.0-20220428153415-da46091cd216
 	github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20211116035050-ddd93fed62f5
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/aws/aws-sdk-go v1.42.27
+	github.com/magefile/mage v1.11.0
 	github.com/opensearch-project/opensearch-go v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
@@ -30,7 +32,6 @@ require (
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/ahocorasick v0.0.0-20180712114356-e1c353eeaaee // indirect
 	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
-	github.com/Velocidex/cryptozip v0.0.0-20200812111814-37033c799bd9 // indirect
 	github.com/Velocidex/etw v0.0.0-20210723072214-4d0cffd1ff22 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect

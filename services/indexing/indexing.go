@@ -35,7 +35,7 @@ func (self Indexer) SetIndex(client_id, term string) error {
 
 // Clear a search term on a client
 func (self Indexer) UnsetIndex(client_id, term string) error {
-	return errors.New("Not implemented")
+	return errors.New("Indexer.UnsetIndex Not implemented")
 }
 
 func (self Indexer) getIndexRecords(
@@ -99,7 +99,7 @@ func (self Indexer) SetSimpleIndex(
 	index_urn api.DSPathSpec,
 	entity string,
 	keywords []string) error {
-	return errors.New("Not implemented")
+	return errors.New("Indexer.SetSimpleIndex Not implemented")
 }
 
 func (self Indexer) UnsetSimpleIndex(
@@ -107,7 +107,7 @@ func (self Indexer) UnsetSimpleIndex(
 	index_urn api.DSPathSpec,
 	entity string,
 	keywords []string) error {
-	return errors.New("Not implemented")
+	return errors.New("Indexer.UnsetSimpleIndex Not implemented")
 }
 
 func (self Indexer) CheckSimpleIndex(
@@ -115,7 +115,7 @@ func (self Indexer) CheckSimpleIndex(
 	index_urn api.DSPathSpec,
 	entity string,
 	keywords []string) error {
-	return errors.New("Not implemented")
+	return errors.New("Indexer.CheckSimpleIndex Not implemented")
 }
 
 func (self Indexer) FastGetApiClient(

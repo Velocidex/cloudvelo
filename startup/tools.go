@@ -7,7 +7,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
-	"www.velocidex.com/golang/cloudvelo/services/users"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/datastore"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -20,11 +19,6 @@ func StartToolServices(
 	config_obj *config_proto.Config) (*services.Service, error) {
 	sm := services.NewServiceManager(ctx, config_obj)
 	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
-	if err != nil {
-		return sm, err
-	}
-
-	err = sm.Start(users.StartUserManager)
 	if err != nil {
 		return sm, err
 	}
