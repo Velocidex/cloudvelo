@@ -131,7 +131,7 @@ func (self *Repository) Copy() services.Repository {
 func (self *Repository) LoadDirectory(
 	config_obj *config_proto.Config, dirname string,
 	override_builtins bool) (int, error) {
-	return 0, errors.New("Not implemented")
+	return 0, errors.New("Repository.LoadDirectory Not implemented")
 }
 
 func (self *Repository) LoadYaml(data string, validate, built_in bool) (

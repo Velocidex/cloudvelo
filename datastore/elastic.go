@@ -52,6 +52,9 @@ func DSPathSpecToRecord(path api.DSPathSpec) (*DatastoreRecord, error) {
 		}, nil
 
 	default:
-		return nil, InvalidPath
+		return &DatastoreRecord{
+			Type:    "Generic",
+			VFSPath: path.AsClientPath(),
+		}, nil
 	}
 }

@@ -6,11 +6,16 @@ import (
 	_ "embed"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/opensearch-project/opensearch-go/opensearchapi"
+	"github.com/pkg/errors"
 	"www.velocidex.com/golang/cloudvelo/services"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
@@ -25,7 +30,7 @@ var fs embed.FS
 
 // Just remove the index but do not create one
 func Delete(ctx context.Context,
-	org_id, filter string) error {
+	config_obj *config_proto.Config, org_id, filter string) error {
 
 	client, err := services.GetElasticClient()
 	if err != nil {
@@ -44,23 +49,57 @@ func Delete(ctx context.Context,
 		}
 
 		full_index_name := services.GetIndex(org_id, index_name)
+		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+		logger.Info("Deleting index %v", full_index_name)
 
 		// Delete previously created index.
-		res, err := opensearchapi.IndicesDeleteRequest{
+		_, err := opensearchapi.IndicesDeleteRequest{
 			Index: []string{full_index_name},
 		}.Do(ctx, client)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
+}
+
+func getAllOrgs(ctx context.Context) ([]string, error) {
+	results := []string{"root"}
+	indexes, err := services.ListIndexes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, index := range indexes {
+		parts := strings.Split(index, "_results")
+		if len(parts) == 2 {
+			results = append(results, parts[0])
+		}
+	}
+
+	utils.Debug(results)
+	return results, nil
+}
+
+func DeleteAllOrgs(ctx context.Context,
+	config_obj *config_proto.Config, filter string) error {
+	all_orgs, err := getAllOrgs(ctx)
+	if err != nil {
+		return err
+	}
+	orgs := append([]string{"root"}, all_orgs...)
+	for _, org_id := range orgs {
+		err := Delete(ctx, config_obj, org_id, filter)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Deleted index: %v\n", res)
 	}
+
 	return nil
 }
 
 // Initialize and ensure elastic indexes exist.
 func Initialize(ctx context.Context,
-	org_id, filter string,
-	reset bool) error {
+	org_id, filter string, reset bool) error {
 	client, err := services.GetElasticClient()
 	if err != nil {
 		return err
@@ -70,6 +109,7 @@ func Initialize(ctx context.Context,
 	if err != nil {
 		return err
 	}
+
 	for _, filename := range files {
 		data, err := fs.ReadFile(path.Join("mappings", filename.Name()))
 		if err != nil {

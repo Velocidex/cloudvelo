@@ -92,18 +92,18 @@ func (self ClientInfoManager) Get(
 
 func (self ClientInfoManager) GetStats(
 	ctx context.Context, client_id string) (*services.Stats, error) {
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("ClientInfoManager.GetStats Not implemented")
 }
 
 func (self ClientInfoManager) UpdateStats(
 	ctx context.Context, client_id string, stats *services.Stats) error {
-	return errors.New("Not implemented")
+	return errors.New("ClientInfoManager.UpdateStats Not implemented")
 }
 
 // Get all the tasks without de-queuing them.
 func (self ClientInfoManager) PeekClientTasks(
 	ctx context.Context, client_id string) ([]*crypto_proto.VeloMessage, error) {
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("ClientInfoManager.PeekClientTasks Not implemented")
 }
 
 func (self ClientInfoManager) QueueMessagesForClient(

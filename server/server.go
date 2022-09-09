@@ -166,7 +166,7 @@ func (self Communicator) Start(
 	// A POST to this URL will send a VeloMessage in the body.
 	mux.HandleFunc("/control", self.Send)
 
-	// A GET to this URL will return the VeloMessage in JSON format.
+	// A GET to this URL will return the VeloMessage destined to the client.
 	mux.HandleFunc("/reader", self.Receive)
 
 	mux.Handle("/server.pem", server_pem(config_obj))

@@ -28,7 +28,7 @@ type HuntDispatcher struct {
 }
 
 func (self HuntDispatcher) ApplyFuncOnHunts(cb func(hunt *api_proto.Hunt) error) error {
-	return errors.New("Not implemented")
+	return errors.New("HuntDispatcher.ApplyFuncOnHunts Not implemented")
 }
 
 func (self HuntDispatcher) GetLastTimestamp() uint64 {
@@ -94,7 +94,7 @@ func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
 
 func (self HuntDispatcher) MutateHunt(config_obj *config_proto.Config,
 	mutation *api_proto.HuntMutation) error {
-	return errors.New("Not implemented")
+	return errors.New("HuntDispatcher.HuntMutation Not implemented")
 }
 
 func (self HuntDispatcher) Refresh(config_obj *config_proto.Config) error {

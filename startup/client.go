@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -12,9 +13,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/executor"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/http_comms"
-	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
-	"www.velocidex.com/golang/velociraptor/services/orgs"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 )
 
@@ -68,7 +67,7 @@ func StartClientServices(
 		return sm, err
 	}
 
-	_, err = orgs.NewOrgManager(sm.Ctx, sm.Wg, sm.Config)
+	_, err = orgs.NewClientOrgManager(sm.Ctx, sm.Wg, sm.Config)
 	if err != nil {
 		return sm, err
 	}
@@ -117,10 +116,11 @@ func initializeEventTable(
 		return err
 	}
 
+	// Feed this directly into the executor on startup.
 	for _, req := range requests {
-		json.Debug(req)
 		exe.ProcessRequest(ctx, &crypto_proto.VeloMessage{
 			SessionId:       "F.Monitoring",
+			AuthState:       crypto_proto.VeloMessage_AUTHENTICATED,
 			VQLClientAction: req,
 		})
 	}

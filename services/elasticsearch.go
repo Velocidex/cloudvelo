@@ -55,6 +55,44 @@ func Debug(format string, args ...interface{}) {
 	}
 }
 
+type IndexInfo struct {
+	Index string `json:"index"`
+}
+
+func ListIndexes(ctx context.Context) ([]string, error) {
+	client, err := GetElasticClient()
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := opensearchapi.CatIndicesRequest{
+		Format: "json",
+	}.Do(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	indexes := []*IndexInfo{}
+	err = json.Unmarshal(data, &indexes)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]string, len(indexes))
+	for _, i := range indexes {
+		results = append(results, i.Index)
+	}
+
+	return results, nil
+
+}
+
 func GetIndex(org_id, index string) string {
 	if org_id == "root" {
 		org_id = ""

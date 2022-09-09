@@ -10,6 +10,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/services/indexing"
+	"www.velocidex.com/golang/cloudvelo/services/inventory"
 	"www.velocidex.com/golang/cloudvelo/services/labeler"
 	"www.velocidex.com/golang/cloudvelo/services/launcher"
 	"www.velocidex.com/golang/cloudvelo/services/notebook"
@@ -19,10 +20,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/broadcast"
 	"www.velocidex.com/golang/velociraptor/services/journal"
-)
-
-var (
-	NotImplementedError = errors.New("Not implemented")
 )
 
 // A Service container that creates different org services on demand.
@@ -38,7 +35,7 @@ type LazyServiceContainer struct {
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
-	return nil, NotImplementedError
+	return nil, errors.New("LazyServiceContainer.FrontendManager is Not implemented")
 }
 
 func (self *LazyServiceContainer) Notifier() (services.Notifier, error) {
@@ -46,7 +43,7 @@ func (self *LazyServiceContainer) Notifier() (services.Notifier, error) {
 }
 
 func (self *LazyServiceContainer) ServerEventManager() (services.ServerEventManager, error) {
-	return nil, NotImplementedError
+	return nil, errors.New("LazyServiceContainer.ServerEventManager is Not implemented")
 }
 
 func (self *LazyServiceContainer) ClientEventManager() (services.ClientEventTable, error) {
@@ -90,7 +87,7 @@ func (self *LazyServiceContainer) ClientInfoManager() (services.ClientInfoManage
 }
 
 func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {
-	return nil, NotImplementedError
+	return inventory.NewInventoryDummyService(self.ctx, self.wg, self.config_obj)
 }
 
 func (self *LazyServiceContainer) BroadcastService() (services.BroadcastService, error) {

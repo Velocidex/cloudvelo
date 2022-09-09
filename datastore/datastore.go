@@ -71,19 +71,19 @@ func (self ElasticDatastore) SetSubjectWithCompletion(
 func (self ElasticDatastore) DeleteSubject(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec) error {
-	return errors.New("Not implemented")
+	return errors.New("ElasticDatastore.DeleteSubject Not implemented")
 }
 
 func (self ElasticDatastore) DeleteSubjectWithCompletion(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec, completion func()) error {
-	return errors.New("Not implemented")
+	return errors.New("ElasticDatastore.DeleteSubjectWithCompletion Not implemented")
 }
 
 func (self ElasticDatastore) ListChildren(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec) ([]api.DSPathSpec, error) {
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("ElasticDatastore.ListChildren Not implemented")
 }
 
 func (self ElasticDatastore) Debug(config_obj *config_proto.Config) {}

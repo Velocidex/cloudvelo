@@ -3,6 +3,7 @@ package orgs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/services/users"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/datastore"
@@ -58,6 +60,9 @@ func (self *OrgManager) ListOrgs() []*api_proto.OrgRecord {
 
 func (self *OrgManager) GetOrgConfig(org_id string) (*config_proto.Config, error) {
 	context, err := self.getContext(org_id)
+	if err != nil {
+		return nil, err
+	}
 	return context.config_obj, err
 }
 
@@ -100,11 +105,18 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 		id = NewOrgId()
 	}
 
-	org_record := &api_proto.OrgRecord{
-		Name:  name,
-		OrgId: id,
-		Nonce: NewNonce(),
+	org_context, err := self.makeNewOrgContext(
+		id, name, NewNonce())
+	if err != nil {
+		return nil, err
 	}
+
+	self.mu.Lock()
+	self.orgs[org_context.record.OrgId] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.mu.Unlock()
+
+	org_record := org_context.record
 
 	// Write the org into the index.
 	return org_record, cvelo_services.SetElasticIndex(services.ROOT_ORG_ID,
@@ -144,13 +156,15 @@ func (self *OrgManager) Scan() error {
 			if utils.IsRootOrg(record.OrgId) {
 				record.OrgId = "root"
 				record.Name = "<root>"
+				record.Nonce = self.config_obj.Client.Nonce
 			}
 
 			_, pres := self.orgs[record.OrgId]
 			self.mu.Unlock()
 
 			if !pres {
-				org_context, err := self.makeNewOrgContext(record.OrgId)
+				org_context, err := self.makeNewOrgContext(
+					record.OrgId, record.Name, record.Nonce)
 				if err != nil {
 					continue
 				}
@@ -166,6 +180,34 @@ func (self *OrgManager) Scan() error {
 	return nil
 }
 
+func (self *OrgManager) StartClientOrgManager(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	wg *sync.WaitGroup) error {
+	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger.Info("<green>Starting</> Client Org Manager service.")
+
+	org_context, err := self.makeNewOrgContext(
+		"root", "<root>", config_obj.Client.Nonce)
+	if err != nil {
+		return err
+	}
+
+	self.mu.Lock()
+	self.orgs[org_context.record.OrgId] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.mu.Unlock()
+
+	// Get the root org's repository manager
+	manager, err := services.GetRepositoryManager(config_obj)
+	if err != nil {
+		return err
+	}
+	self.root_repo = manager
+
+	return nil
+}
+
 func (self *OrgManager) Start(
 	ctx context.Context,
 	config_obj *config_proto.Config,
@@ -173,7 +215,16 @@ func (self *OrgManager) Start(
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 	logger.Info("<green>Starting</> Org Manager service.")
 
-	err := cvelo_services.StartElasticSearchService(
+	if config_obj.Client == nil {
+		return errors.New("Config object is missing a Client section")
+	}
+
+	err := users.StartUserManager(ctx, wg, config_obj)
+	if err != nil {
+		return err
+	}
+
+	err = cvelo_services.StartElasticSearchService(
 		config_obj, self.elastic_config_path)
 	if err != nil {
 		return err
@@ -199,6 +250,22 @@ func (self *OrgManager) Start(
 
 	// Register our result set implementations
 	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
+
+	org_context, err := self.makeNewOrgContext(
+		"root", "<root>", config_obj.Client.Nonce)
+	if err != nil {
+		return err
+	}
+
+	err = self.Scan()
+	if err != nil {
+		return err
+	}
+
+	self.mu.Lock()
+	self.orgs[org_context.record.OrgId] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.mu.Unlock()
 
 	// Get the root org's repository manager
 	manager, err := services.GetRepositoryManager(config_obj)
@@ -255,4 +322,26 @@ func NewOrgManager(
 	}
 
 	return service, service.Start(ctx, config_obj, wg)
+}
+
+func NewClientOrgManager(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	config_obj *config_proto.Config) (services.OrgManager, error) {
+
+	service := &OrgManager{
+		config_obj: config_obj,
+		ctx:        ctx,
+		wg:         wg,
+
+		orgs:            make(map[string]*OrgContext),
+		org_id_by_nonce: make(map[string]string),
+	}
+
+	_, err := services.GetOrgManager()
+	if err != nil {
+		services.RegisterOrgManager(service)
+	}
+
+	return service, service.StartClientOrgManager(ctx, config_obj, wg)
 }

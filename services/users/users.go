@@ -100,15 +100,6 @@ func (self *UserManager) GetUserWithHashes(username string) (
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
 		self.config_obj.OrgId, "users", username)
-	if err == os.ErrNotExist {
-		// User is not found, create an empty user record.  The
-		// existance of a user record depends on the header having the
-		// correct username - we always trust the headers.
-		return &api_proto.VelociraptorUser{
-			Name: username,
-		}, nil
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +235,7 @@ func (self *UserManager) GetUserOptions(username string) (
 func (self *UserManager) GetFavorites(
 	config_obj *config_proto.Config,
 	principal, fav_type string) (*api_proto.Favorites, error) {
-	return nil, errors.New("Not implemented")
+	return nil, errors.New("UserManager.GetFavorites Not implemented")
 }
 
 func StartUserManager(
