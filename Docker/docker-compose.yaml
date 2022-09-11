@@ -29,8 +29,7 @@ services:
     image: localstack/localstack:latest
     container_name: localstack
     ports:
-      - "4566-4599:4566-4599"
-      - "9177:8080"
+      - 4566:4566
     environment:
       - SERVICES=s3
       - DEBUG=1
@@ -41,7 +40,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
     volumes:
-      - "localstack-data:/tmp/localstack"
+      - "./.localstack:/tmp/localstack"
     networks:
       - velociraptor-network
 
@@ -113,7 +112,7 @@ volumes:
   # Volume to store opensearch databases - clear with
   # docker volume rm docker_opensearch-data
   opensearch-data:
-  localstack-data:
+
 
 networks:
   velociraptor-network:
