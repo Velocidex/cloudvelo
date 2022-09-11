@@ -19,7 +19,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/constants"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type CommunicatorBackend interface {
@@ -61,16 +60,18 @@ func (self Communicator) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	message_info.RemoteAddr = r.RemoteAddr
+	logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
 
 	err = message_info.IterateJobs(r.Context(), func(
 		ctx context.Context, message *crypto_proto.VeloMessage) {
-		utils.Debug(message)
-		self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
+		err := self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
+		if err != nil {
+			logger.Error("Communicator.Send: %v", err)
+		}
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
-		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
 		logger.Error("Unable to send to backend: %v", err)
 		return
 	}
@@ -104,8 +105,6 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	}
 	message_info.RemoteAddr = r.RemoteAddr
 
-	utils.Debug(message_info)
-
 	// Reject unauthenticated messages. This ensures
 	// untrusted clients are not allowed to keep
 	// connections open.
@@ -118,7 +117,6 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	// time.
 	err = message_info.IterateJobs(r.Context(), func(
 		ctx context.Context, message *crypto_proto.VeloMessage) {
-		utils.Debug(message)
 		self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
 	})
 	if err != nil {

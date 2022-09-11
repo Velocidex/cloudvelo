@@ -18,7 +18,7 @@ gui:
 	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml  --config ./testdata/config/server.config.yaml  gui -v --debug
 
 debug_gui:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./testdata/elastic/config.yaml  --config ./testdata/config/server.config.yaml  gui -v --debug
+	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./Docker/config/elastic_config.yaml  --config ./Docker/config/server.config.yaml  gui -v --debug
 
 frontend:
 	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml frontend -v --debug

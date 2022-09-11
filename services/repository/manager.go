@@ -28,8 +28,11 @@ type RepositoryManager struct {
 	config_obj *config_proto.Config
 }
 
+// New Repository is called to create a new temporary repository
 func (self *RepositoryManager) NewRepository() services.Repository {
-	return NewRepository(self.config_obj)
+	return &repository.Repository{
+		Data: make(map[string]*artifacts_proto.Artifact),
+	}
 }
 
 func (self *RepositoryManager) BuildScope(builder services.ScopeBuilder) vfilter.Scope {

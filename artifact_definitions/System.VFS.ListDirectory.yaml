@@ -20,7 +20,8 @@ sources:
         SELECT OSPath FROM glob(
           globs=format(format='/**%v', args=Depth),
           root=Components,
-          accessor=Accessor)
+          accessor=Accessor,
+          nosymlink=TRUE)
         WHERE IsDir
       }, query={
         SELECT * FROM vfs_ls(

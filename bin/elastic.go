@@ -17,6 +17,9 @@ var (
 	elastic_command_reset_org_id = elastic_command.Flag(
 		"org_id", "An OrgID to initialize").String()
 
+	elastic_command_recreate = elastic_command.Flag(
+		"recreate", "Also recreate the inde").Bool()
+
 	elastic_command_reset_filter = elastic_command_reset.Arg(
 		"index_filter", "If specified only re-create these indexes").String()
 )
@@ -34,6 +37,12 @@ func doResetElastic() error {
 	err = services.StartElasticSearchService(config_obj, *elastic_config)
 	if err != nil {
 		return err
+	}
+
+	if *elastic_command_recreate {
+		return schema.Initialize(ctx,
+			*elastic_command_reset_org_id,
+			*elastic_command_reset_filter, true)
 	}
 
 	if *elastic_command_reset_org_id == "" {

@@ -16,7 +16,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
@@ -59,8 +58,6 @@ func (self *Communicator) StartMultipartUpload(
 		w.Write([]byte(err.Error()))
 		return
 	}
-
-	utils.Debug(resp)
 
 	if resp.UploadId == nil {
 		w.WriteHeader(http.StatusServiceUnavailable)

@@ -52,14 +52,26 @@ services:
     restart: on-failure
     container_name: velociraptor-frontend
     image: cvelociraptor
-    depends_on:
-      - opensearch
-      - localstack
+#    depends_on:
+#      - opensearch
+#      - localstack
     ports:
       - '8000:8000'
     volumes:
       - ./config:/config/:ro
     entrypoint: /cvelociraptor --config /config/server.config.yaml --elastic_config /config/elastic_config.yaml frontend -v
+    networks:
+      - velociraptor-network
+
+  velociraptor-foreman:
+    profiles:
+      - all
+    restart: on-failure
+    container_name: velociraptor-foreman
+    image: cvelociraptor
+    volumes:
+      - ./config:/config/:ro
+    entrypoint: /cvelociraptor --config /config/server.config.yaml --elastic_config /config/elastic_config.yaml foreman -v
     networks:
       - velociraptor-network
 
@@ -70,8 +82,8 @@ services:
     restart: on-failure
     container_name: velociraptor-gui
     image: cvelociraptor
-    depends_on:
-      - opensearch
+#    depends_on:
+#      - opensearch
     ports:
       - target: 8889
         published: 8889
