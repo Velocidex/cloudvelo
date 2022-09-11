@@ -15,7 +15,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
@@ -75,8 +74,6 @@ func getAllOrgs(ctx context.Context) ([]string, error) {
 			results = append(results, parts[0])
 		}
 	}
-
-	utils.Debug(results)
 	return results, nil
 }
 

@@ -435,7 +435,7 @@ func build_gui_files() error {
 	}
 	defer os.Chdir(cwd)
 
-	err = os.Chdir("gui/velociraptor")
+	err = os.Chdir("velociraptor/gui/velociraptor")
 	if err != nil {
 		return err
 	}
@@ -471,8 +471,6 @@ func hash() string {
 }
 
 func fileb0x(asset string) error {
-	return nil
-
 	err := sh.Run("fileb0x", asset)
 	if err != nil {
 		err = sh.Run(mg.GoCmd(), "install", "github.com/Velocidex/fileb0x@d54f4040016051dd9657ce04d0ae6f31eab99bc6")
@@ -487,12 +485,22 @@ func fileb0x(asset string) error {
 }
 
 func ensure_assets() error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	defer os.Chdir(cwd)
+
+	os.Chdir("./velociraptor")
+
 	for asset, target := range assets {
+		fmt.Printf("Checking %v\n", asset)
 		before := timestamp_of(target)
 		err := fileb0x(asset)
 		if err != nil {
 			return err
 		}
+
 		// Only do this if the file has changed.
 		if before != timestamp_of(target) {
 			err = replace_string_in_file(target, "func init()", "func Init()")

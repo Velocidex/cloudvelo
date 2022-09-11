@@ -189,8 +189,6 @@ func (self Foreman) checkHunts(
 			if err != nil {
 				return err
 			}
-
-			utils.Debug(client)
 		}
 	}
 

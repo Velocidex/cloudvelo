@@ -3,6 +3,8 @@ package startup
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
@@ -13,6 +15,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/executor"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/http_comms"
+	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 )
@@ -84,11 +87,12 @@ func StartClientServices(
 		return sm, err
 	}
 
-	return sm, initializeEventTable(ctx, config_obj, exe)
+	return sm, initializeEventTable(sm.Ctx, sm.Wg, config_obj, exe)
 }
 
 func initializeEventTable(
 	ctx context.Context,
+	wg *sync.WaitGroup,
 	config_obj *config_proto.Config,
 	exe executor.Executor) error {
 	launcher, err := services.GetLauncher(config_obj)
@@ -116,13 +120,30 @@ func initializeEventTable(
 		return err
 	}
 
-	// Feed this directly into the executor on startup.
-	for _, req := range requests {
-		exe.ProcessRequest(ctx, &crypto_proto.VeloMessage{
-			SessionId:       "F.Monitoring",
-			AuthState:       crypto_proto.VeloMessage_AUTHENTICATED,
-			VQLClientAction: req,
-		})
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		logger := logging.GetLogger(config_obj, &logging.ClientComponent)
+
+		// Feed this directly into the executor on startup.
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Info("Exiting Client Info Updating Loop")
+				return
+			case <-time.After(30 * time.Second):
+			}
+
+			logger.Info("Sending an Generic.Client.Updates message")
+			for _, req := range requests {
+				exe.ProcessRequest(ctx, &crypto_proto.VeloMessage{
+					SessionId:       "F.Monitoring",
+					AuthState:       crypto_proto.VeloMessage_AUTHENTICATED,
+					VQLClientAction: req,
+				})
+			}
+		}
+	}()
 	return nil
 }

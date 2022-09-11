@@ -35,7 +35,8 @@ func doRunClient() error {
 	}()
 
 	sm, err := startup.StartClientServices(ctx, config_obj, on_error)
-	sm.Close()
+	defer sm.Close()
+
 	if err != nil {
 		return err
 	}

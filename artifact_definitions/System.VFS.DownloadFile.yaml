@@ -33,7 +33,8 @@ sources:
       LET download_recursive =
           SELECT OSPath AS Path, Accessor,
             Size, upload(file=OSPath, accessor=Accessor) AS Upload
-          FROM glob(globs="**", root=Components, accessor=Accessor)
+          FROM glob(globs="**", root=Components,
+                    accessor=Accessor, nosymlink=TRUE)
           WHERE Mode.IsRegular
 
       SELECT Path, Accessor,
