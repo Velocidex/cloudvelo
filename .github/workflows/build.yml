@@ -5,7 +5,7 @@ on: [pull_request]
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -42,7 +42,10 @@ jobs:
         cd velociraptor/
         make linux
         cd ../
-        make
+
+        go run make.go -v LinuxMusl
+        go run make.go -v Windows
+        go run make.go -v DarwinBase
 
     - name: StoreBinaries
       uses: actions/upload-artifact@v1
