@@ -7,7 +7,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
 	"www.velocidex.com/golang/cloudvelo/services/server_artifacts"
-	"www.velocidex.com/golang/cloudvelo/services/users"
 	"www.velocidex.com/golang/velociraptor/api"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -44,12 +43,8 @@ func StartGUIServices(
 	}
 
 	sm := services.NewServiceManager(ctx, config_obj)
-	err := sm.Start(users.StartUserManager)
-	if err != nil {
-		return sm, err
-	}
 
-	_, err = orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
+	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
 	if err != nil {
 		return sm, err
 	}
