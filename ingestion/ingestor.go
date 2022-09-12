@@ -12,10 +12,9 @@ import (
 	"context"
 
 	"github.com/opensearch-project/opensearch-go"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/crypto/server"
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/constants"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -95,8 +94,7 @@ func (self ElasticIngestor) Process(
 }
 
 func NewElasticIngestor(
-	config_obj *config_proto.Config,
-	config *elastic_datastore.ElasticConfiguration,
+	config_obj *config.Config,
 	crypto_manager *server.ServerCryptoManager) (*ElasticIngestor, error) {
 
 	client, err := cvelo_services.GetElasticClient()
@@ -104,15 +102,8 @@ func NewElasticIngestor(
 		return nil, err
 	}
 
-	// TODO: Not used any more
-	index := config.Index
-	if index == "" {
-		index = "velociraptor"
-	}
-
 	return &ElasticIngestor{
 		client:         client,
 		crypto_manager: crypto_manager,
-		index:          index,
 	}, nil
 }

@@ -18,12 +18,13 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/aws/aws-sdk-go/aws/session"
+
 	opensearch "github.com/opensearch-project/opensearch-go"
 	opensearchapi "github.com/opensearch-project/opensearch-go/opensearchapi"
 	"github.com/opensearch-project/opensearch-go/opensearchutil"
 	requestsigner "github.com/opensearch-project/opensearch-go/signer/aws"
 
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
+	"www.velocidex.com/golang/cloudvelo/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/crypto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -710,28 +711,17 @@ func SetDebugLogger(config_obj *config_proto.Config) {
 	logger = logging.GetLogger(config_obj, &logging.FrontendComponent)
 }
 
-func StartElasticSearchService(
-	config_obj *config_proto.Config, elastic_config_path string) error {
-
-	if elastic_config_path == "" {
-		return nil
-	}
-
-	elastic_config, err := elastic_datastore.LoadConfig(elastic_config_path)
-	if err != nil {
-		return err
-	}
-
+func StartElasticSearchService(config_obj *config.Config) error {
 	cfg := opensearch.Config{
-		Addresses: elastic_config.Addresses,
+		Addresses: config_obj.Cloud.Addresses,
 	}
 
 	CA_Pool := x509.NewCertPool()
 	crypto.AddPublicRoots(CA_Pool)
 
-	if elastic_config.RootCerts != "" &&
-		!CA_Pool.AppendCertsFromPEM([]byte(elastic_config.RootCerts)) {
-		return errors.New("elastic ingestion: Unable to add root certs")
+	if config_obj.Cloud.RootCerts != "" &&
+		!CA_Pool.AppendCertsFromPEM([]byte(config_obj.Cloud.RootCerts)) {
+		return errors.New("cloud ingestion: Unable to add root certs")
 	}
 
 	cfg.Transport = &http.Transport{
@@ -740,13 +730,13 @@ func StartElasticSearchService(
 		TLSClientConfig: &tls.Config{
 			ClientSessionCache: tls.NewLRUClientSessionCache(100),
 			RootCAs:            CA_Pool,
-			InsecureSkipVerify: elastic_config.DisableSSLSecurity,
+			InsecureSkipVerify: config_obj.Cloud.DisableSSLSecurity,
 		},
 	}
 
-	if elastic_config.Username != "" && elastic_config.Password != "" {
-		cfg.Username = elastic_config.Username
-		cfg.Password = elastic_config.Password
+	if config_obj.Cloud.Username != "" && config_obj.Cloud.Password != "" {
+		cfg.Username = config_obj.Cloud.Username
+		cfg.Password = config_obj.Cloud.Password
 	} else {
 		signer, err := requestsigner.NewSigner(session.Options{SharedConfigState: session.SharedConfigEnable})
 		if err != nil {
@@ -795,13 +785,14 @@ func MakeId(item string) string {
 func StartBulkIndexService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 	elastic_client, err := GetElasticClient()
 	if err != nil {
 		return err
 	}
 
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(
+		config_obj.VeloConf(), &logging.FrontendComponent)
 
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{

@@ -1,4 +1,4 @@
-package elastic_datastore
+package config
 
 import (
 	"io/ioutil"

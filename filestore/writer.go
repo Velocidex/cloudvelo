@@ -7,8 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
-	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
@@ -18,22 +17,21 @@ const (
 )
 
 type S3Writer struct {
-	elastic_config *elastic_datastore.ElasticConfiguration
-	config_obj     *config_proto.Config
-	session        *session.Session
-	key            string
-	buf            []byte
-	parts          []*s3.CompletedPart
-	size           int64
-	upload_id      string
-	part_number    int64
+	config_obj  *config.Config
+	session     *session.Session
+	key         string
+	buf         []byte
+	parts       []*s3.CompletedPart
+	size        int64
+	upload_id   string
+	part_number int64
 }
 
 func (self *S3Writer) start() error {
 	svc := s3.New(self.session)
 	resp, err := svc.CreateMultipartUpload(
 		&s3.CreateMultipartUploadInput{
-			Bucket:      aws.String(self.elastic_config.Bucket),
+			Bucket:      aws.String(self.config_obj.Cloud.Bucket),
 			Key:         aws.String(self.key),
 			ContentType: aws.String("application/binary"),
 		})
@@ -76,7 +74,7 @@ func (self *S3Writer) writeBuf() (size int, err error) {
 	svc := s3.New(self.session)
 	partInput := &s3.UploadPartInput{
 		Body:          bytes.NewReader(data),
-		Bucket:        aws.String(self.elastic_config.Bucket),
+		Bucket:        aws.String(self.config_obj.Cloud.Bucket),
 		Key:           aws.String(self.key),
 		PartNumber:    aws.Int64(self.part_number),
 		UploadId:      aws.String(self.upload_id),
@@ -110,7 +108,7 @@ func (self *S3Writer) Truncate() error {
 
 	svc := s3.New(self.session)
 	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(self.elastic_config.Bucket),
+		Bucket: aws.String(self.config_obj.Cloud.Bucket),
 		Key:    aws.String(self.key),
 	})
 	if err != nil {
@@ -118,7 +116,7 @@ func (self *S3Writer) Truncate() error {
 	}
 
 	return svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
-		Bucket: aws.String(self.elastic_config.Bucket),
+		Bucket: aws.String(self.config_obj.Cloud.Bucket),
 		Key:    aws.String(self.key),
 	})
 }
@@ -126,7 +124,8 @@ func (self *S3Writer) Truncate() error {
 func (self *S3Writer) Close() error {
 	err := self.Flush()
 	if err != nil {
-		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger := logging.GetLogger(
+			self.config_obj.VeloConf(), &logging.FrontendComponent)
 		logger.Error("S3Writer %v Close error: %v", self.key, err)
 	}
 	return err
@@ -143,7 +142,7 @@ func (self *S3Writer) Flush() error {
 
 	svc := s3.New(self.session)
 	completeInput := &s3.CompleteMultipartUploadInput{
-		Bucket:   aws.String(self.elastic_config.Bucket),
+		Bucket:   aws.String(self.config_obj.Cloud.Bucket),
 		Key:      aws.String(self.key),
 		UploadId: aws.String(self.upload_id),
 		MultipartUpload: &s3.CompletedMultipartUpload{

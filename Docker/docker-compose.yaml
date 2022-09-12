@@ -35,7 +35,7 @@ services:
       - DEBUG=1
       - DATA_DIR=/tmp/localstack/data
       - KINESIS_PROVIDER=kinesalite
-      # These have to match up with the config in elastic_config.yaml
+      # These have to match up with the config in server.config.yaml
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
@@ -58,7 +58,7 @@ services:
       - '8000:8000'
     volumes:
       - ./config:/config/:ro
-    entrypoint: /cvelociraptor --config /config/server.config.yaml --elastic_config /config/elastic_config.yaml frontend -v
+    entrypoint: /cvelociraptor --config /config/server.config.yaml frontend -v
     networks:
       - velociraptor-network
 
@@ -70,7 +70,7 @@ services:
     image: cvelociraptor
     volumes:
       - ./config:/config/:ro
-    entrypoint: /cvelociraptor --config /config/server.config.yaml --elastic_config /config/elastic_config.yaml foreman -v
+    entrypoint: /cvelociraptor --config /config/server.config.yaml foreman -v
     networks:
       - velociraptor-network
 
@@ -91,7 +91,7 @@ services:
 
     volumes:
       - ./config:/config/:ro
-    entrypoint: /cvelociraptor --config /config/server.config.yaml --elastic_config /config/elastic_config.yaml gui -v
+    entrypoint: /cvelociraptor --config /config/server.config.yaml gui -v
     networks:
       - velociraptor-network
 

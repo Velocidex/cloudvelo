@@ -3,6 +3,7 @@ package orgs
 import (
 	"fmt"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
@@ -58,10 +59,12 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 		service:    service_manager,
 	}
 
-	// Set up the indexes for the new org.
-	if self.elastic_config_path != "" {
-		file_store_obj, err := filestore.NewS3Filestore(
-			org_config, self.elastic_config_path)
+	if self.cloud_config != nil {
+		// Set up the indexes for the new org.
+		file_store_obj, err := filestore.NewS3Filestore(&config.Config{
+			Config: *org_config,
+			Cloud:  *self.cloud_config,
+		})
 		if err != nil {
 			return nil, err
 		}

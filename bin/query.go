@@ -8,6 +8,7 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -35,19 +36,21 @@ var (
 )
 
 func doQuery() error {
-	// Include the writeback in the client's configuration.
-	config_obj, err := makeDefaultConfigLoader().
-		WithRequiredLogging().
-		WithFileLoader(*config_path).
-		LoadAndValidate()
+	cloud_config_obj, err := (&config.ConfigLoader{
+		VelociraptorLoader: makeDefaultConfigLoader().
+			WithRequiredLogging(),
+		Filename: *config_path,
+	}).Load()
 	if err != nil {
-		return fmt.Errorf("Unable to load config file: %w", err)
+		return fmt.Errorf("loading config file: %w", err)
 	}
+
+	config_obj := cloud_config_obj.VeloConf()
 
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	sm, err := startup.StartToolServices(ctx, *elastic_config, config_obj)
+	sm, err := startup.StartToolServices(ctx, cloud_config_obj)
 	defer sm.Close()
 
 	if err != nil {

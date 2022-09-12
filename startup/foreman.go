@@ -3,6 +3,7 @@ package startup
 import (
 	"context"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/foreman"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -11,8 +12,7 @@ import (
 
 func StartForeman(
 	ctx context.Context,
-	config_obj *config_proto.Config,
-	elastic_config_path string) (*services.Service, error) {
+	config_obj *config.Config) (*services.Service, error) {
 
 	// Come up with a suitable services plan depending on the frontend
 	// role.
@@ -27,8 +27,8 @@ func StartForeman(
 		}
 	}
 
-	sm := services.NewServiceManager(ctx, config_obj)
-	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
+	sm := services.NewServiceManager(ctx, config_obj.VeloConf())
+	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, config_obj)
 	if err != nil {
 		return sm, err
 	}

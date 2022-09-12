@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/velociraptor/acls"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -29,7 +30,7 @@ type UserGUIOptions struct {
 
 type UserManager struct {
 	ca_pool    *x509.CertPool
-	config_obj *config_proto.Config
+	config_obj *config.Config
 	ctx        context.Context
 }
 
@@ -77,7 +78,8 @@ func (self *UserManager) ListUsers(ctx context.Context) (
 func (self *UserManager) GetUserFromContext(ctx context.Context) (
 	*api_proto.VelociraptorUser, *config_proto.Config, error) {
 
-	grpc_user_info := users.GetGRPCUserInfo(self.config_obj, ctx, self.ca_pool)
+	grpc_user_info := users.GetGRPCUserInfo(
+		self.config_obj.VeloConf(), ctx, self.ca_pool)
 	user_record, err := self.GetUser(ctx, grpc_user_info.Name)
 	if err != nil {
 		return nil, nil, err
@@ -246,7 +248,7 @@ func (self *UserManager) GetFavorites(
 func StartUserManager(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 
 	CA_Pool := x509.NewCertPool()
 	if config_obj.Client != nil {
