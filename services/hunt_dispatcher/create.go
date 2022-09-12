@@ -118,7 +118,8 @@ func (self HuntDispatcher) CreateHunt(
 		return "", err
 	}
 
-	err = cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	err = cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId,
 		"hunts", hunt_id, &HuntEntry{
 			HuntId:    hunt_id,
 			Timestamp: time.Now().Unix(),

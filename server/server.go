@@ -24,7 +24,8 @@ import (
 type CommunicatorBackend interface {
 	Send(ctx context.Context, messages []*crypto_proto.VeloMessage) error
 	Receive(ctx context.Context, client_id, org_id string) (
-		messages []*crypto_proto.VeloMessage, err error)
+		messages []*crypto_proto.VeloMessage,
+		org_config_obj *config_proto.Config, err error)
 }
 
 type Communicator struct {
@@ -130,7 +131,7 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	client_id := message_info.Source
 	org_id := message_info.OrgId
 
-	messages, err := self.backend.Receive(r.Context(),
+	messages, org_config_obj, err := self.backend.Receive(r.Context(),
 		client_id, org_id)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -145,6 +146,7 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	response, err := self.crypto_manager.EncryptMessageList(
 		message_list,
 		crypto_proto.PackedMessageList_UNCOMPRESSED,
+		org_config_obj.Client.Nonce,
 		message_info.Source)
 	if err != nil {
 		http.Error(w, "Please Enrol", http.StatusNotAcceptable)

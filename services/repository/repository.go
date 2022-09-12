@@ -26,6 +26,7 @@ import (
 type Repository struct {
 	mu sync.Mutex
 
+	ctx        context.Context
 	config_obj *config_proto.Config
 
 	lru *ttlcache.Cache
@@ -162,7 +163,7 @@ func (self *Repository) LoadProto(
 
 func (self *Repository) Del(name string) {
 	self.lru.Remove(name)
-	cvelo_services.DeleteDocument(self.config_obj.OrgId,
+	cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
 		"repository", name, cvelo_services.SyncDelete)
 }
 
@@ -233,7 +234,7 @@ func (self *Repository) saveArtifact(artifact *artifacts_proto.Artifact) error {
 	}
 
 	// Set the artifact in the elastic index.
-	err := cvelo_services.SetElasticIndex(
+	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
 		"repository", artifact.Name,
 		&api.RepositoryEntry{
@@ -246,10 +247,12 @@ func (self *Repository) saveArtifact(artifact *artifacts_proto.Artifact) error {
 	return err
 }
 
-func NewRepository(config_obj *config_proto.Config) *Repository {
+func NewRepository(
+	ctx context.Context, config_obj *config_proto.Config) *Repository {
 	result := &Repository{
 		config_obj: config_obj,
 		lru:        ttlcache.NewCache(),
+		ctx:        ctx,
 	}
 	result.lru.SetTTL(10 * time.Second)
 	return result

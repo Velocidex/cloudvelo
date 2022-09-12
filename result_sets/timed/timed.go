@@ -1,6 +1,7 @@
 package timed
 
 import (
+	"context"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
@@ -73,6 +74,7 @@ type ElasticTimedResultSetWriter struct {
 	file_store_factory api.FileStore
 	path_manager       api.PathManager
 	opts               *json.EncOpts
+	ctx                context.Context
 }
 
 func (self ElasticTimedResultSetWriter) WriteJSONL(
@@ -81,7 +83,7 @@ func (self ElasticTimedResultSetWriter) WriteJSONL(
 	record := NewTimedResultSetRecord(self.path_manager)
 	record.JSONData = string(serialized)
 
-	services.SetElasticIndex(
+	services.SetElasticIndex(self.ctx,
 		filestore.GetOrgId(self.file_store_factory),
 		"results", "", record)
 }
@@ -113,5 +115,6 @@ func NewTimedResultSetWriter(
 		file_store_factory: file_store_factory,
 		path_manager:       path_manager,
 		opts:               opts,
+		ctx:                context.Background(),
 	}, nil
 }

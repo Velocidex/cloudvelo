@@ -36,7 +36,7 @@ func (self *SanityChecks) CheckRootOrg(
 			}
 		}
 
-		err = createInitialUsers(config_obj, config_obj.GUI.InitialUsers)
+		err = createInitialUsers(ctx, config_obj, config_obj.GUI.InitialUsers)
 		if err != nil {
 			return err
 		}

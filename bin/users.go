@@ -47,7 +47,7 @@ func doOrgUserAdd() error {
 	}
 
 	user_manager := services.GetUserManager()
-	record, err := user_manager.GetUserWithHashes(*orgs_user_add_user)
+	record, err := user_manager.GetUserWithHashes(ctx, *orgs_user_add_user)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func doOrgUserAdd() error {
 		Id:   *orgs_user_add_org,
 	})
 
-	return user_manager.SetUser(record)
+	return user_manager.SetUser(ctx, record)
 }
 
 func init() {

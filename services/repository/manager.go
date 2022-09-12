@@ -26,6 +26,7 @@ type RepositoryManager struct {
 	global_repository services.Repository
 
 	config_obj *config_proto.Config
+	ctx        context.Context
 }
 
 // New Repository is called to create a new temporary repository
@@ -82,13 +83,15 @@ func NewRepositoryManager(
 				Data: make(map[string]*artifacts_proto.Artifact),
 			},
 			config_obj: config_obj,
+			ctx:        ctx,
 		}, nil
 	}
 
 	// Sub orgs get a new elastic based repository.
 	return &RepositoryManager{
-		global_repository: NewRepository(config_obj),
+		global_repository: NewRepository(ctx, config_obj),
 		config_obj:        config_obj,
+		ctx:               ctx,
 	}, nil
 }
 
@@ -129,7 +132,7 @@ func (self *RepositoryManager) SetArtifactFile(config_obj *config_proto.Config, 
 
 func (self *RepositoryManager) DeleteArtifactFile(config_obj *config_proto.Config,
 	principal, name string) error {
-	err := cvelo_services.DeleteDocument(self.config_obj.OrgId,
+	err := cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
 		"repository", name, cvelo_services.Sync)
 	if err != nil {
 		return err

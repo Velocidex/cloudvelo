@@ -48,7 +48,7 @@ func getType(notebook_id string) string {
 }
 
 func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error {
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
 		"notebooks", in.NotebookId, &NotebookRecord{
 			NotebookId: in.NotebookId,
@@ -85,7 +85,7 @@ func (self *NotebookStoreImpl) GetNotebook(notebook_id string) (
 func (self *NotebookStoreImpl) SetNotebookCell(
 	notebook_id string, in *api_proto.NotebookCell) error {
 
-	err := cvelo_services.SetElasticIndex(
+	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
 		"notebooks", in.CellId, &NotebookRecord{
 			NotebookId:   notebook_id,

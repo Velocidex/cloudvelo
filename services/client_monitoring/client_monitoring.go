@@ -223,7 +223,8 @@ func (self ClientMonitoringManager) SetClientMonitoringState(
 
 	state.Version = uint64(time.Now().UnixNano())
 
-	return cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId,
 		"config", "client_monitoring",
 		&ConfigEntry{
 			Type: "client_monitoring",

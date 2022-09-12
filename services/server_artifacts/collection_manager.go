@@ -21,6 +21,8 @@ type contextManager struct {
 	config_obj   *config_proto.Config
 	path_manager *paths.FlowPathManager
 	cancel       func()
+
+	ctx context.Context
 }
 
 func NewCollectionContextManager(
@@ -34,6 +36,7 @@ func NewCollectionContextManager(
 		config_obj: config_obj,
 		cancel:     cancel,
 		context:    collection_context,
+		ctx:        sub_ctx,
 	}
 
 	// Write collection context periodically to disk so the
@@ -122,7 +125,7 @@ func (self *contextManager) Save() error {
 	}
 
 	// Store the collection_context first, then queue all the tasks.
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId, "collections", self.context.SessionId,
 		api.ArtifactCollectorContextFromProto(self.context))
 }

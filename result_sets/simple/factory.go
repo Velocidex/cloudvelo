@@ -39,6 +39,7 @@ func (self ResultSetFactory) NewResultSetWriter(
 		org_id:   org_id,
 		log_path: log_path,
 		opts:     opts,
+		ctx:      context.Background(),
 	}, nil
 }
 

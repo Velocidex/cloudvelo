@@ -26,6 +26,8 @@ type ElasticSimpleResultSetWriter struct {
 	// before writing anything (which is another database round trip
 	// and can be expensive).
 	truncated bool
+
+	ctx context.Context
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
@@ -40,7 +42,7 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	record.TotalRows = uint64(self.start_row)
 
 	services.SetElasticIndex(
-		self.org_id, "results", "", record)
+		self.ctx, self.org_id, "results", "", record)
 }
 
 func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
@@ -116,7 +118,7 @@ func (self *ElasticSimpleResultSetWriter) Flush() {
 	self.buffered_rows = 0
 
 	// Make sure the results are visible immediately
-	cvelo_services.FlushIndex(self.org_id, "results")
+	cvelo_services.FlushIndex(self.ctx, self.org_id, "results")
 
 	// No need to find the last start row as we assume we are the only
 	// writers.

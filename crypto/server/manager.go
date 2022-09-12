@@ -52,7 +52,9 @@ func NewServerCryptoManager(
 	return server_manager, nil
 }
 
-type serverPublicKeyResolver struct{}
+type serverPublicKeyResolver struct {
+	ctx context.Context
+}
 
 func (self *serverPublicKeyResolver) GetPublicKey(
 	config_obj *config_proto.Config,
@@ -88,7 +90,7 @@ func (self *serverPublicKeyResolver) SetPublicKey(
 		EnrollTime: uint64(time.Now().Unix()),
 	}
 	return cvelo_services.SetElasticIndex(
-		config_obj.OrgId, "client_key", client_id, pem)
+		self.ctx, config_obj.OrgId, "client_key", client_id, pem)
 }
 
 func (self *serverPublicKeyResolver) Clear() {}
@@ -97,7 +99,9 @@ func NewServerPublicKeyResolver(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	wg *sync.WaitGroup) (client.PublicKeyResolver, error) {
-	result := &serverPublicKeyResolver{}
+	result := &serverPublicKeyResolver{
+		ctx: ctx,
+	}
 
 	return result, nil
 }

@@ -62,7 +62,7 @@ func (self ElasticIngestor) Process(
 		return nil
 	}
 
-	err = self.maybeHandleHuntResponse(config_obj, message)
+	err = self.maybeHandleHuntResponse(ctx, config_obj, message)
 	if err != nil {
 		return err
 	}
@@ -74,15 +74,15 @@ func (self ElasticIngestor) Process(
 	}
 
 	if message.VQLResponse != nil {
-		return self.HandleResponses(config_obj, message)
+		return self.HandleResponses(ctx, config_obj, message)
 	}
 
 	if message.Status != nil {
-		return self.HandleStatus(config_obj, message)
+		return self.HandleStatus(ctx, config_obj, message)
 	}
 
 	if message.ForemanCheckin != nil {
-		return self.HandlePing(config_obj, message)
+		return self.HandlePing(ctx, config_obj, message)
 	}
 
 	if message.FileBuffer != nil {

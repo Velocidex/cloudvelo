@@ -33,20 +33,23 @@ type UserManager struct {
 	ctx        context.Context
 }
 
-func (self *UserManager) SetUser(user_record *api_proto.VelociraptorUser) error {
+func (self *UserManager) SetUser(
+	ctx context.Context, user_record *api_proto.VelociraptorUser) error {
 	serialized, err := json.Marshal(user_record)
 	if err != nil {
 		return err
 	}
 
-	return cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId,
 		"users", user_record.Name, &UserRecord{
 			Username: user_record.Name,
 			Record:   string(serialized),
 		})
 }
 
-func (self *UserManager) ListUsers() ([]*api_proto.VelociraptorUser, error) {
+func (self *UserManager) ListUsers(ctx context.Context) (
+	[]*api_proto.VelociraptorUser, error) {
 	hits, err := cvelo_services.QueryElasticRaw(self.ctx, services.ROOT_ORG_ID,
 		"users", `{"query": {"match_all": {}}}`)
 	if err != nil {
@@ -75,7 +78,7 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 	*api_proto.VelociraptorUser, *config_proto.Config, error) {
 
 	grpc_user_info := users.GetGRPCUserInfo(self.config_obj, ctx, self.ca_pool)
-	user_record, err := self.GetUser(grpc_user_info.Name)
+	user_record, err := self.GetUser(ctx, grpc_user_info.Name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,8 +98,8 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 	return user_record, org_config_obj, err
 }
 
-func (self *UserManager) GetUserWithHashes(username string) (
-	*api_proto.VelociraptorUser, error) {
+func (self *UserManager) GetUserWithHashes(
+	ctx context.Context, username string) (*api_proto.VelociraptorUser, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
 		self.config_obj.OrgId, "users", username)
@@ -135,9 +138,9 @@ func (self *UserManager) GetUserWithHashes(username string) (
 	return result, err
 }
 
-func (self *UserManager) GetUser(username string) (
+func (self *UserManager) GetUser(ctx context.Context, username string) (
 	*api_proto.VelociraptorUser, error) {
-	result, err := self.GetUserWithHashes(username)
+	result, err := self.GetUserWithHashes(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -148,10 +151,11 @@ func (self *UserManager) GetUser(username string) (
 }
 
 func (self *UserManager) SetUserOptions(
+	ctx context.Context,
 	username string,
 	options *api_proto.SetGUIOptionsRequest) error {
 
-	user_record, err := self.GetUserOptions(username)
+	user_record, err := self.GetUserOptions(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -181,7 +185,7 @@ func (self *UserManager) SetUserOptions(
 		return err
 	}
 
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
 		"user_options", username, &UserGUIOptions{
 			Username:   username,
@@ -189,7 +193,7 @@ func (self *UserManager) SetUserOptions(
 		})
 }
 
-func (self *UserManager) GetUserOptions(username string) (
+func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
@@ -233,6 +237,7 @@ func (self *UserManager) GetUserOptions(username string) (
 }
 
 func (self *UserManager) GetFavorites(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	principal, fav_type string) (*api_proto.Favorites, error) {
 	return nil, errors.New("UserManager.GetFavorites Not implemented")
@@ -256,7 +261,10 @@ func StartUserManager(
 	services.RegisterUserManager(service)
 
 	// Register our new acl manager.
-	acls.SetACLManager(&ACLManager{&acls.ACLManager{}})
+	acls.SetACLManager(&ACLManager{
+		ACLManager: &acls.ACLManager{},
+		ctx:        ctx,
+	})
 
 	return nil
 }

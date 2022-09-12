@@ -42,4 +42,4 @@ output/
 testdata/pool_writebacks/*
 
 __debug_bin
-.localstack
+Docker/.localstack/data/*

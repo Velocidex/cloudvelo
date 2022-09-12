@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"context"
+
 	"google.golang.org/protobuf/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/datastore"
@@ -37,7 +39,10 @@ func (self ElasticWrapper) GetSubject(
 }
 
 func NewElasticDatastore(
+	ctx context.Context,
 	config_obj *config_proto.Config) datastore.DataStore {
 
-	return &ElasticDatastore{}
+	return &ElasticDatastore{
+		ctx: ctx,
+	}
 }
