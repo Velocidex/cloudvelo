@@ -25,6 +25,9 @@ type RepositoryManager struct {
 	mu                sync.Mutex
 	global_repository services.Repository
 
+	// An in-memory repository of the build in set.
+	built_in_repository services.Repository
+
 	config_obj *config_proto.Config
 	ctx        context.Context
 }
@@ -78,12 +81,17 @@ func NewRepositoryManager(
 	// the built-in set. It will be reflected in all the child orgs
 	// automatically and is immutable.
 	if utils.IsRootOrg(config_obj.OrgId) {
+		root_global_repo := NewRepository(ctx, config_obj)
+		built_in_repository := &repository.Repository{
+			Data: make(map[string]*artifacts_proto.Artifact),
+		}
+		root_global_repo.SetParent(built_in_repository, config_obj)
+
 		return &RepositoryManager{
-			global_repository: &repository.Repository{
-				Data: make(map[string]*artifacts_proto.Artifact),
-			},
-			config_obj: config_obj,
-			ctx:        ctx,
+			global_repository:   root_global_repo,
+			built_in_repository: built_in_repository,
+			config_obj:          config_obj,
+			ctx:                 ctx,
 		}, nil
 	}
 
@@ -176,7 +184,10 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 		return err
 	}
 
-	grepository, _ := self.GetGlobalRepository(config_obj)
+	// Load all the built in artifacts into this in-memory repository
+	self.mu.Lock()
+	grepository := self.built_in_repository
+	self.mu.Unlock()
 
 	count := 0
 
