@@ -2,10 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/Velocidex/yaml/v2"
+	jsonpatch "github.com/evanphx/json-patch"
 	errors "github.com/pkg/errors"
 	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -46,6 +48,41 @@ func (self Config) VeloConf() *config_proto.Config {
 type ConfigLoader struct {
 	VelociraptorLoader *config.Loader
 	Filename           string
+	JSONPatch          string
+}
+
+func (self *ConfigLoader) ApplyJsonPatch(config_obj *Config) (*Config, error) {
+	serialized, err := json.Marshal(config_obj)
+	if err != nil {
+		return nil, err
+	}
+
+	/*
+		patch, err := jsonpatch.DecodePatch([]byte(self.JSONPatch))
+		if err != nil {
+			return nil, fmt.Errorf("Decoding JSON patch: %w", err)
+		}
+
+		patched, err := patch.Apply(serialized)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid merge patch: %w", err)
+		}
+	*/
+
+	patched, err := jsonpatch.MergePatch(serialized, []byte(self.JSONPatch))
+	if err != nil {
+		return nil, fmt.Errorf("Invalid merge patch: %w", err)
+	}
+
+	result := &Config{}
+	err = json.Unmarshal(patched, result)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"Patched object produces an invalid config (%v): %w",
+			self.JSONPatch, err)
+	}
+
+	return result, nil
 }
 
 func (self *ConfigLoader) LoadFilename() (*Config, error) {
@@ -53,6 +90,13 @@ func (self *ConfigLoader) LoadFilename() (*Config, error) {
 	config_obj, err := read_config_from_file(self.Filename)
 	if err != nil {
 		return nil, err
+	}
+
+	if self.JSONPatch != "" {
+		config_obj, err = self.ApplyJsonPatch(config_obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Now load and verify the velociraptor config

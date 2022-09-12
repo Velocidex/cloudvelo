@@ -1,7 +1,6 @@
 package main
 
 import (
-	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	logging "www.velocidex.com/golang/velociraptor/logging"
 )
@@ -15,15 +14,10 @@ func doRunClient() error {
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	loader := &config.ConfigLoader{
-		VelociraptorLoader: makeDefaultConfigLoader().
-			WithRequiredClient().
-			WithRequiredLogging().
-			WithWriteback(),
-		Filename: *config_path,
-	}
-
-	config_obj, err := loader.Load()
+	config_obj, err := loadConfig(makeDefaultConfigLoader().
+		WithRequiredClient().
+		WithRequiredLogging().
+		WithWriteback())
 	if err != nil {
 		return err
 	}

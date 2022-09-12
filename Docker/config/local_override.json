@@ -1,0 +1,10 @@
+{"Client": {
+    "server_urls": ["https://localhost:8000/"]
+  },
+ "Cloud": {
+     "addresses": [
+         "https://localhost:9200/"
+     ],
+     "endpoint": "https://localhost:4566/"
+ }
+}

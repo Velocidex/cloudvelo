@@ -8,7 +8,6 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -36,11 +35,8 @@ var (
 )
 
 func doQuery() error {
-	cloud_config_obj, err := (&config.ConfigLoader{
-		VelociraptorLoader: makeDefaultConfigLoader().
-			WithRequiredLogging(),
-		Filename: *config_path,
-	}).Load()
+	cloud_config_obj, err := loadConfig(
+		makeDefaultConfigLoader().WithRequiredLogging())
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}

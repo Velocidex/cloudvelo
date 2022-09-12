@@ -51,10 +51,9 @@ func doPoolClient() error {
 		number_of_clients = 2
 	}
 
-	client_config, err := makeDefaultConfigLoader().
+	client_config, err := loadConfig(makeDefaultConfigLoader().
 		WithRequiredClient().
-		WithVerbose(*verbose_flag).
-		LoadAndValidate()
+		WithVerbose(*verbose_flag))
 	if err != nil {
 		return fmt.Errorf("Unable to load config file: %w", err)
 	}
@@ -63,10 +62,10 @@ func doPoolClient() error {
 	defer cancel()
 
 	// Start all the services
-	sm := services.NewServiceManager(ctx, client_config)
+	sm := services.NewServiceManager(ctx, client_config.VeloConf())
 	defer sm.Close()
 
-	server.IncreaseLimits(client_config)
+	server.IncreaseLimits(client_config.VeloConf())
 
 	// Make a copy of all the configs for each client.
 	configs := make([]*config_proto.Config, 0, number_of_clients)

@@ -26,8 +26,6 @@ var (
 
 	config_path = app.Flag("config", "The configuration file.").
 			Short('c').String()
-	override_flag = app.Flag("config_override", "A json object to override the config.").
-			Short('o').String()
 	verbose_flag = app.Flag(
 		"verbose", "Enabled verbose logging.").Short('v').
 		Default("false").Bool()
@@ -142,6 +140,5 @@ func makeDefaultConfigLoader() *config.Loader {
 		WithVerbose(*verbose_flag).
 		WithTempdir(*tempdir_flag).
 		WithCustomValidator(initDebugServer).
-		WithLogFile(*logging_flag).
-		WithOverride(*override_flag)
+		WithLogFile(*logging_flag)
 }
