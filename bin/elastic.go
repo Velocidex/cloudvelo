@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/schema"
 	"www.velocidex.com/golang/cloudvelo/services"
 )
@@ -25,8 +26,10 @@ var (
 )
 
 func doResetElastic() error {
-	config_obj, err := makeDefaultConfigLoader().
-		LoadAndValidate()
+	config_obj, err := (&config.ConfigLoader{
+		VelociraptorLoader: makeDefaultConfigLoader(),
+		Filename:           *config_path,
+	}).Load()
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}
@@ -34,7 +37,7 @@ func doResetElastic() error {
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	err = services.StartElasticSearchService(config_obj, *elastic_config)
+	err = services.StartElasticSearchService(config_obj)
 	if err != nil {
 		return err
 	}
@@ -47,12 +50,12 @@ func doResetElastic() error {
 
 	if *elastic_command_reset_org_id == "" {
 		return schema.DeleteAllOrgs(ctx,
-			config_obj, *elastic_command_reset_filter)
+			config_obj.VeloConf(), *elastic_command_reset_filter)
 
 	}
 
 	return schema.Delete(ctx,
-		config_obj,
+		config_obj.VeloConf(),
 		*elastic_command_reset_org_id,
 		*elastic_command_reset_filter)
 }

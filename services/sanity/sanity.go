@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -60,8 +61,8 @@ func (self *SanityChecks) Check(
 func NewSanityCheckService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 
 	result := &SanityChecks{}
-	return result.Check(ctx, config_obj)
+	return result.Check(ctx, config_obj.VeloConf())
 }

@@ -14,6 +14,7 @@ import (
 
 type ServerArtifactsService struct {
 	ctx context.Context
+	wg  *sync.WaitGroup
 }
 
 func (self ServerArtifactsService) LaunchServerArtifact(
@@ -26,7 +27,11 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 	}
 
 	runner := server_artifacts.NewServerArtifactRunner(config_obj)
+
+	self.wg.Add(1)
 	go func() {
+		defer self.wg.Done()
+
 		collection_context_manager, err := NewCollectionContextManager(
 			self.ctx, config_obj, collection_context)
 		if err != nil {
@@ -53,10 +58,10 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 
 func NewServerArtifactService(
 	ctx context.Context,
-	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) services.ServerArtifactsService {
+	wg *sync.WaitGroup) services.ServerArtifactsService {
 
 	return &ServerArtifactsService{
 		ctx: ctx,
+		wg:  wg,
 	}
 }

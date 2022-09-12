@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	"www.velocidex.com/golang/velociraptor/gui/velociraptor"
 )
@@ -12,19 +13,22 @@ var (
 )
 
 func doGUI() error {
-	config_obj, err := makeDefaultConfigLoader().
-		LoadAndValidate()
+	config_obj, err := (&config.ConfigLoader{
+		VelociraptorLoader: makeDefaultConfigLoader(),
+		Filename:           *config_path,
+	}).Load()
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}
 
+	// Load the GUI assets
 	velociraptor.Init()
 
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
 	// Now start the frontend services
-	sm, err := startup.StartGUIServices(ctx, config_obj, *elastic_config)
+	sm, err := startup.StartGUIServices(ctx, config_obj)
 	if err != nil {
 		return fmt.Errorf("starting frontend: %w", err)
 	}

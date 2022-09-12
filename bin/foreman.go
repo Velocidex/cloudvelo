@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 )
 
@@ -11,8 +12,10 @@ var (
 )
 
 func doForeman() error {
-	config_obj, err := makeDefaultConfigLoader().
-		LoadAndValidate()
+	config_obj, err := (&config.ConfigLoader{
+		VelociraptorLoader: makeDefaultConfigLoader(),
+		Filename:           *config_path,
+	}).Load()
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}
@@ -20,7 +23,7 @@ func doForeman() error {
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	sm, err := startup.StartForeman(ctx, config_obj, *elastic_config)
+	sm, err := startup.StartForeman(ctx, config_obj)
 	defer sm.Close()
 	if err != nil {
 		return err

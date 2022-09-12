@@ -3,6 +3,7 @@ package startup
 import (
 	"context"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	ingestor_services "www.velocidex.com/golang/cloudvelo/ingestion/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
@@ -13,8 +14,7 @@ import (
 // StartFrontendServices starts the binary as a frontend:
 func StartCommunicatorServices(
 	ctx context.Context,
-	config_obj *config_proto.Config,
-	elastic_config_path string) (*services.Service, error) {
+	config_obj *config.Config) (*services.Service, error) {
 
 	if config_obj.Frontend == nil {
 		config_obj.Frontend = &config_proto.FrontendConfig{}
@@ -27,14 +27,13 @@ func StartCommunicatorServices(
 		}
 	}
 
-	sm := services.NewServiceManager(ctx, config_obj)
-	err := cvelo_services.StartElasticSearchService(
-		config_obj, elastic_config_path)
+	sm := services.NewServiceManager(ctx, config_obj.VeloConf())
+	err := cvelo_services.StartElasticSearchService(config_obj)
 	if err != nil {
 		return sm, err
 	}
 
-	_, err = orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
+	_, err = orgs.NewOrgManager(sm.Ctx, sm.Wg, config_obj)
 	if err != nil {
 		return sm, err
 	}

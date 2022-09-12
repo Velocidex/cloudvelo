@@ -3,6 +3,7 @@ package startup
 import (
 	"context"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
@@ -15,8 +16,7 @@ import (
 // StartFrontendServices starts the binary as a frontend:
 func StartGUIServices(
 	ctx context.Context,
-	config_obj *config_proto.Config,
-	elastic_config_path string) (*services.Service, error) {
+	config_obj *config.Config) (*services.Service, error) {
 
 	// Come up with a suitable services plan depending on the frontend
 	// role.
@@ -42,18 +42,19 @@ func StartGUIServices(
 		}
 	}
 
-	sm := services.NewServiceManager(ctx, config_obj)
+	sm := services.NewServiceManager(ctx, config_obj.VeloConf())
 
-	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, elastic_config_path, config_obj)
+	_, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, config_obj)
 	if err != nil {
 		return sm, err
 	}
 
 	cvelo_services.RegisterServerArtifactsService(
-		server_artifacts.NewServerArtifactService(sm.Ctx, sm.Wg, config_obj))
+		server_artifacts.NewServerArtifactService(sm.Ctx, sm.Wg))
 
 	// Start the listening server
-	server_builder, err := api.NewServerBuilder(sm.Ctx, config_obj, sm.Wg)
+	server_builder, err := api.NewServerBuilder(
+		sm.Ctx, config_obj.VeloConf(), sm.Wg)
 	if err != nil {
 		return sm, err
 	}

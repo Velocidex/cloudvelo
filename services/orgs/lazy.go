@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
@@ -27,7 +27,7 @@ type LazyServiceContainer struct {
 	ctx            context.Context
 	wg             *sync.WaitGroup
 	config_obj     *config_proto.Config
-	elastic_config *elastic_datastore.ElasticConfiguration
+	elastic_config *config.ElasticConfiguration
 
 	// Elastic is too slow to serve the repository manager directly so
 	// we cache it here.

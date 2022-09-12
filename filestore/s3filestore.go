@@ -11,18 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
-	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
 type S3Filestore struct {
-	config_obj     *config_proto.Config
-	elastic_config *elastic_datastore.ElasticConfiguration
-	session        *session.Session
-	bucket         string
+	config_obj *config.Config
+	session    *session.Session
+	bucket     string
 }
 
 func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error) {
@@ -30,7 +28,7 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 	return &S3Reader{
 		session:    self.session,
 		downloader: downloader,
-		key:        PathspecToKey(self.config_obj, filename),
+		key:        PathspecToKey(filename),
 		bucket:     self.bucket,
 		filename:   filename,
 	}, nil
@@ -39,11 +37,10 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 // Async write - same as WriteFileWithCompletion with BackgroundWriter
 func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, error) {
 	result := &S3Writer{
-		key:            PathspecToKey(self.config_obj, filename),
-		elastic_config: self.elastic_config,
-		config_obj:     self.config_obj,
-		session:        self.session,
-		part_number:    1,
+		key:         PathspecToKey(filename),
+		config_obj:  self.config_obj,
+		session:     self.session,
+		part_number: 1,
 	}
 
 	return result, result.start()
@@ -66,7 +63,7 @@ func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, e
 	// Get the list of items
 	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: aws.String(self.bucket),
-		Prefix: aws.String(PathspecToKey(self.config_obj,
+		Prefix: aws.String(PathspecToKey(
 			dirname.SetType(api.PATH_TYPE_DATASTORE_DIRECTORY))),
 	})
 	if err != nil {
@@ -93,8 +90,7 @@ func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, e
 
 func (self S3Filestore) Delete(filename api.FSPathSpec) error {
 
-	key := PathspecToKey(self.config_obj, filename)
-
+	key := PathspecToKey(filename)
 	svc := s3.New(self.session)
 	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(self.bucket),
@@ -120,47 +116,40 @@ func (self S3Filestore) Close() error {
 }
 
 func NewS3Filestore(
-	config_obj *config_proto.Config,
-	elastic_config_path string) (*S3Filestore, error) {
-	elastic_config, session, err := GetS3Session(elastic_config_path)
+	config_obj *config.Config) (*S3Filestore, error) {
+
+	session, err := GetS3Session(config_obj)
 	return &S3Filestore{
-		config_obj:     config_obj,
-		session:        session,
-		elastic_config: elastic_config,
-		bucket:         elastic_config.Bucket,
+		config_obj: config_obj,
+		session:    session,
+		bucket:     config_obj.Cloud.Bucket,
 	}, err
 }
 
-func GetS3Session(elastic_config_path string) (
-	*elastic_datastore.ElasticConfiguration, *session.Session, error) {
-	elastic_config, err := elastic_datastore.LoadConfig(elastic_config_path)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func GetS3Session(config_obj *config.Config) (*session.Session, error) {
 	conf := aws.NewConfig()
-	if elastic_config.AWSRegion != "" {
-		conf = conf.WithRegion(elastic_config.AWSRegion)
+	if config_obj.Cloud.AWSRegion != "" {
+		conf = conf.WithRegion(config_obj.Cloud.AWSRegion)
 	}
 
-	if elastic_config.CredentialsKey != "" &&
-		elastic_config.CredentialsSecret != "" {
+	if config_obj.Cloud.CredentialsKey != "" &&
+		config_obj.Cloud.CredentialsSecret != "" {
 		token := ""
 		creds := credentials.NewStaticCredentials(
-			elastic_config.CredentialsKey, elastic_config.CredentialsSecret, token)
+			config_obj.Cloud.CredentialsKey, config_obj.Cloud.CredentialsSecret, token)
 		_, err := creds.Get()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		conf = conf.WithCredentials(creds)
 	}
 
-	if elastic_config.Endpoint != "" {
-		conf = conf.WithEndpoint(elastic_config.Endpoint).
+	if config_obj.Cloud.Endpoint != "" {
+		conf = conf.WithEndpoint(config_obj.Cloud.Endpoint).
 			WithS3ForcePathStyle(true)
 
-		if elastic_config.NoVerifyCert {
+		if config_obj.Cloud.NoVerifyCert {
 			tr := &http.Transport{
 				Proxy:           networking.GetProxy(),
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -177,8 +166,8 @@ func GetS3Session(elastic_config_path string) (
 			SharedConfigState: session.SharedConfigEnable,
 		})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return elastic_config, sess, nil
+	return sess, nil
 }

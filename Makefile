@@ -1,46 +1,51 @@
-all:
-	go build -tags 'server_vql extras release yara' -o output/cvelociraptor ./bin/
+SERVER_CONFIG=./Docker/config/server.config.yaml
+CLIENT_CONFIG=./Docker/config/client.config.yaml
+BINARY=./output/cvelociraptor
+CONFIG_ARGS= --config $(SERVER_CONFIG)
+CLIENT_CONFIG_ARGS= --config $(CLIENT_CONFIG)
+DLV=dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ --
+WRITEBACK_DIR=./testdata/pool_writebacks/
+POOL_NUMBER=200
+
+all: linux_musl
 
 debug_client:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- client -v  --config ./testdata/config/client.config.yaml
+	$(DLV) client -v $(CLIENT_CONFIG_ARGS)
 
 .PHONY: client
 client:
-	./output/cvelociraptor client -v  --config ./testdata/config/client.config.yaml
+	$(BINARY) client -v $(CLIENT_CONFIG_ARGS)
 
 pool_client:
-	./output/cvelociraptor pool_client -v  --config ./testdata/config/server.config.yaml --writeback_dir ./testdata/pool_writebacks/ --number 200
+	$(BINARY) pool_client -v $(CLIENT_CONFIG_ARGS) --writeback_dir $(WRITEBACK_DIR) --number $(POOL_NUMBER)
 
 debug_pool_client:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- pool_client -v  --config ./testdata/config/server.config.yaml --writeback_dir ./testdata/pool_writebacks/ --number 200
+	$(DLV) pool_client -v $(CLIENT_CONFIG_ARGS) --writeback_dir $(WRITEBACK_DIR) --number $(POOL_NUMBER)
 
 gui:
-	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml  --config ./testdata/config/server.config.yaml  gui -v --debug
+	$(BINARY) $(CONFIG_ARGS) gui -v --debug
 
 debug_gui:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./Docker/config/elastic_config.yaml  --config ./Docker/config/server.config.yaml  gui -v --debug
+	$(DLV) $(CONFIG_ARGS) gui -v --debug
 
 frontend:
-	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml frontend -v --debug
+	$(BINARY) $(CONFIG_ARGS) frontend -v --debug
 
 .PHONY: foreman
 foreman:
-	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml foreman -v --debug
+	$(BINARY) $(CONFIG_ARGS) foreman -v --debug
 
 debug_foreman:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml foreman -v --debug
+	$(DLV) $(CONFIG_ARGS) foreman -v --debug
 
 debug_frontend:
-	dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ -- --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml frontend -v --debug
-
-add_user:
-	./output/cvelociraptor --elastic_config ./testdata/elastic/config.yaml --config ./testdata/config/server.config.yaml  query "SELECT user_create(user='mic', roles='administrator', password='mic') FROM scope()"
+	$(DLV) $(CONFIG_ARGS) frontend -v --debug
 
 reset_elastic:
-	./output/cvelociraptor  --elastic_config testdata/elastic/config.yaml  --config ./testdata/config/server.config.yaml  -v elastic reset
+	$(BINARY) $(CONFIG_ARGS) elastic reset --recreate $(INDEX)
 
 linux_m1:
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -gcflags "all=-N -l" -tags 'server_vql extras release yara' -o output/velociraptor ./bin/
+	go run make.go -v LinuxM1
 
 linux_musl:
 	go run make.go -v LinuxMusl

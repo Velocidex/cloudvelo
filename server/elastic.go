@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/crypto/server"
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
 	"www.velocidex.com/golang/cloudvelo/ingestion"
+
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -17,12 +18,10 @@ type ElasticBackend struct {
 }
 
 func NewElasticBackend(
-	config_obj *config_proto.Config,
-	crypto_manager *server.ServerCryptoManager,
-	config *elastic_datastore.ElasticConfiguration) (
+	config_obj *config.Config,
+	crypto_manager *server.ServerCryptoManager) (
 	*ElasticBackend, error) {
-	ingestor, err := ingestion.NewElasticIngestor(
-		config_obj, config, crypto_manager)
+	ingestor, err := ingestion.NewElasticIngestor(config_obj, crypto_manager)
 	if err != nil {
 		return nil, err
 	}

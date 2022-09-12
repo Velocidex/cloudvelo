@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	logging "www.velocidex.com/golang/velociraptor/logging"
 )
@@ -16,25 +15,28 @@ func doRunClient() error {
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	// Include the writeback in the client's configuration.
-	config_obj, err := makeDefaultConfigLoader().
-		WithRequiredClient().
-		WithRequiredLogging().
-		WithFileLoader(*config_path).
-		WithWriteback().LoadAndValidate()
+	loader := &config.ConfigLoader{
+		VelociraptorLoader: makeDefaultConfigLoader().
+			WithRequiredClient().
+			WithRequiredLogging().
+			WithWriteback(),
+		Filename: *config_path,
+	}
+
+	config_obj, err := loader.Load()
 	if err != nil {
-		return fmt.Errorf("Unable to load config file: %w", err)
+		return err
 	}
 
 	// Report any errors from this function.
-	logger := logging.GetLogger(config_obj, &logging.ClientComponent)
+	logger := logging.GetLogger(&config_obj.Config, &logging.ClientComponent)
 	defer func() {
 		if err != nil {
 			logger.Error("<red>doRunClient Error:</> %v", err)
 		}
 	}()
 
-	sm, err := startup.StartClientServices(ctx, config_obj, on_error)
+	sm, err := startup.StartClientServices(ctx, &config_obj.Config, on_error)
 	defer sm.Close()
 
 	if err != nil {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/crypto/server"
-	"www.velocidex.com/golang/cloudvelo/elastic_datastore"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/constants"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -29,7 +29,7 @@ type CommunicatorBackend interface {
 }
 
 type Communicator struct {
-	config_obj *config_proto.Config
+	config_obj *config.Config
 	client_id  string
 	backend    CommunicatorBackend
 
@@ -37,8 +37,7 @@ type Communicator struct {
 	// flush to disk when done.
 	mu sync.Mutex
 
-	elastic_config *elastic_datastore.ElasticConfiguration
-	session        *session.Session
+	session *session.Session
 
 	parts []*s3.CompletedPart
 
@@ -61,7 +60,8 @@ func (self Communicator) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	message_info.RemoteAddr = r.RemoteAddr
-	logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(
+		self.config_obj.VeloConf(), &logging.FrontendComponent)
 
 	err = message_info.IterateJobs(r.Context(), func(
 		ctx context.Context, message *crypto_proto.VeloMessage) {
@@ -92,7 +92,8 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(
 		io.LimitReader(r.Body, constants.MAX_MEMORY))
 	if err != nil {
-		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger := logging.GetLogger(
+			self.config_obj.VeloConf(), &logging.FrontendComponent)
 		logger.Error("Unable to read body: %v", err)
 		http.Error(w, "", http.StatusForbidden)
 		return
@@ -123,7 +124,8 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
-		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger := logging.GetLogger(
+			self.config_obj.VeloConf(), &logging.FrontendComponent)
 		logger.Error("Unable to send to backend: %v", err)
 		return
 	}

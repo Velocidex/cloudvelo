@@ -44,12 +44,11 @@ func (self *Communicator) StartMultipartUpload(
 
 	svc := s3.New(self.session)
 	key := filestore.PathspecToKey(
-		self.config_obj,
 		path_specs.NewUnsafeFilestorePath(request.Components...).
 			SetType(api.PATH_TYPE_FILESTORE_ANY))
 	resp, err := svc.CreateMultipartUpload(
 		&s3.CreateMultipartUploadInput{
-			Bucket:      aws.String(self.elastic_config.Bucket),
+			Bucket:      aws.String(self.config_obj.Cloud.Bucket),
 			Key:         aws.String(key),
 			ContentType: aws.String("application/binary"),
 		})
@@ -137,7 +136,7 @@ func (self *Communicator) uploadPart(
 	svc := s3.New(self.session)
 	partInput := &s3.UploadPartInput{
 		Body:          bytes.NewReader(data),
-		Bucket:        aws.String(self.elastic_config.Bucket),
+		Bucket:        aws.String(self.config_obj.Cloud.Bucket),
 		Key:           aws.String(key),
 		PartNumber:    aws.Int64(int64(part)),
 		UploadId:      aws.String(upload_id),
@@ -150,7 +149,8 @@ func (self *Communicator) uploadPart(
 			return resp, nil
 		}
 
-		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger := logging.GetLogger(
+			self.config_obj.VeloConf(), &logging.FrontendComponent)
 		logger.Error("While uploading %v: %v", upload_id, err)
 		if i >= maxRetries {
 			return nil, err
@@ -164,7 +164,7 @@ func (self *Communicator) completeUpload(
 	key, upload_id string, parts []*s3.CompletedPart) error {
 	svc := s3.New(self.session)
 	completeInput := &s3.CompleteMultipartUploadInput{
-		Bucket:   aws.String(self.elastic_config.Bucket),
+		Bucket:   aws.String(self.config_obj.Cloud.Bucket),
 		Key:      aws.String(key),
 		UploadId: aws.String(upload_id),
 		MultipartUpload: &s3.CompletedMultipartUpload{

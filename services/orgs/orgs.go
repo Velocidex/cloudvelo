@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_datastore "www.velocidex.com/golang/cloudvelo/datastore"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
@@ -36,8 +37,8 @@ type OrgManager struct {
 	wg  *sync.WaitGroup
 
 	// The base global config object
-	config_obj          *config_proto.Config
-	elastic_config_path string
+	config_obj   *config_proto.Config
+	cloud_config *config.ElasticConfiguration
 
 	// Each org has a separate config object.
 	orgs            map[string]*OrgContext
@@ -128,7 +129,6 @@ func (self *OrgManager) makeNewConfigObj(
 	record *api_proto.OrgRecord) *config_proto.Config {
 
 	result := proto.Clone(self.config_obj).(*config_proto.Config)
-
 	result.OrgId = record.OrgId
 	result.OrgName = record.Name
 
@@ -211,9 +211,9 @@ func (self *OrgManager) StartClientOrgManager(
 
 func (self *OrgManager) Start(
 	ctx context.Context,
-	config_obj *config_proto.Config,
+	config_obj *config.Config,
 	wg *sync.WaitGroup) error {
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(&config_obj.Config, &logging.FrontendComponent)
 	logger.Info("<green>Starting</> Org Manager service.")
 
 	if config_obj.Client == nil {
@@ -225,8 +225,7 @@ func (self *OrgManager) Start(
 		return err
 	}
 
-	err = cvelo_services.StartElasticSearchService(
-		config_obj, self.elastic_config_path)
+	err = cvelo_services.StartElasticSearchService(config_obj)
 	if err != nil {
 		return err
 	}
@@ -240,14 +239,14 @@ func (self *OrgManager) Start(
 	datastore.OverrideDatastoreImplementation(
 		cvelo_datastore.NewElasticDatastore(ctx, config_obj))
 
-	file_store_obj, err := filestore.NewS3Filestore(
-		config_obj, self.elastic_config_path)
+	file_store_obj, err := filestore.NewS3Filestore(config_obj)
 	if err != nil {
 		return err
 	}
 
 	// Filestore implementation uses s3 as a backend.
-	file_store.OverrideFilestoreImplementation(config_obj, file_store_obj)
+	file_store.OverrideFilestoreImplementation(
+		config_obj.VeloConf(), file_store_obj)
 
 	// Register our result set implementations
 	result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
@@ -269,7 +268,7 @@ func (self *OrgManager) Start(
 	self.mu.Unlock()
 
 	// Get the root org's repository manager
-	manager, err := services.GetRepositoryManager(config_obj)
+	manager, err := services.GetRepositoryManager(config_obj.VeloConf())
 	if err != nil {
 		return err
 	}
@@ -304,15 +303,13 @@ func (self *OrgManager) Start(
 func NewOrgManager(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	elastic_config_path string,
-	config_obj *config_proto.Config) (services.OrgManager, error) {
+	config_obj *config.Config) (services.OrgManager, error) {
 
 	service := &OrgManager{
-		config_obj:          config_obj,
-		ctx:                 ctx,
-		wg:                  wg,
-		elastic_config_path: elastic_config_path,
-
+		config_obj:      &config_obj.Config,
+		cloud_config:    &config_obj.Cloud,
+		ctx:             ctx,
+		wg:              wg,
 		orgs:            make(map[string]*OrgContext),
 		org_id_by_nonce: make(map[string]string),
 	}
