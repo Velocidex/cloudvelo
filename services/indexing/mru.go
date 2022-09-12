@@ -18,7 +18,7 @@ type MRUItem struct {
 func (self Indexer) UpdateMRU(
 	config_obj *config_proto.Config,
 	user_name string, client_id string) error {
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
 		"user_mru", user_name+":"+client_id,
 		&MRUItem{

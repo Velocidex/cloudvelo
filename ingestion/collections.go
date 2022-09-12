@@ -1,6 +1,8 @@
 package ingestion
 
 import (
+	"context"
+
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	"www.velocidex.com/golang/velociraptor/artifacts"
@@ -45,6 +47,7 @@ func (self ElasticIngestor) HandleLogs(
 }
 
 func (self ElasticIngestor) HandleResponses(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -60,10 +63,10 @@ func (self ElasticIngestor) HandleResponses(
 	// Handle special types of responses
 	switch message.VQLResponse.Query.Name {
 	case "System.VFS.ListDirectory":
-		_ = self.HandleSystemVfsListDirectory(config_obj, message)
+		_ = self.HandleSystemVfsListDirectory(ctx, config_obj, message)
 
 	case "System.VFS.DownloadFile":
-		_ = self.HandleSystemVfsUpload(config_obj, message)
+		_ = self.HandleSystemVfsUpload(ctx, config_obj, message)
 	}
 
 	path_manager, err := artifact_paths.NewArtifactPathManager(

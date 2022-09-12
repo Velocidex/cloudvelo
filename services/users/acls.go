@@ -18,6 +18,8 @@ type ACLRecord struct {
 
 type ACLManager struct {
 	*acls.ACLManager
+
+	ctx context.Context
 }
 
 func (self ACLManager) GetPolicy(
@@ -60,7 +62,7 @@ func (self ACLManager) GetEffectivePolicy(
 func (self ACLManager) SetPolicy(
 	config_obj *config_proto.Config,
 	principal string, acl_obj *acl_proto.ApiClientACL) error {
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(self.ctx,
 		config_obj.OrgId,
 		"acls", principal, &ACLRecord{
 			ACL: json.MustMarshalString(acl_obj),

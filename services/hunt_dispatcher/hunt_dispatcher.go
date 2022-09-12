@@ -57,7 +57,8 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 		record.Errors = hunt.Stats.TotalClientsWithErrors
 	}
 
-	return cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	return cvelo_services.SetElasticIndex(self.ctx,
+		self.config_obj.OrgId,
 		"hunts", hunt.HuntId, record)
 }
 

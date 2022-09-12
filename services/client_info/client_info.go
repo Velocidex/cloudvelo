@@ -44,7 +44,7 @@ func (self *ClientInfoManager) Set(
 		lower_labels = append(lower_labels, strings.ToLower(label))
 	}
 
-	return cvelo_services.SetElasticIndex(
+	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
 		"clients", client_info.ClientId, &ClientInfo{
 			ClientId:              client_info.ClientId,
@@ -63,7 +63,7 @@ func (self *ClientInfoManager) Set(
 
 func (self ClientInfoManager) Remove(
 	ctx context.Context, client_id string) {
-	cvelo_services.DeleteDocument(self.config_obj.OrgId,
+	cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
 		"clients", client_id, true)
 }
 

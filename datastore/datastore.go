@@ -14,7 +14,9 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
-type ElasticDatastore struct{}
+type ElasticDatastore struct {
+	ctx context.Context
+}
 
 func (self ElasticDatastore) GetSubject(
 	config_obj *config_proto.Config,
@@ -57,7 +59,8 @@ func (self ElasticDatastore) SetSubject(
 	}
 
 	record.JSONData = string(serialized)
-	return services.SetElasticIndex(config_obj.OrgId, "datastore", "", record)
+	return services.SetElasticIndex(
+		self.ctx, config_obj.OrgId, "datastore", "", record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(

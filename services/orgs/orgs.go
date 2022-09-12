@@ -119,7 +119,8 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	org_record := org_context.record
 
 	// Write the org into the index.
-	return org_record, cvelo_services.SetElasticIndex(services.ROOT_ORG_ID,
+	return org_record, cvelo_services.SetElasticIndex(self.ctx,
+		services.ROOT_ORG_ID,
 		"orgs", org_record.OrgId, org_record)
 }
 
@@ -237,7 +238,7 @@ func (self *OrgManager) Start(
 
 	// Install the ElasticDatastore
 	datastore.OverrideDatastoreImplementation(
-		cvelo_datastore.NewElasticDatastore(config_obj))
+		cvelo_datastore.NewElasticDatastore(ctx, config_obj))
 
 	file_store_obj, err := filestore.NewS3Filestore(
 		config_obj, self.elastic_config_path)

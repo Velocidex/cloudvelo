@@ -4,6 +4,7 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // The source of truth for this record is
@@ -87,6 +88,8 @@ func UpdateFlowStats(collection_context *flows_proto.ArtifactCollectorContext) {
 	collection_context.State = flows_proto.ArtifactCollectorContext_RUNNING
 	collection_context.Status = ""
 	collection_context.Backtrace = ""
+	collection_context.ArtifactsWithResults = nil
+
 	for _, s := range collection_context.QueryStats {
 		// Get the first errored query.
 		if collection_context.State == flows_proto.ArtifactCollectorContext_RUNNING &&
@@ -103,6 +106,13 @@ func UpdateFlowStats(collection_context *flows_proto.ArtifactCollectorContext) {
 	collection_context.ExecutionDuration = 0
 	for _, s := range collection_context.QueryStats {
 		collection_context.ExecutionDuration += s.Duration
+
+		for _, a := range s.NamesWithResponse {
+			if !utils.InString(collection_context.ArtifactsWithResults, a) {
+				collection_context.ArtifactsWithResults = append(
+					collection_context.ArtifactsWithResults, a)
+			}
+		}
 	}
 
 	collection_context.OutstandingRequests = collection_context.TotalRequests -

@@ -122,7 +122,7 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	}
 
 	// Store the collection_context first, then queue all the tasks.
-	err := cvelo_services.SetElasticIndex(
+	err := cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
 		"collections", session_id,
 		api.ArtifactCollectorContextFromProto(collection_context))
@@ -131,7 +131,7 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	}
 
 	// Record the tasks for provenance of what we actually did.
-	err = cvelo_services.SetElasticIndex(
+	err = cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
 		"collection_tasks", "",
 		&api_proto.ApiFlowRequestDetails{

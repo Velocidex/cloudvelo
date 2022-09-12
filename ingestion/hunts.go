@@ -1,6 +1,7 @@
 package ingestion
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ const (
 )
 
 func (self ElasticIngestor) maybeHandleHuntResponse(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -67,7 +69,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 			Status:    "started",
 		}
 
-		return services.SetElasticIndex(
+		return services.SetElasticIndex(ctx,
 			config_obj.OrgId, "hunt_flows",
 			message.SessionId, hunt_flow_entry)
 	}
@@ -84,7 +86,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 				Status:    "error",
 			}
 
-			return services.SetElasticIndex(
+			return services.SetElasticIndex(ctx,
 				config_obj.OrgId, "hunt_flows",
 				message.SessionId, hunt_flow_entry)
 		}
@@ -100,7 +102,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 				Status:    "finished",
 			}
 
-			return services.SetElasticIndex(
+			return services.SetElasticIndex(ctx,
 				config_obj.OrgId, "hunt_flows",
 				message.SessionId, hunt_flow_entry)
 		}

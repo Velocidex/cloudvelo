@@ -87,7 +87,8 @@ func (self Labeler) SetClientLabel(
 		return errors.New("Invalid Label should use only A-Z and 0-9")
 	}
 
-	return cvelo_services.UpdateIndex(self.config_obj.OrgId,
+	return cvelo_services.UpdateIndex(ctx,
+		self.config_obj.OrgId,
 		"clients", client_id,
 		json.Format(label_update_query, all_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))
@@ -113,7 +114,7 @@ func (self Labeler) RemoveClientLabel(
 
 	label = strings.TrimSpace(label)
 
-	return cvelo_services.UpdateIndex(self.config_obj.OrgId,
+	return cvelo_services.UpdateIndex(ctx, self.config_obj.OrgId,
 		"clients", client_id,
 		json.Format(label_update_query, remove_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))

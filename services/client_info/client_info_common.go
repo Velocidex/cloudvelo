@@ -31,7 +31,8 @@ func (self ClientInfoManager) QueueMessageForClient(
 	req *crypto_proto.VeloMessage,
 	notify bool, completion func()) error {
 
-	return cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId,
 		"tasks", "", &ClientTask{
 			ClientId:  client_id,
 			Timestamp: time.Now().UnixNano(),
@@ -58,7 +59,8 @@ func (self ClientInfoManager) GetClientTasks(
 
 	results := []*crypto_proto.VeloMessage{}
 	for _, hit := range hits {
-		err = cvelo_services.DeleteDocument(self.config_obj.OrgId,
+		err = cvelo_services.DeleteDocument(ctx,
+			self.config_obj.OrgId,
 			"tasks", hit.Id, cvelo_services.NoSync)
 		if err != nil {
 			return nil, err

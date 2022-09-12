@@ -105,9 +105,9 @@ func GetIndex(org_id, index string) string {
 		"%s_%s", strings.ToLower(org_id), index)
 }
 
-func DeleteDocument(org_id, index string, id string, sync bool) error {
+func DeleteDocument(
+	ctx context.Context, org_id, index string, id string, sync bool) error {
 	Debug("DeleteDocument %v\n", id)
-	ctx := context.Background()
 	client, err := GetElasticClient()
 	if err != nil {
 		return err
@@ -133,8 +133,8 @@ func DeleteDocument(org_id, index string, id string, sync bool) error {
 }
 
 // Should be called to force the index to synchronize.
-func FlushIndex(org_id, index string) error {
-	ctx := context.Background()
+func FlushIndex(
+	ctx context.Context, org_id, index string) error {
 	client, err := GetElasticClient()
 	if err != nil {
 		return err
@@ -149,14 +149,16 @@ func FlushIndex(org_id, index string) error {
 	return err
 }
 
-func UpdateIndex(org_id, index, id string, query string) error {
+func UpdateIndex(
+	ctx context.Context, org_id, index, id string, query string) error {
 	Debug("UpdateIndex %v %v\n", index, id)
 	return retry(func() error {
-		return _UpdateIndex(org_id, index, id, query)
+		return _UpdateIndex(ctx, org_id, index, id, query)
 	})
 }
 
-func _UpdateIndex(org_id, index, id string, query string) error {
+func _UpdateIndex(
+	ctx context.Context, org_id, index, id string, query string) error {
 	client, err := GetElasticClient()
 	if err != nil {
 		return err
@@ -169,7 +171,7 @@ func _UpdateIndex(org_id, index, id string, query string) error {
 		Refresh:    "true",
 	}
 
-	res, err := es_req.Do(context.Background(), client)
+	res, err := es_req.Do(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -202,6 +204,7 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 
 	serialized := json.MustMarshalString(record)
 
+	// Add with background context which might outlive our caller.
 	return l_bulk_indexer.Add(context.Background(),
 		opensearchutil.BulkIndexerItem{
 			Index:      GetIndex(org_id, index),
@@ -211,14 +214,16 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 		})
 }
 
-func SetElasticIndex(org_id, index, id string, record interface{}) error {
+func SetElasticIndex(ctx context.Context,
+	org_id, index, id string, record interface{}) error {
 	Debug("SetElasticIndex %v %v\n", index, id)
 	return retry(func() error {
-		return _SetElasticIndex(org_id, index, id, record)
+		return _SetElasticIndex(ctx, org_id, index, id, record)
 	})
 }
 
-func _SetElasticIndex(org_id, index, id string, record interface{}) error {
+func _SetElasticIndex(
+	ctx context.Context, org_id, index, id string, record interface{}) error {
 	serialized := json.MustMarshalIndent(record)
 	client, err := GetElasticClient()
 	if err != nil {
@@ -232,7 +237,7 @@ func _SetElasticIndex(org_id, index, id string, record interface{}) error {
 		Refresh:    "true",
 	}
 
-	res, err := es_req.Do(context.Background(), client)
+	res, err := es_req.Do(ctx, client)
 	if err != nil {
 		return err
 	}

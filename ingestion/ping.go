@@ -1,6 +1,7 @@
 package ingestion
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -31,9 +32,10 @@ if (ctx._source.first_seen_at == 0 ) {
 )
 
 func (self ElasticIngestor) HandlePing(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
-	err := services.UpdateIndex(
+	err := services.UpdateIndex(ctx,
 		config_obj.OrgId, "clients", message.Source,
 		json.Format(updatePingQuery,
 			updatePingQueryScript, time.Now().Unix()))

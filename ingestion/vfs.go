@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"bufio"
+	"context"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ type VFSRow struct {
 }
 
 func (self ElasticIngestor) HandleSystemVfsListDirectory(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -66,7 +68,8 @@ func (self ElasticIngestor) HandleSystemVfsListDirectory(
 			Downloads:  []string{},
 			JSONData:   json.MustMarshalString(vfs_response),
 		}
-		err = services.SetElasticIndex(config_obj.OrgId, "vfs", id, record)
+		err = services.SetElasticIndex(ctx,
+			config_obj.OrgId, "vfs", id, record)
 		if err != nil {
 			return err
 		}
@@ -90,6 +93,7 @@ const (
 )
 
 func (self ElasticIngestor) HandleSystemVfsUpload(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -130,7 +134,7 @@ func (self ElasticIngestor) HandleSystemVfsUpload(
 
 	// Update the downloads in all the VFS records we need to
 	for id, downloads := range downloads {
-		return services.UpdateIndex(
+		return services.UpdateIndex(ctx,
 			config_obj.OrgId, "vfs", id,
 			json.Format(updateDownloadQuery, downloads))
 	}

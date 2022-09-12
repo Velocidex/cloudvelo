@@ -109,7 +109,7 @@ ctx._source.errors += params.errors ;
 `
 )
 
-func (self *HuntStatsUpdater) Flush() error {
+func (self *HuntStatsUpdater) Flush(ctx context.Context) error {
 
 	// Kepp the lock tight because elastic call can take a while.
 	self.mu.Lock()
@@ -126,7 +126,8 @@ func (self *HuntStatsUpdater) Flush() error {
 	self.errors = 0
 	self.mu.Unlock()
 
-	return services.UpdateIndex(self.config_obj.OrgId, "hunts", hunt_id, query)
+	return services.UpdateIndex(
+		ctx, self.config_obj.OrgId, "hunts", hunt_id, query)
 }
 
 func StartHuntStatsUpdater(
@@ -145,7 +146,7 @@ func StartHuntStatsUpdater(
 	HuntStatsManager.lru.SetExpirationCallback(
 		func(hunt_id string, value interface{}) {
 			updater := value.(*HuntStatsUpdater)
-			err := updater.Flush()
+			err := updater.Flush(ctx)
 			if err != nil {
 				logger.Error("HuntStatsUpdater: %v", err)
 			}

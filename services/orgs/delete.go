@@ -1,6 +1,7 @@
 package orgs
 
 import (
+	"context"
 	"errors"
 
 	"www.velocidex.com/golang/cloudvelo/schema"
@@ -11,19 +12,21 @@ import (
 )
 
 // Remove the org and all its data.
-func (self *OrgManager) DeleteOrg(org_id string) error {
+func (self *OrgManager) DeleteOrg(
+	ctx context.Context, org_id string) error {
 
 	if utils.IsRootOrg(org_id) {
 		return errors.New("Can not remove root org.")
 	}
 
-	err := orgs.RemoveOrgFromUsers(org_id)
+	err := orgs.RemoveOrgFromUsers(ctx, org_id)
 	if err != nil {
 		return err
 	}
 
 	// Remove the org from the index.
-	err = cvelo_services.DeleteDocument(services.ROOT_ORG_ID, "orgs",
+	err = cvelo_services.DeleteDocument(ctx,
+		services.ROOT_ORG_ID, "orgs",
 		org_id, cvelo_services.SyncDelete)
 	if err != nil {
 		return err

@@ -45,21 +45,22 @@ func (self ElasticBackend) Send(
 // For accepting messages FROM server to CLIENT
 func (self ElasticBackend) Receive(
 	ctx context.Context, client_id string, org_id string) (
-	message []*crypto_proto.VeloMessage, err error) {
+	message []*crypto_proto.VeloMessage, org_config_obj *config_proto.Config, err error) {
 
 	org_manager, err := services.GetOrgManager()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	org_config_obj, err := org_manager.GetOrgConfig(org_id)
+	org_config_obj, err = org_manager.GetOrgConfig(org_id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	client_info_manager, err := services.GetClientInfoManager(org_config_obj)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return client_info_manager.GetClientTasks(ctx, client_id)
+	tasks, err := client_info_manager.GetClientTasks(ctx, client_id)
+	return tasks, org_config_obj, err
 }

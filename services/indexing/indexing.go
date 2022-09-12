@@ -23,10 +23,12 @@ type ElasticIndexRecord struct {
 
 type Indexer struct {
 	config_obj *config_proto.Config
+	ctx        context.Context
 }
 
 func (self Indexer) SetIndex(client_id, term string) error {
-	return cvelo_services.SetElasticIndex(self.config_obj.OrgId,
+	return cvelo_services.SetElasticIndex(self.ctx,
+		self.config_obj.OrgId,
 		"index", "", &ElasticIndexRecord{
 			Term:     term,
 			ClientId: client_id,
@@ -176,6 +178,7 @@ func NewIndexingService(ctx context.Context, wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (*Indexer, error) {
 	indexer := &Indexer{
 		config_obj: config_obj,
+		ctx:        ctx,
 	}
 	return indexer, nil
 }
