@@ -1,13 +1,15 @@
 SERVER_CONFIG=./Docker/config/server.config.yaml
 CLIENT_CONFIG=./Docker/config/client.config.yaml
+OVERRIDE_FILE=./Docker/config/local_override.json
 BINARY=./output/cvelociraptor
-CONFIG_ARGS= --config $(SERVER_CONFIG)
-CLIENT_CONFIG_ARGS= --config $(CLIENT_CONFIG)
+CONFIG_ARGS= --config $(SERVER_CONFIG) --override_file $(OVERRIDE_FILE)
+CLIENT_CONFIG_ARGS= --config $(CLIENT_CONFIG) --override_file $(OVERRIDE_FILE)
 DLV=dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ --
-WRITEBACK_DIR=./testdata/pool_writebacks/
+WRITEBACK_DIR=./pool_writebacks/
 POOL_NUMBER=200
 
-all: linux_musl
+all:
+	go run make.go -v Auto
 
 debug_client:
 	$(DLV) client -v $(CLIENT_CONFIG_ARGS)

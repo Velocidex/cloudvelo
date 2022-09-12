@@ -9,6 +9,7 @@ require (
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20211116035050-ddd93fed62f5
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/aws/aws-sdk-go v1.42.27
+	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/magefile/mage v1.11.0
 	github.com/opensearch-project/opensearch-go v1.1.0
 	github.com/pkg/errors v0.9.1
@@ -174,6 +175,7 @@ require (
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
+
 // replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs

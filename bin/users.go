@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/users"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -24,13 +23,10 @@ var (
 )
 
 func doOrgUserAdd() error {
-	config_obj, err := (&config.ConfigLoader{
-		VelociraptorLoader: makeDefaultConfigLoader().
-			WithRequiredFrontend().
-			WithRequiredUser().
-			WithRequiredLogging(),
-		Filename: *config_path,
-	}).Load()
+	config_obj, err := loadConfig(makeDefaultConfigLoader().
+		WithRequiredFrontend().
+		WithRequiredUser().
+		WithRequiredLogging())
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}

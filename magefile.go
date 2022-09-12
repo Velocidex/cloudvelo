@@ -184,7 +184,7 @@ func (self Builder) Run() error {
 
 func Auto() error {
 	return Builder{goos: runtime.GOOS,
-		filename:   "velociraptor",
+		filename:   "cvelociraptor",
 		extra_tags: " release yara ",
 		arch:       runtime.GOARCH}.Run()
 }
@@ -193,7 +193,7 @@ func AutoDev() error {
 	return Builder{goos: runtime.GOOS,
 		arch:        runtime.GOARCH,
 		extra_tags:  " yara ",
-		filename:    "velociraptor",
+		filename:    "cvelociraptor",
 		extra_flags: []string{"-race"}}.Run()
 }
 
@@ -357,7 +357,7 @@ func WindowsDev() error {
 	return Builder{
 		goos:       "windows",
 		extra_tags: " release yara ",
-		filename:   "velociraptor.exe",
+		filename:   "cvelociraptor.exe",
 		arch:       "amd64"}.Run()
 }
 
@@ -370,7 +370,7 @@ func WindowsTest() error {
 	return Builder{
 		goos:        "windows",
 		extra_tags:  " release yara ",
-		filename:    "velociraptor.exe",
+		filename:    "cvelociraptor.exe",
 		arch:        "amd64",
 		extra_flags: []string{"-race"}}.Run()
 }

@@ -2,6 +2,8 @@ package ingestion
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
@@ -9,9 +11,9 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
+	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
-	artifact_paths "www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
@@ -69,16 +71,13 @@ func (self ElasticIngestor) HandleResponses(
 		_ = self.HandleSystemVfsUpload(ctx, config_obj, message)
 	}
 
-	path_manager, err := artifact_paths.NewArtifactPathManager(
-		config_obj, message.Source,
-		message.SessionId, message.VQLResponse.Query.Name)
-	if err != nil {
-		return err
-	}
-
+	// We do not verify that this is a real artifact in order to avoid
+	// having to maintain a full artifact repository and lookups. We
+	// just blindly write it in the client's space.
+	pathspec := getFSPathSpec(message, message.VQLResponse.Query.Name)
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
-		file_store_factory, path_manager.Path(), json.NoEncOpts,
+		file_store_factory, pathspec, json.NoEncOpts,
 		utils.BackgroundWriter, result_sets.AppendMode)
 	if err != nil {
 		return err
@@ -94,4 +93,53 @@ func (self ElasticIngestor) HandleResponses(
 		message.VQLResponse.TotalRows)
 
 	return nil
+}
+
+// In the ingestor we only have to identify CLIENT_EVENT or CLIENT
+// type artifacts. We use the fact that client events are always sent
+// to FlowId "F.Monitoring"
+func getFSPathSpec(
+	message *crypto_proto.VeloMessage,
+	full_artifact_name string) api.FSPathSpec {
+	base_artifact_name, artifact_source := paths.SplitFullSourceName(full_artifact_name)
+
+	if message.SessionId == "F.Monitoring" {
+		if artifact_source != "" {
+			return paths.CLIENTS_ROOT.AsFilestorePath().
+				SetType(api.PATH_TYPE_FILESTORE_JSON).
+				AddChild(
+					message.Source, "monitoring",
+					base_artifact_name, artifact_source,
+					getDayName())
+		} else {
+			return paths.CLIENTS_ROOT.AsFilestorePath().
+				SetType(api.PATH_TYPE_FILESTORE_JSON).
+				AddChild(
+					message.Source, "monitoring",
+					base_artifact_name,
+					getDayName())
+		}
+	}
+
+	// Simple Client type artifact
+	if artifact_source != "" {
+		return paths.CLIENTS_ROOT.AsFilestorePath().
+			SetType(api.PATH_TYPE_FILESTORE_JSON).
+			AddChild(
+				message.Source, "artifacts",
+				base_artifact_name, message.SessionId,
+				artifact_source)
+	} else {
+		return paths.CLIENTS_ROOT.AsFilestorePath().
+			SetType(api.PATH_TYPE_FILESTORE_JSON).
+			AddChild(
+				message.Source, "artifacts",
+				base_artifact_name,
+				message.SessionId)
+	}
+}
+
+func getDayName() string {
+	now := time.Now().UTC()
+	return fmt.Sprintf("%d-%02d-%02d", now.Year(), now.Month(), now.Day())
 }
