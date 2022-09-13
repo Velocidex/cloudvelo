@@ -8,8 +8,7 @@ use a simple go get to install the dependency.
 1. First make sure the git submodule is cloned properly
 
 ```
-git submodules init
-git submodules update
+git submodule update --init
 ```
 
 2. Next build the Velociraptor GUI
@@ -59,7 +58,7 @@ this time.
 ## Start the GUI
 
 ```
-./output/cvelociraptor --elastic_config testdata/elastic/config.yaml --config testdata/config/server.config.yaml gui
+./output/cvelociraptor --config testdata/config/server.config.yaml gui
 ```
 
 ## Initialize the elastic indexes
@@ -67,7 +66,7 @@ this time.
 The following will delete all indexes and recreate them with the correct mappings.
 
 ```
-./output/cvelociraptor  --config testdata/config/server.config.yaml --elastic_config testdata/elastic/config.yaml elastic reset
+./output/cvelociraptor  --config testdata/config/server.config.yaml elastic reset
 ```
 
 ## To create a new user
@@ -75,13 +74,13 @@ The following will delete all indexes and recreate them with the correct mapping
 We can use VQL to create a new user so you may log into the GUI
 
 ```
-$ ./output/cvelociraptor  --config testdata/config/server.config.yaml  --elastic_config testdata/elastic/config.yaml -v query "SELECT user_create(user='mic', roles='administrator', password='hunter1') FROM scope()"
+$ ./output/cvelociraptor  --config testdata/config/server.config.yaml  -v query "SELECT user_create(user='mic', roles='administrator', password='hunter1') FROM scope()"
 ```
 
 ## Start the frontend (receiving data from clients)
 
 ```
-./output/cvelociraptor frontend  --config testdata/config/server.config.yaml --elastic_config testdata/elastic/config.yaml -v
+./output/cvelociraptor frontend  --config testdata/config/server.config.yaml -v
 ```
 
 ## Start the client

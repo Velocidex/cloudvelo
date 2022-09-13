@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -33,8 +32,7 @@ type ClientInfo struct {
 }
 
 type ClientInfoManager struct {
-	config_obj     *config_proto.Config
-	elastic_config *config.ElasticConfiguration
+	config_obj *config_proto.Config
 }
 
 func (self *ClientInfoManager) Set(
@@ -129,13 +127,10 @@ func (self ClientInfoManager) UnQueueMessageForClient(
 func (self ClientInfoManager) Flush(ctx context.Context, client_id string) {
 }
 
-func NewClientInfoManager(
-	config_obj *config_proto.Config,
-	elastic_config *config.ElasticConfiguration) (*ClientInfoManager, error) {
+func NewClientInfoManager(config_obj *config_proto.Config) (*ClientInfoManager, error) {
 
 	service := &ClientInfoManager{
-		config_obj:     config_obj,
-		elastic_config: elastic_config,
+		config_obj: config_obj,
 	}
 	return service, nil
 }

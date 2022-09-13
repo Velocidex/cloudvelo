@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 
-	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
@@ -24,10 +23,9 @@ import (
 
 // A Service container that creates different org services on demand.
 type LazyServiceContainer struct {
-	ctx            context.Context
-	wg             *sync.WaitGroup
-	config_obj     *config_proto.Config
-	elastic_config *config.ElasticConfiguration
+	ctx        context.Context
+	wg         *sync.WaitGroup
+	config_obj *config_proto.Config
 
 	// Elastic is too slow to serve the repository manager directly so
 	// we cache it here.
@@ -83,7 +81,7 @@ func (self *LazyServiceContainer) Journal() (services.JournalService, error) {
 }
 
 func (self *LazyServiceContainer) ClientInfoManager() (services.ClientInfoManager, error) {
-	return client_info.NewClientInfoManager(self.config_obj, self.elastic_config)
+	return client_info.NewClientInfoManager(self.config_obj)
 }
 
 func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {
