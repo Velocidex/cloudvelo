@@ -188,7 +188,7 @@ func (self *OrgManager) StartClientOrgManager(
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 	logger.Info("<green>Starting</> Client Org Manager service.")
 
-	org_context, err := self.makeNewOrgContext(
+	org_context, err := self.makeClientOrgContext(
 		"root", "<root>", config_obj.Client.Nonce)
 	if err != nil {
 		return err

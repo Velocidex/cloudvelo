@@ -13,6 +13,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	velo_repository "www.velocidex.com/golang/velociraptor/services/repository"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -129,6 +130,66 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 
 		repo_manager.SetParent(self.config_obj, root_repo)
 	}
+	return org_context, nil
+}
+
+func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgContext, error) {
+	// Create a new service container and cache it for next time
+	record := &api_proto.OrgRecord{
+		OrgId: org_id,
+		Name:  name,
+		Nonce: nonce,
+	}
+
+	if utils.IsRootOrg(org_id) {
+		record.OrgId = "root"
+		record.Name = "<root>"
+		record.Nonce = self.config_obj.Client.Nonce
+	}
+
+	org_config := self.makeNewConfigObj(record)
+	service_manager := &LazyServiceContainer{
+		wg:         self.wg,
+		ctx:        self.ctx,
+		config_obj: org_config,
+	}
+
+	org_context := &OrgContext{
+		record:     record,
+		config_obj: org_config,
+		service:    service_manager,
+	}
+
+	self.mu.Lock()
+	self.orgs["root"] = org_context
+	self.mu.Unlock()
+
+	// Create a repository manager for the org.
+	repo_manager, err := repository.NewClientRepositoryManager(
+		self.ctx, self.wg, org_config)
+	if err != nil {
+		return nil, err
+	}
+	service_manager.repository = repo_manager
+
+	// Assume the built in artifacts are OK so we dont need to
+	// validate them at runtime.
+	err = velo_repository.LoadBuiltInArtifacts(self.ctx, org_config,
+		repo_manager.(*velo_repository.RepositoryManager), false /* validate */)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repository.LoadArtifactsFromConfig(repo_manager, org_config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repository.LoadOverridenArtifacts(org_config, repo_manager)
+	if err != nil {
+		return nil, err
+	}
+
 	return org_context, nil
 }
 
