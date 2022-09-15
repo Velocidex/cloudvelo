@@ -54,3 +54,6 @@ linux_musl:
 
 docker:
 	go run make.go -v DockerImage
+
+assets:
+	go run make.go -v Assets
