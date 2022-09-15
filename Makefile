@@ -49,6 +49,9 @@ reset_elastic:
 linux_m1:
 	go run make.go -v LinuxM1
 
+windows:
+	go run make.go -v Windows
+
 linux_musl:
 	go run make.go -v LinuxMusl
 
