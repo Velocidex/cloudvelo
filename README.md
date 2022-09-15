@@ -1,3 +1,5 @@
+<img src="docs/cloudvelo-logo.svg" width="128">
+
 ## How to build
 
 This version of Velociraptor depends on the open source codebase as
@@ -14,29 +16,41 @@ git submodule update --init
 2. Next build the Velociraptor GUI
 
 ```
-cd ./velociraptor/gui/velociraptor
-npm ci
-npm run build
-cd -
+make assets
 ```
 
-3. Now generate the go files (NOTE: You need to have ~/go/bin in your
-   path so we can install fluxb0x there to be able to generate the Go
-   files.
+3. Finally we can build the Cloud version by running make in the top level.
 
 ```
-cd ./velociraptor/
-make linux
-cd -
-```
-
-4. Finally we can build the Cloud version by running make in the top level.
-
-```
-make
+make linux_musl
 ```
 
 You will find the binary in `./output/cvelociraptor`
+
+
+## Try it out with Docker
+
+Alternatively build the Docker image
+
+```
+make docker
+```
+
+Start the docker test system
+
+```
+cd Docker
+make up
+```
+
+Clear the docker system
+
+```
+make clean
+```
+
+The Makefile contains startup commands for all components.
+
 
 ## Notes
 
@@ -54,37 +68,3 @@ dependencies, so this project only supports the opensearch backend.
 Any references to Elastic in the codebase or documentation actually
 refer to opensearch and that is the only database that is supported at
 this time.
-
-## Start the GUI
-
-```
-./output/cvelociraptor --config testdata/config/server.config.yaml gui
-```
-
-## Initialize the elastic indexes
-
-The following will delete all indexes and recreate them with the correct mappings.
-
-```
-./output/cvelociraptor  --config testdata/config/server.config.yaml elastic reset
-```
-
-## To create a new user
-
-We can use VQL to create a new user so you may log into the GUI
-
-```
-$ ./output/cvelociraptor  --config testdata/config/server.config.yaml  -v query "SELECT user_create(user='mic', roles='administrator', password='hunter1') FROM scope()"
-```
-
-## Start the frontend (receiving data from clients)
-
-```
-./output/cvelociraptor frontend  --config testdata/config/server.config.yaml -v
-```
-
-## Start the client
-
-```
-./output/cvelociraptor -v client  --config testdata/config/client.config.yaml
-```
