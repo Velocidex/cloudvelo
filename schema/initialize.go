@@ -119,6 +119,18 @@ func Initialize(ctx context.Context,
 			continue
 		}
 
+		// Non-root orgs don't need all indexes
+		isRoot := org_id == "" || org_id == "root"
+		rootOnlyIndexes := map[string]bool{
+			"users":        true,
+			"user_options": true,
+			"orgs":         true,
+		}
+
+		if !isRoot && rootOnlyIndexes[index_name] {
+			continue
+		}
+
 		full_index_name := services.GetIndex(org_id, index_name)
 
 		response, err := client.Indices.Exists([]string{full_index_name})
