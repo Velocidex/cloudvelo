@@ -38,7 +38,7 @@ func (self ElasticIngestor) HandlePing(
 	err := services.UpdateIndex(ctx,
 		config_obj.OrgId, "clients", message.Source,
 		json.Format(updatePingQuery,
-			updatePingQueryScript, time.Now().Unix()))
+			updatePingQueryScript, time.Now().UnixNano()))
 	if err == nil ||
 		strings.Contains(err.Error(), "document_missing_exception") {
 		return nil

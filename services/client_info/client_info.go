@@ -83,7 +83,7 @@ func (self ClientInfoManager) Get(
 	}
 
 	// Ping times in Velociraptor are in microseconds
-	result.Ping *= 1000000
+	result.Ping /= 1000
 
 	return &services.ClientInfo{result}, nil
 }

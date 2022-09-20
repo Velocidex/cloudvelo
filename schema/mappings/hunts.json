@@ -6,6 +6,7 @@
             "scheduled": { "type": "integer" },
             "completed": { "type": "integer" },
             "errors" :   { "type": "integer" },
+            "state":     { "type": "keyword" },
             "hunt":      { "type": "binary" }
         }
     }

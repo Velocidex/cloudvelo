@@ -197,6 +197,44 @@ func _UpdateIndex(
 	return makeElasticError(response)
 }
 
+func UpdateByQuery(
+	ctx context.Context, org_id, index string, query string) error {
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	es_req := opensearchapi.UpdateByQueryRequest{
+		Index:   []string{GetIndex(org_id, index)},
+		Body:    strings.NewReader(query),
+		Refresh: &TRUE,
+	}
+
+	res, err := es_req.Do(ctx, client)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !res.IsError() {
+		return nil
+	}
+
+	response := ordereddict.NewDict()
+	err = response.UnmarshalJSON(data)
+	if err != nil {
+		return err
+	}
+
+	return makeElasticError(response)
+}
+
 func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	Debug("SetElasticIndexAsync %v %v\n", index, id)
 	mu.Lock()

@@ -6,7 +6,10 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 
+	"github.com/Velocidex/ttlcache/v2"
+	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/velociraptor/acls"
@@ -32,6 +35,8 @@ type UserManager struct {
 	ca_pool    *x509.CertPool
 	config_obj *config.Config
 	ctx        context.Context
+
+	lru *ttlcache.Cache
 }
 
 func (self *UserManager) SetUser(
@@ -40,6 +45,8 @@ func (self *UserManager) SetUser(
 	if err != nil {
 		return err
 	}
+
+	self.lru.Set(user_record.Name, user_record)
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
@@ -103,6 +110,16 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 func (self *UserManager) GetUserWithHashes(
 	ctx context.Context, username string) (*api_proto.VelociraptorUser, error) {
 
+	cached_any, err := self.lru.Get(username)
+	if err == nil {
+		cached, ok := cached_any.(*api_proto.VelociraptorUser)
+		if ok {
+			// Return a copy so the cached version does not get
+			// changed.
+			return proto.Clone(cached).(*api_proto.VelociraptorUser), nil
+		}
+	}
+
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
 		self.config_obj.OrgId, "users", username)
 	if err != nil {
@@ -136,6 +153,8 @@ func (self *UserManager) GetUserWithHashes(
 			org.Name = org_config_obj.OrgName
 		}
 	}
+
+	self.lru.Set(username, result)
 
 	return result, err
 }
@@ -259,14 +278,15 @@ func StartUserManager(
 		ca_pool:    CA_Pool,
 		config_obj: config_obj,
 		ctx:        ctx,
+		lru:        ttlcache.NewCache(),
 	}
+	service.lru.SetTTL(10 * time.Second)
+
 	services.RegisterUserManager(service)
 
 	// Register our new acl manager.
-	acls.SetACLManager(&ACLManager{
-		ACLManager: &acls.ACLManager{},
-		ctx:        ctx,
-	})
+	acl_manager := NewACLManager(ctx)
+	acls.SetACLManager(acl_manager)
 
 	return nil
 }

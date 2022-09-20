@@ -124,6 +124,7 @@ func (self HuntDispatcher) CreateHunt(
 			HuntId:    hunt_id,
 			Timestamp: time.Now().Unix(),
 			Hunt:      string(serialized),
+			State:     hunt.State.String(),
 		})
 
 	// The actual hunt scheduling is done by the foreman.
