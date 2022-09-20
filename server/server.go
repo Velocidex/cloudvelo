@@ -63,13 +63,13 @@ func (self Communicator) Send(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger(
 		self.config_obj.VeloConf(), &logging.FrontendComponent)
 
-	err = message_info.IterateJobs(r.Context(), func(
-		ctx context.Context, message *crypto_proto.VeloMessage) {
-		err := self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
-		if err != nil {
-			logger.Error("Communicator.Send: %v", err)
-		}
-	})
+	err = message_info.IterateJobs(r.Context(), self.config_obj.VeloConf(),
+		func(ctx context.Context, message *crypto_proto.VeloMessage) {
+			err := self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
+			if err != nil {
+				logger.Error("Communicator.Send: %v", err)
+			}
+		})
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
@@ -117,10 +117,10 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 
 	// Process Foreman ping messages to update the client's last seen
 	// time.
-	err = message_info.IterateJobs(r.Context(), func(
-		ctx context.Context, message *crypto_proto.VeloMessage) {
-		self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
-	})
+	err = message_info.IterateJobs(r.Context(), self.config_obj.VeloConf(),
+		func(ctx context.Context, message *crypto_proto.VeloMessage) {
+			self.backend.Send(r.Context(), []*crypto_proto.VeloMessage{message})
+		})
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
