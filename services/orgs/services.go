@@ -80,6 +80,7 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 
 		// TODO: This needs to be very quick.
 		err = schema.Initialize(self.ctx,
+			self.config_obj,
 			org_id, schema.NO_FILTER, schema.DO_NOT_RESET_INDEX)
 		if err != nil {
 			return nil, err

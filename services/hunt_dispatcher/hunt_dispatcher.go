@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -25,7 +24,7 @@ type HuntEntry struct {
 
 func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
 	hunt_info := &api_proto.Hunt{}
-	err := protojson.Unmarshal([]byte(self.Hunt), hunt_info)
+	err := json.Unmarshal([]byte(self.Hunt), hunt_info)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 		return errors.New("Invalid hunt")
 	}
 
-	serialized, err := protojson.Marshal(hunt)
+	serialized, err := json.Marshal(hunt)
 	if err != nil {
 		return err
 	}

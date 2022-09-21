@@ -29,6 +29,7 @@ type ClientInfo struct {
 	LastHuntTimestamp     uint64   `json:"last_hunt_timestamp"`
 	LastEventTableVersion uint64   `json:"last_event_table_version"`
 	LastLabelTimestamp    uint64   `json:"labels_timestamp"`
+	AssignedHunts         []string `json:"assigned_hunts"`
 }
 
 type ClientInfoManager struct {
@@ -56,6 +57,7 @@ func (self *ClientInfoManager) Set(
 			LastHuntTimestamp:     client_info.LastHuntTimestamp,
 			LastEventTableVersion: client_info.LastEventTableVersion,
 			LastLabelTimestamp:    client_info.LabelsTimestamp,
+			AssignedHunts:         []string{},
 		})
 }
 
@@ -84,6 +86,7 @@ func (self ClientInfoManager) Get(
 
 	// Ping times in Velociraptor are in microseconds
 	result.Ping /= 1000
+	result.FirstSeenAt /= 1000
 
 	return &services.ClientInfo{result}, nil
 }
