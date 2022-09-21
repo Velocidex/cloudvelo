@@ -2,11 +2,11 @@ package hunt_dispatcher
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
@@ -113,7 +113,7 @@ func (self HuntDispatcher) CreateHunt(
 	hunt.HuntId = hunt_id
 	hunt.StartRequest.CompiledCollectorArgs = compiled
 
-	serialized, err := protojson.Marshal(hunt)
+	serialized, err := json.Marshal(hunt)
 	if err != nil {
 		return "", err
 	}
@@ -124,6 +124,7 @@ func (self HuntDispatcher) CreateHunt(
 			HuntId:    hunt_id,
 			Timestamp: time.Now().Unix(),
 			Hunt:      string(serialized),
+			State:     hunt.State.String(),
 		})
 
 	// The actual hunt scheduling is done by the foreman.

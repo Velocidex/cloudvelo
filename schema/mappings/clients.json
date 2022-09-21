@@ -11,6 +11,7 @@
             "labels_timestamp":          { "type": "long" },
             "mac_addresses":             { "type": "keyword" },
             "last_hunt_timestamp":       { "type": "long" },
+            "assigned_hunts":            { "type": "keyword" },
             "last_event_table_version" : { "type": "long" }
         }
     }

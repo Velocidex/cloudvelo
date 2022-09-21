@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -20,6 +19,33 @@ type HuntEntry struct {
 	Completed uint64 `json:"completed"`
 	Errors    uint64 `json:"errors"`
 	Hunt      string `json:"hunt"`
+	State     string `json:"state"`
+}
+
+func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
+	hunt_info := &api_proto.Hunt{}
+	err := json.Unmarshal([]byte(self.Hunt), hunt_info)
+	if err != nil {
+		return nil, err
+	}
+
+	hunt_info.Stats = &api_proto.HuntStats{
+		TotalClientsScheduled:   self.Scheduled,
+		TotalClientsWithResults: self.Completed,
+		TotalClientsWithErrors:  self.Errors,
+	}
+	switch self.State {
+	case "PAUSED":
+		hunt_info.State = api_proto.Hunt_PAUSED
+
+	case "RUNNING":
+		hunt_info.State = api_proto.Hunt_RUNNING
+
+	case "STOPPED":
+		hunt_info.State = api_proto.Hunt_STOPPED
+	}
+
+	return hunt_info, nil
 }
 
 type HuntDispatcher struct {
@@ -41,7 +67,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 		return errors.New("Invalid hunt")
 	}
 
-	serialized, err := protojson.Marshal(hunt)
+	serialized, err := json.Marshal(hunt)
 	if err != nil {
 		return err
 	}
@@ -49,6 +75,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 	record := &HuntEntry{
 		HuntId: hunt_id,
 		Hunt:   string(serialized),
+		State:  hunt.State.String(),
 	}
 
 	if hunt.Stats != nil {
@@ -75,16 +102,9 @@ func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
 		return nil, false
 	}
 
-	hunt_info := &api_proto.Hunt{}
-	err = protojson.Unmarshal([]byte(hunt_entry.Hunt), hunt_info)
+	hunt_info, err := hunt_entry.GetHunt()
 	if err != nil {
 		return nil, false
-	}
-
-	hunt_info.Stats = &api_proto.HuntStats{
-		TotalClientsScheduled:   hunt_entry.Scheduled,
-		TotalClientsWithResults: hunt_entry.Completed,
-		TotalClientsWithErrors:  hunt_entry.Errors,
 	}
 
 	hunt_info.Stats.AvailableDownloads, _ = availableHuntDownloadFiles(
@@ -126,18 +146,15 @@ func (self HuntDispatcher) ListHunts(
 	for _, hit := range hits {
 		entry := &HuntEntry{}
 		err = json.Unmarshal(hit, entry)
-		if err == nil {
-			hunt_info := &api_proto.Hunt{}
-			err = protojson.Unmarshal([]byte(entry.Hunt), hunt_info)
-			if err == nil {
-				hunt_info.Stats = &api_proto.HuntStats{
-					TotalClientsScheduled:   uint64(entry.Scheduled),
-					TotalClientsWithResults: uint64(entry.Completed),
-					TotalClientsWithErrors:  uint64(entry.Errors),
-				}
-				result.Items = append(result.Items, hunt_info)
-			}
+		if err != nil {
+			continue
 		}
+
+		hunt_info, err := entry.GetHunt()
+		if err != nil {
+			continue
+		}
+		result.Items = append(result.Items, hunt_info)
 	}
 
 	return result, nil

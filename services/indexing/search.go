@@ -281,7 +281,7 @@ func (self *Indexer) searchWithTerms(
 		client_info := &actions_proto.ClientInfo{}
 		err = json.Unmarshal(hit, client_info)
 		if err == nil {
-			client_info.Ping *= 1000000
+			client_info.Ping /= 1000
 			result.Items = append(result.Items, _makeApiClient(client_info))
 		}
 	}

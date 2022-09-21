@@ -40,6 +40,7 @@ func doResetElastic() error {
 
 	if *elastic_command_recreate {
 		return schema.Initialize(ctx,
+			config_obj.VeloConf(),
 			*elastic_command_reset_org_id,
 			*elastic_command_reset_filter, true)
 	}

@@ -48,6 +48,7 @@ func (self Config) VeloConf() *config_proto.Config {
 type ConfigLoader struct {
 	VelociraptorLoader *config.Loader
 	Filename           string
+	ConfigText         string
 	JSONPatch          string
 }
 
@@ -103,30 +104,39 @@ func (self *ConfigLoader) LoadFilename() (*Config, error) {
 	return config_obj, nil
 }
 
+func (self *ConfigLoader) validateVeloConfig(config_obj *Config) error {
+	// Serialized the velociraptor part of the config and validate it
+	serialized, err := json.Marshal(config_obj.Config)
+	if err != nil {
+		return err
+	}
+
+	os.Setenv("VELOCONFIG", string(serialized))
+	velo_config, err := self.VelociraptorLoader.
+		WithEnvLiteralLoader("VELOCONFIG").
+		LoadAndValidate()
+	if err != nil {
+		return err
+	}
+	config_obj.Config = *velo_config
+	return nil
+}
+
 func (self *ConfigLoader) Load() (*Config, error) {
-	if self.Filename != "" {
+	if self.ConfigText != "" {
+		result := &Config{}
+		err := yaml.UnmarshalStrict([]byte(self.ConfigText), result)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return result, self.validateVeloConfig(result)
+
+	} else if self.Filename != "" {
 		config_obj, err := self.LoadFilename()
 		if err != nil {
 			return nil, err
 		}
-
-		// Now serialized the velociraptor part of the config and
-		// validate it
-		serialized, err := json.Marshal(config_obj.Config)
-		if err != nil {
-			return nil, err
-		}
-
-		os.Setenv("VELOCONFIG", string(serialized))
-
-		velo_config, err := self.VelociraptorLoader.
-			WithEnvLiteralLoader("VELOCONFIG").
-			LoadAndValidate()
-		if err != nil {
-			return nil, err
-		}
-		config_obj.Config = *velo_config
-		return config_obj, nil
+		return config_obj, self.validateVeloConfig(config_obj)
 	}
 	return nil, errors.New("Unable to load config from anywhere")
 }

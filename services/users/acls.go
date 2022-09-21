@@ -2,7 +2,9 @@ package users
 
 import (
 	"context"
+	"time"
 
+	"github.com/Velocidex/ttlcache/v2"
 	"github.com/pkg/errors"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/velociraptor/acls"
@@ -20,11 +22,31 @@ type ACLManager struct {
 	*acls.ACLManager
 
 	ctx context.Context
+
+	lru *ttlcache.Cache
+}
+
+func NewACLManager(ctx context.Context) *ACLManager {
+	acl_manager := &ACLManager{
+		ACLManager: &acls.ACLManager{},
+		ctx:        ctx,
+		lru:        ttlcache.NewCache(),
+	}
+	acl_manager.lru.SetTTL(10 * time.Second)
+	return acl_manager
 }
 
 func (self ACLManager) GetPolicy(
 	config_obj *config_proto.Config,
 	principal string) (*acl_proto.ApiClientACL, error) {
+
+	permissions_any, err := self.lru.Get(principal)
+	if err == nil {
+		permissions, ok := permissions_any.(*acl_proto.ApiClientACL)
+		if ok {
+			return permissions, nil
+		}
+	}
 
 	hit, err := cvelo_services.GetElasticRecord(
 		context.Background(), config_obj.OrgId,
@@ -45,6 +67,7 @@ func (self ACLManager) GetPolicy(
 		return nil, err
 	}
 
+	self.lru.Set(principal, permissions)
 	return permissions, err
 }
 
@@ -62,6 +85,8 @@ func (self ACLManager) GetEffectivePolicy(
 func (self ACLManager) SetPolicy(
 	config_obj *config_proto.Config,
 	principal string, acl_obj *acl_proto.ApiClientACL) error {
+
+	self.lru.Set(principal, acl_obj)
 	return cvelo_services.SetElasticIndex(self.ctx,
 		config_obj.OrgId,
 		"acls", principal, &ACLRecord{

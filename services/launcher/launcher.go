@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
@@ -54,6 +55,28 @@ func (self Launcher) ScheduleArtifactCollection(
 
 	return self.ScheduleArtifactCollectionFromCollectorArgs(
 		ctx, config_obj, collector_request, args, completion)
+}
+
+// The Elastic version stores collections in their own index.
+func (self Launcher) ScheduleVQLCollectorArgsOnMultipleClients(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	collector_request *flows_proto.ArtifactCollectorArgs,
+	clients []string) error {
+
+	for _, client_id := range clients {
+		request := proto.Clone(collector_request).(*flows_proto.ArtifactCollectorArgs)
+
+		request.ClientId = client_id
+		_, err := self.ScheduleArtifactCollectionFromCollectorArgs(
+			ctx, config_obj, request, request.CompiledCollectorArgs,
+			func() {})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // The Elastic version stores collections in their own index.
