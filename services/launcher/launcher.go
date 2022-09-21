@@ -137,9 +137,11 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	collection_context := &flows_proto.ArtifactCollectorContext{
 		SessionId:            session_id,
 		CreateTime:           uint64(time.Now().UnixNano() / 1000),
-		State:                1,
+		State:                flows_proto.ArtifactCollectorContext_RUNNING,
 		Request:              collector_request,
 		ClientId:             client_id,
+		TotalUploadedFiles:   0,
+		TotalUploadedBytes:   0,
 		ArtifactsWithResults: []string{},
 		OutstandingRequests:  int64(len(tasks)),
 	}

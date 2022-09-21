@@ -1,10 +1,12 @@
 package ingestion
 
 import (
+	"context"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -14,7 +16,28 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+const (
+	updateUploadStatsScript = `
+ctx._source.uploaded_files += params.uploaded_files;
+ctx._source.uploaded_bytes += params.uploaded_bytes
+`
+
+	updateUploadStats = `
+{
+   "script": {
+     "source": %q,
+     "lang": "painless",
+     "params": {
+       "uploaded_files": %q,
+       "uploaded_bytes": %q
+     }
+   }
+}
+`
+)
+
 func (self ElasticIngestor) HandleUploads(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -49,5 +72,15 @@ func (self ElasticIngestor) HandleUploads(
 			Set("file_size", response.Size).
 			Set("uploaded_size", response.StoredSize))
 
-	return nil
+	uploaded_files := 0
+	if response.Offset == 0 {
+		uploaded_files = 1
+	}
+
+	return cvelo_services.UpdateIndex(ctx, config_obj.OrgId, "collections",
+		message.SessionId,
+		json.Format(
+			updateUploadStats, updateUploadStatsScript,
+			uploaded_files, response.Size))
+
 }

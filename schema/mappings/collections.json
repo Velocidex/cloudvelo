@@ -5,6 +5,8 @@
             "session_id":          { "type": "keyword" },
             "create_time":         { "type": "long" },
             "start_time":          { "type": "long" },
+            "uploaded_files":      { "type": "long" },
+            "uploaded_bytes":      { "type": "long" },
             "last_active_time":    { "type": "long" },
             "raw":                 { "type": "binary" },
             "stats":               { "type": "binary" }

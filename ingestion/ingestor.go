@@ -85,7 +85,7 @@ func (self ElasticIngestor) Process(
 	}
 
 	if message.FileBuffer != nil {
-		return self.HandleUploads(config_obj, message)
+		return self.HandleUploads(ctx, config_obj, message)
 	}
 
 	json.Dump(message)

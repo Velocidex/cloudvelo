@@ -13,13 +13,15 @@ import (
 
 // We use the database to manipulate exposed fields.
 type ArtifactCollectorContext struct {
-	ClientId   string   `json:"client_id"`
-	SessionId  string   `json:"session_id"`
-	Raw        string   `json:"context"`
-	CreateTime uint64   `json:"create_time"`
-	StartTime  uint64   `json:"start_time"`
-	LastActive uint64   `json:"last_active_time"`
-	QueryStats []string `json:"query_stats"`
+	ClientId      string   `json:"client_id"`
+	SessionId     string   `json:"session_id"`
+	Raw           string   `json:"context"`
+	CreateTime    uint64   `json:"create_time"`
+	StartTime     uint64   `json:"start_time"`
+	LastActive    uint64   `json:"last_active_time"`
+	UploadedFiles uint64   `json:"uploaded_files"`
+	UploadedBytes uint64   `json:"uploaded_bytes"`
+	QueryStats    []string `json:"query_stats"`
 }
 
 func ArtifactCollectorContextToProto(
@@ -36,6 +38,11 @@ func ArtifactCollectorContextToProto(
 	result.CreateTime = in.CreateTime
 	result.StartTime = in.StartTime
 	result.ActiveTime = in.LastActive
+
+	// FIXME: When uploads support sparse files, adjust this.
+	result.TotalExpectedUploadedBytes = in.UploadedBytes
+	result.TotalUploadedBytes = in.UploadedBytes
+	result.TotalUploadedFiles = in.UploadedFiles
 	result.QueryStats = nil
 
 	// Now build the full context from the statuses we received.
@@ -106,6 +113,8 @@ func UpdateFlowStats(collection_context *flows_proto.ArtifactCollectorContext) {
 	collection_context.ExecutionDuration = 0
 	for _, s := range collection_context.QueryStats {
 		collection_context.ExecutionDuration += s.Duration
+		collection_context.TotalCollectedRows += uint64(s.ResultRows)
+		collection_context.TotalLogs += uint64(s.LogRows)
 
 		for _, a := range s.NamesWithResponse {
 			if !utils.InString(collection_context.ArtifactsWithResults, a) {
