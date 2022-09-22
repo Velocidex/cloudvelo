@@ -22,4 +22,5 @@ jobs:
 
     - name: Run tests
       run: |
+        cd velociraptor && make assets && cd -
         go test -v ./foreman/
