@@ -309,13 +309,13 @@ func XXXXNewRepositoryManager(ctx context.Context, wg *sync.WaitGroup,
 
 		err := self.LoadBuiltInArtifacts(ctx, config_obj, false /* validate */)
 		if err != nil {
-			logger.Error("Loading built in artifacts: ", err)
+			logger.Error("Loading built in artifacts: %v", err)
 			return
 		}
 
 		err = LoadOverridenArtifacts(config_obj, self)
 		if err != nil {
-			logger.Error("Loading overriden artifacts: ", err)
+			logger.Error("Loading overriden artifacts: %v", err)
 			return
 		}
 	}()

@@ -428,6 +428,11 @@ func Assets() error {
 	return ensure_assets()
 }
 
+// Only build the minimal assets (not the GUI) such as artifacts etc.
+func BareAssets() error {
+	return ensure_assets()
+}
+
 func build_gui_files() error {
 	cwd, err := os.Getwd()
 	if err != nil {

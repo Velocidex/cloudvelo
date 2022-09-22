@@ -269,9 +269,9 @@ Cloud:
   password: admin
   disable_ssl_security: true
   addresses:
-    - https://127.0.0.1:9200/
+    - http://127.0.0.1:9200/
     # Alternaive proxy endpoint for protocol inspection.
-    #  - http://127.0.0.1:9201/
+    #- http://127.0.0.1:9201/
 
   # S3 details for uploads.
   bucket: velociraptor

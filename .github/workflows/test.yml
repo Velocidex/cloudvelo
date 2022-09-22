@@ -1,0 +1,26 @@
+name: Tests
+on: [pull_request]
+
+jobs:
+  build:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '^1.18'
+    - run: go version
+    - name: Install Opensearch
+      uses: ankane/setup-opensearch@v1
+      with:
+        opensearch-version: 1.2
+
+    - name: Run tests
+      run: |
+        go run make.go -v BareAssets
+        go test -v ./foreman/

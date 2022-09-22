@@ -53,11 +53,15 @@ func (self Labeler) IsLabelSet(
 // Set the label
 
 const (
+	// When we label a client, we zero out the last hunt and event
+	// tables version to force the foreman to recalculate memberships.
 	all_label_painless = `
 if(!ctx._source.lower_labels.contains(params.lower_label)) {
   ctx._source.labels.add(params.label);
   ctx._source.lower_labels.add(params.lower_label);
   ctx._source.labels_timestamp = params.now;
+  ctx._source.last_hunt_timestamp = 0;
+  ctx._source.last_event_table_version = 0;
 }
 `
 
