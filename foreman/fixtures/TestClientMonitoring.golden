@@ -1,0 +1,162 @@
+{
+ "All": {
+  "session_id": "F.Monitoring",
+  "UpdateEventTable": {
+   "event": [
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForAll_0_0 = SELECT ArtifactForAll FROM scope()"
+      },
+      {
+       "Name": "ArtifactForAll",
+       "VQL": "SELECT * FROM ArtifactForAll_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    }
+   ],
+   "version": 1661391000000000000
+  }
+ },
+ "Label1": {
+  "session_id": "F.Monitoring",
+  "UpdateEventTable": {
+   "event": [
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForAll_0_0 = SELECT ArtifactForAll FROM scope()"
+      },
+      {
+       "Name": "ArtifactForAll",
+       "VQL": "SELECT * FROM ArtifactForAll_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    },
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForLabel1_0_0 = SELECT ArtifactForLabel1 FROM scope()"
+      },
+      {
+       "Name": "ArtifactForLabel1",
+       "VQL": "SELECT * FROM ArtifactForLabel1_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    }
+   ],
+   "version": 1661391000000000000
+  }
+ },
+ "Label2": {
+  "session_id": "F.Monitoring",
+  "UpdateEventTable": {
+   "event": [
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForAll_0_0 = SELECT ArtifactForAll FROM scope()"
+      },
+      {
+       "Name": "ArtifactForAll",
+       "VQL": "SELECT * FROM ArtifactForAll_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    },
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForLabel2_0_0 = SELECT ArtifactForLabel2 FROM scope()"
+      },
+      {
+       "Name": "ArtifactForLabel2",
+       "VQL": "SELECT * FROM ArtifactForLabel2_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    }
+   ],
+   "version": 1661391000000000000
+  }
+ },
+ "Label1|Label2": {
+  "session_id": "F.Monitoring",
+  "UpdateEventTable": {
+   "event": [
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForAll_0_0 = SELECT ArtifactForAll FROM scope()"
+      },
+      {
+       "Name": "ArtifactForAll",
+       "VQL": "SELECT * FROM ArtifactForAll_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    },
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForLabel1_0_0 = SELECT ArtifactForLabel1 FROM scope()"
+      },
+      {
+       "Name": "ArtifactForLabel1",
+       "VQL": "SELECT * FROM ArtifactForLabel1_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    },
+    {
+     "query_id": 1,
+     "total_queries": 1,
+     "Query": [
+      {
+       "VQL": "LET ArtifactForLabel2_0_0 = SELECT ArtifactForLabel2 FROM scope()"
+      },
+      {
+       "Name": "ArtifactForLabel2",
+       "VQL": "SELECT * FROM ArtifactForLabel2_0_0"
+      }
+     ],
+     "max_row": 1000,
+     "max_wait": 120,
+     "timeout": 99999999
+    }
+   ],
+   "version": 1661391000000000000
+  }
+ }
+}

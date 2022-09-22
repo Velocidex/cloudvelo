@@ -8,12 +8,15 @@ require (
 	github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20211116035050-ddd93fed62f5
 	github.com/Velocidex/yaml/v2 v2.2.8
+	github.com/alecthomas/assert v1.0.0
 	github.com/aws/aws-sdk-go v1.42.27
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/magefile/mage v1.11.0
 	github.com/opensearch-project/opensearch-go v1.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/sebdah/goldie v1.0.0
 	github.com/sirupsen/logrus v1.8.1
+	github.com/stretchr/testify v1.8.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
@@ -43,7 +46,6 @@ require (
 	github.com/Velocidex/pkcs7 v0.0.0-20210524015001-8d1eee94a157 // indirect
 	github.com/Velocidex/zip v0.0.0-20210101070220-e7ecefb7aad7 // indirect
 	github.com/ZachtimusPrime/Go-Splunk-HTTP/splunk/v2 v2.0.1 // indirect
-	github.com/alecthomas/assert v1.0.0 // indirect
 	github.com/alecthomas/chroma v0.7.2 // indirect
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/participle v0.7.1 // indirect
@@ -133,7 +135,6 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect

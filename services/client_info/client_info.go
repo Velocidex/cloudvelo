@@ -121,6 +121,20 @@ func (self ClientInfoManager) QueueMessagesForClient(
 	return nil
 }
 
+func (self ClientInfoManager) QueueMessageForMultipleClients(
+	ctx context.Context,
+	client_ids []string,
+	req *crypto_proto.VeloMessage,
+	notify bool) error {
+	for _, client_id := range client_ids {
+		err := self.QueueMessageForClient(ctx, client_id, req, notify, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (self ClientInfoManager) UnQueueMessageForClient(
 	ctx context.Context,
 	client_id string, req *crypto_proto.VeloMessage) error {

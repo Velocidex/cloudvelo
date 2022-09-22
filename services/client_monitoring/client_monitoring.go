@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/rand"
 	"sync"
-	"time"
 
 	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -16,7 +15,12 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
+)
+
+var (
+	Clock utils.Clock = &utils.RealClock{}
 )
 
 type ConfigEntry struct {
@@ -28,7 +32,7 @@ type ClientMonitoringManager struct {
 	config_obj *config_proto.Config
 }
 
-func (self ClientMonitoringManager) CheckClientEventsVersion(
+func (self *ClientMonitoringManager) CheckClientEventsVersion(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string, client_version uint64) bool {
@@ -37,7 +41,7 @@ func (self ClientMonitoringManager) CheckClientEventsVersion(
 
 // Get the message to send to the client in order to force it
 // to update.
-func (self ClientMonitoringManager) GetClientUpdateEventTableMessage(
+func (self *ClientMonitoringManager) GetClientUpdateEventTableMessage(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string) *crypto_proto.VeloMessage {
@@ -45,7 +49,7 @@ func (self ClientMonitoringManager) GetClientUpdateEventTableMessage(
 	state := self.GetClientMonitoringState()
 
 	result := &actions_proto.VQLEventTable{
-		Version: uint64(time.Now().UnixNano()),
+		Version: uint64(Clock.Now().UnixNano()),
 	}
 
 	if state.Artifacts == nil {
@@ -56,7 +60,8 @@ func (self ClientMonitoringManager) GetClientUpdateEventTableMessage(
 		result.Event = append(result.Event, proto.Clone(event).(*actions_proto.VQLCollectorArgs))
 	}
 
-	// Now apply any event queries that belong to this client based on labels.
+	// Now apply any event queries that belong to this client based on
+	// labels.
 	labeler := services.GetLabeler(config_obj)
 	for _, table := range state.LabelEvents {
 		if labeler.IsLabelSet(ctx, config_obj, client_id, table.Label) {
@@ -104,7 +109,7 @@ func (self ClientMonitoringManager) makeDefaultClientMonitoringLabel() *flows_pr
 	logger.Info("Creating default Client Monitoring Service")
 
 	return &flows_proto.ClientEventTable{
-		Version: uint64(time.Now().UnixNano()),
+		Version: uint64(Clock.Now().UnixNano()),
 		Artifacts: &flows_proto.ArtifactCollectorArgs{
 			Artifacts: self.config_obj.Frontend.DefaultClientMonitoringArtifacts,
 		},
@@ -145,13 +150,37 @@ func (self ClientMonitoringManager) GetClientMonitoringState() *flows_proto.Clie
 	}
 
 	// Compile the monitoring state at the last minute to pick up any
-	// changed in the artifacts.
+	// changes in the artifacts.
 	self.compileState(ctx, self.config_obj, result)
 
 	return result
 }
 
-func (self ClientMonitoringManager) compileArtifactCollectorArgs(
+// Set the client monitoring table.
+func (self *ClientMonitoringManager) SetClientMonitoringState(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	principal string,
+	state *flows_proto.ClientEventTable) error {
+
+	state = proto.Clone(state).(*flows_proto.ClientEventTable)
+	state.Version = uint64(Clock.Now().UnixNano())
+
+	err := self.compileState(ctx, config_obj, state)
+	if err != nil {
+		return err
+	}
+
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId,
+		"config", "client_monitoring",
+		&ConfigEntry{
+			Type: "client_monitoring",
+			Data: json.MustMarshalString(state),
+		})
+}
+
+func (self *ClientMonitoringManager) compileArtifactCollectorArgs(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	artifact *flows_proto.ArtifactCollectorArgs) (
@@ -180,7 +209,7 @@ func (self ClientMonitoringManager) compileArtifactCollectorArgs(
 		}, artifact)
 }
 
-func (self ClientMonitoringManager) compileState(
+func (self *ClientMonitoringManager) compileState(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	state *flows_proto.ClientEventTable) (err error) {
@@ -212,24 +241,6 @@ func (self ClientMonitoringManager) compileState(
 	}
 
 	return nil
-}
-
-// Set the client monitoring table.
-func (self ClientMonitoringManager) SetClientMonitoringState(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	principal string,
-	state *flows_proto.ClientEventTable) error {
-
-	state.Version = uint64(time.Now().UnixNano())
-
-	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
-		"config", "client_monitoring",
-		&ConfigEntry{
-			Type: "client_monitoring",
-			Data: json.MustMarshalString(state),
-		})
 }
 
 func NewClientMonitoringService(
