@@ -22,4 +22,4 @@ jobs:
 
     - name: Run tests
       run: |
-        go test -v ./forman/
+        go test -v ./foreman/
