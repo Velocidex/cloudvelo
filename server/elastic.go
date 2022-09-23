@@ -14,14 +14,14 @@ import (
 
 // Test with an elastic backend
 type ElasticBackend struct {
-	ingestor *ingestion.ElasticIngestor
+	ingestor *ingestion.Ingestor
 }
 
 func NewElasticBackend(
 	config_obj *config.Config,
 	crypto_manager *server.ServerCryptoManager) (
 	*ElasticBackend, error) {
-	ingestor, err := ingestion.NewElasticIngestor(config_obj, crypto_manager)
+	ingestor, err := ingestion.NewIngestor(config_obj, crypto_manager)
 	if err != nil {
 		return nil, err
 	}

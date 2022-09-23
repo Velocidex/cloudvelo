@@ -2,9 +2,9 @@ package ingestion
 
 import (
 	"context"
-	"time"
 
 	"www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -36,7 +36,7 @@ if(ctx._source.start_time == 0) {
 )
 
 // When we receive a status we need to modify the collection record.
-func (self ElasticIngestor) HandleStatus(
+func (self Ingestor) HandleStatus(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -49,6 +49,6 @@ func (self ElasticIngestor) HandleStatus(
 		config_obj.OrgId, "collections", message.SessionId,
 		json.Format(updateQuery,
 			painlessScript,
-			time.Now().UnixNano()/1000,
+			utils.Clock.Now().UnixNano()/1000,
 			json.MustMarshalString(message.Status)))
 }

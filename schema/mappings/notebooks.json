@@ -1,5 +1,6 @@
 {
     "mappings": {
+        "dynamic": false,
         "properties": {
             "notebook_id":   { "type": "keyword" },
             "cell_id":       { "type": "keyword" },

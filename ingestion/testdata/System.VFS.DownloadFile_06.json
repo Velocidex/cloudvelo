@@ -1,0 +1,19 @@
+{
+ "session_id": "F.CCM9S0N2QR4H8",
+ "request_id": 1,
+ "response_id": 1663868421953359554,
+ "source": "C.1352adc54e292a23",
+ "auth_state": 1,
+ "status": {
+  "duration": 399915666,
+  "names_with_response": [
+   "",
+   "System.VFS.DownloadFile"
+  ],
+  "Artifact": "System.VFS.DownloadFile",
+  "log_rows": 2,
+  "result_rows": 1,
+  "query_id": 1,
+  "total_queries": 1
+ }
+}

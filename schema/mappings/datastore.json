@@ -1,5 +1,6 @@
 {
     "mappings": {
+        "dynamic": false,
         "properties": {
             "client_id":    { "type": "keyword" },
             "vfs_path":     { "type": "keyword" },

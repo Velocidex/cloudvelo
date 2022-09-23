@@ -1,5 +1,6 @@
 {
     "mappings": {
+        "dynamic": false,
         "properties": {
             "hunt_id":   { "type": "keyword" },
             "timestamp": { "type": "long" },

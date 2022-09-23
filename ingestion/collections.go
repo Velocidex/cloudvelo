@@ -3,10 +3,10 @@ package ingestion
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
+	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -18,7 +18,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
-func (self ElasticIngestor) HandleLogs(
+func (self Ingestor) HandleLogs(
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -48,7 +48,7 @@ func (self ElasticIngestor) HandleLogs(
 	return nil
 }
 
-func (self ElasticIngestor) HandleResponses(
+func (self Ingestor) HandleResponses(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -140,6 +140,6 @@ func getFSPathSpec(
 }
 
 func getDayName() string {
-	now := time.Now().UTC()
+	now := cvelo_utils.Clock.Now().UTC()
 	return fmt.Sprintf("%d-%02d-%02d", now.Year(), now.Month(), now.Day())
 }

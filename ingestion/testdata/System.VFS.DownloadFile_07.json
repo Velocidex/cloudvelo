@@ -1,0 +1,14 @@
+{
+ "session_id": "F.CCM9S0N2QR4H8",
+ "request_id": 980,
+ "response_id": 1663868421953387377,
+ "source": "C.1352adc54e292a23",
+ "auth_state": 1,
+ "LogMessage": {
+  "id": 2,
+  "message": "Collection is done after 399.585847ms\n",
+  "timestamp": 1663868421953380,
+  "artifact": "System.VFS.DownloadFile",
+  "level": "INFO"
+ }
+}
