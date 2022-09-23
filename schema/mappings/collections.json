@@ -9,7 +9,7 @@
             "uploaded_bytes":      { "type": "long" },
             "last_active_time":    { "type": "long" },
             "raw":                 { "type": "binary" },
-            "stats":               { "type": "binary" }
+            "query_stats":         { "type": "binary" }
         }
     }
 }
