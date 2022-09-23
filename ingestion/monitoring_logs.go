@@ -10,18 +10,25 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/logging"
 	artifact_paths "www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
-func (self ElasticIngestor) HandleMonitoringLogs(
+func (self Ingestor) HandleMonitoringLogs(
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
 	row := message.LogMessage
 	artifact_name := artifacts.DeobfuscateString(
 		config_obj, row.Artifact)
+
+	// Suppress logging of some artifacts
+	switch artifact_name {
+
+	// Automatically interrogate this client.
+	case "Client.Info.Updates":
+		return nil
+	}
 
 	log_path_manager, err := artifact_paths.NewArtifactLogPathManager(
 		config_obj, message.Source, message.SessionId, artifact_name)
@@ -46,7 +53,7 @@ func (self ElasticIngestor) HandleMonitoringLogs(
 	return nil
 }
 
-func (self ElasticIngestor) HandleMonitoringResponses(
+func (self Ingestor) HandleMonitoringResponses(
 	ctx context.Context, config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -64,11 +71,7 @@ func (self ElasticIngestor) HandleMonitoringResponses(
 
 	// Automatically interrogate this client.
 	case "Client.Info.Updates":
-		err := self.HandleClientInfoUpdates(ctx, message)
-		if err != nil {
-			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
-			logger.Error("HandleClientInfoUpdates: %v", err)
-		}
+		return self.HandleClientInfoUpdates(ctx, message)
 	}
 
 	// Add the client id on the end of the record

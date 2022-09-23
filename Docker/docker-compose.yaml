@@ -7,6 +7,8 @@ services:
     container_name: opensearch
     environment:
       - discovery.type=single-node
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - "action.auto_create_index=false" # Stop creating indexes automatically so we can catch errors.
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
     networks:
       - velociraptor-network

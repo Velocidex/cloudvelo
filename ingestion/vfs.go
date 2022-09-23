@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"context"
 	"strings"
-	"time"
 
 	"www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
+	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -24,7 +24,7 @@ type VFSRow struct {
 	JSON       string   `json:"_JSON"`
 }
 
-func (self ElasticIngestor) HandleSystemVfsListDirectory(
+func (self Ingestor) HandleSystemVfsListDirectory(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -92,7 +92,7 @@ const (
 `
 )
 
-func (self ElasticIngestor) HandleSystemVfsUpload(
+func (self Ingestor) HandleSystemVfsUpload(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -124,7 +124,7 @@ func (self ElasticIngestor) HandleSystemVfsUpload(
 		if len(row.Components) > 0 {
 			components := append([]string{message.Source, accessor},
 				row.Components[:len(row.Components)-1]...)
-			row.Mtime = uint64(time.Now().Unix())
+			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
 			id := services.MakeId(utils.JoinComponents(components, "/"))
 			dir_downloads, _ := downloads[id]
 			dir_downloads = append(dir_downloads, json.MustMarshalString(row))

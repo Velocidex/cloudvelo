@@ -2,11 +2,11 @@ package ingestion
 
 import (
 	"context"
-	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -36,7 +36,7 @@ ctx._source.uploaded_bytes += params.uploaded_bytes
 `
 )
 
-func (self ElasticIngestor) HandleUploads(
+func (self Ingestor) HandleUploads(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -66,8 +66,8 @@ func (self ElasticIngestor) HandleUploads(
 
 	rs_writer.Write(
 		ordereddict.NewDict().
-			Set("Timestamp", time.Now().Unix()).
-			Set("started", time.Now()).
+			Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
+			Set("started", cvelo_utils.Clock.Now()).
 			Set("vfs_path", response.Pathspec.Path).
 			Set("file_size", response.Size).
 			Set("uploaded_size", response.StoredSize))

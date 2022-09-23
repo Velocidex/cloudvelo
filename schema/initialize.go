@@ -147,7 +147,7 @@ func Initialize(ctx context.Context,
 					logger.Error("Initialize: %v", err)
 					return
 				}
-				fmt.Printf("Deleted index: %v\n", res)
+				fmt.Printf("Deleted index %v: %v\n", full_index_name, res)
 			}
 
 			response, err = opensearchapi.IndicesCreateRequest{

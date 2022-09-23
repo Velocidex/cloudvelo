@@ -65,6 +65,9 @@ func (self *LazyServiceContainer) Indexer() (services.Indexer, error) {
 }
 
 func (self *LazyServiceContainer) RepositoryManager() (services.RepositoryManager, error) {
+	if self.repository == nil {
+		return nil, errors.New("Repository Manager not initialized!")
+	}
 	return self.repository, nil
 }
 

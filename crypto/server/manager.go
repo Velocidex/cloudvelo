@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
-	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/crypto/client"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -62,7 +62,7 @@ func (self *serverPublicKeyResolver) GetPublicKey(
 
 	record, err := cvelo_services.GetElasticRecord(
 		context.Background(), config_obj.OrgId,
-		"client_key", client_id)
+		"client_keys", client_id)
 	if err != nil {
 		return nil, false
 	}
@@ -87,10 +87,10 @@ func (self *serverPublicKeyResolver) SetPublicKey(
 
 	pem := &crypto_proto.PublicKey{
 		Pem:        crypto_utils.PublicKeyToPem(key),
-		EnrollTime: uint64(time.Now().Unix()),
+		EnrollTime: uint64(utils.Clock.Now().Unix()),
 	}
 	return cvelo_services.SetElasticIndex(
-		self.ctx, config_obj.OrgId, "client_key", client_id, pem)
+		self.ctx, config_obj.OrgId, "client_keys", client_id, pem)
 }
 
 func (self *serverPublicKeyResolver) Clear() {}

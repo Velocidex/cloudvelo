@@ -3,11 +3,11 @@ package ingestion
 import (
 	"context"
 	"strings"
-	"time"
 
 	ingestor_services "www.velocidex.com/golang/cloudvelo/ingestion/services"
 	"www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
+	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 )
@@ -40,7 +40,7 @@ const (
 `
 )
 
-func (self ElasticIngestor) maybeHandleHuntResponse(
+func (self Ingestor) maybeHandleHuntResponse(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
@@ -65,7 +65,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 			HuntId:    hunt_id,
 			ClientId:  message.Source,
 			FlowId:    message.SessionId,
-			Timestamp: time.Now().Unix(),
+			Timestamp: utils.Clock.Now().Unix(),
 			Status:    "started",
 		}
 
@@ -82,7 +82,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 				HuntId:    hunt_id,
 				ClientId:  message.Source,
 				FlowId:    message.SessionId,
-				Timestamp: time.Now().Unix(),
+				Timestamp: utils.Clock.Now().Unix(),
 				Status:    "error",
 			}
 
@@ -98,7 +98,7 @@ func (self ElasticIngestor) maybeHandleHuntResponse(
 				HuntId:    hunt_id,
 				ClientId:  message.Source,
 				FlowId:    message.SessionId,
-				Timestamp: time.Now().Unix(),
+				Timestamp: utils.Clock.Now().Unix(),
 				Status:    "finished",
 			}
 
