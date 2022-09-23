@@ -293,36 +293,6 @@ func NewClientRepositoryManager(
 	return repository.NewRepositoryManager(ctx, wg, config_obj)
 }
 
-func XXXXNewRepositoryManager(ctx context.Context, wg *sync.WaitGroup,
-	config_obj *config_proto.Config) (services.RepositoryManager, error) {
-
-	// Load all the artifacts in the repository and compile them in the background.
-	self, err := NewRepositoryManager(ctx, wg, config_obj)
-	if err != nil {
-		return nil, err
-	}
-
-	// Compile the artifacts in the background and resync the elastic
-	// source with the latest definitions from built in.
-	go func() {
-		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
-
-		err := self.LoadBuiltInArtifacts(ctx, config_obj, false /* validate */)
-		if err != nil {
-			logger.Error("Loading built in artifacts: %v", err)
-			return
-		}
-
-		err = LoadOverridenArtifacts(config_obj, self)
-		if err != nil {
-			logger.Error("Loading overriden artifacts: %v", err)
-			return
-		}
-	}()
-
-	return self, nil
-}
-
 var (
 	name_regex = regexp.MustCompile("(?sm)^(name: *)(.+)$")
 )

@@ -1,5 +1,6 @@
 {
     "mappings": {
+        "dynamic": false,
         "properties": {
             "client_id":           { "type": "keyword" },
             "session_id":          { "type": "keyword" },
@@ -9,7 +10,8 @@
             "uploaded_bytes":      { "type": "long" },
             "last_active_time":    { "type": "long" },
             "raw":                 { "type": "binary" },
-            "stats":               { "type": "binary" }
+            "tasks":               { "type": "binary" },
+            "query_stats":         { "type": "binary" }
         }
     }
 }

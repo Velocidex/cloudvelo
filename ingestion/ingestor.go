@@ -10,6 +10,8 @@ package ingestion
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/opensearch-project/opensearch-go"
 	"www.velocidex.com/golang/cloudvelo/config"
@@ -21,8 +23,12 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
+var (
+	idx = 0
+)
+
 // Responsible for inserting VeloMessage objects into elastic.
-type ElasticIngestor struct {
+type Ingestor struct {
 	client *opensearch.Client
 
 	crypto_manager *server.ServerCryptoManager
@@ -30,8 +36,22 @@ type ElasticIngestor struct {
 	index string
 }
 
-func (self ElasticIngestor) Process(
+// Log messages to a file - used to generate test data.
+func (self Ingestor) LogMessage(message *crypto_proto.VeloMessage) {
+	filename := fmt.Sprintf("Msg_%v.json", idx)
+	idx++
+
+	fd, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
+	if err == nil {
+		fd.Write([]byte(json.MustMarshalIndent(message)))
+	}
+	fd.Close()
+}
+
+func (self Ingestor) Process(
 	ctx context.Context, message *crypto_proto.VeloMessage) error {
+	// self.LogMessage(message)
+
 	org_manager, err := services.GetOrgManager()
 	if err != nil {
 		return err
@@ -93,16 +113,16 @@ func (self ElasticIngestor) Process(
 	return nil
 }
 
-func NewElasticIngestor(
+func NewIngestor(
 	config_obj *config.Config,
-	crypto_manager *server.ServerCryptoManager) (*ElasticIngestor, error) {
+	crypto_manager *server.ServerCryptoManager) (*Ingestor, error) {
 
 	client, err := cvelo_services.GetElasticClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return &ElasticIngestor{
+	return &Ingestor{
 		client:         client,
 		crypto_manager: crypto_manager,
 	}, nil

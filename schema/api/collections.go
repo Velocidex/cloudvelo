@@ -22,6 +22,7 @@ type ArtifactCollectorContext struct {
 	UploadedFiles uint64   `json:"uploaded_files"`
 	UploadedBytes uint64   `json:"uploaded_bytes"`
 	QueryStats    []string `json:"query_stats"`
+	Tasks         string   `json:"tasks"`
 }
 
 func ArtifactCollectorContextToProto(

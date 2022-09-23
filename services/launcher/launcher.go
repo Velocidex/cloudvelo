@@ -146,24 +146,12 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		OutstandingRequests:  int64(len(tasks)),
 	}
 
+	record := api.ArtifactCollectorContextFromProto(collection_context)
+	record.Tasks = json.MustMarshalString(tasks)
+
 	// Store the collection_context first, then queue all the tasks.
 	err := cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
-		"collections", session_id,
-		api.ArtifactCollectorContextFromProto(collection_context))
-	if err != nil {
-		return "", err
-	}
-
-	// Record the tasks for provenance of what we actually did.
-	err = cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
-		"collection_tasks", "",
-		&api_proto.ApiFlowRequestDetails{
-			ClientId: client_id,
-			FlowId:   session_id,
-			Items:    tasks,
-		})
+		self.config_obj.OrgId, "collections", session_id, record)
 	if err != nil {
 		return "", err
 	}
@@ -193,23 +181,24 @@ func (self *Launcher) GetFlowRequests(
 	config_obj *config_proto.Config,
 	client_id string, flow_id string,
 	offset uint64, count uint64) (*api_proto.ApiFlowRequestDetails, error) {
-	hits, err := cvelo_services.QueryElastic(self.ctx, self.config_obj.OrgId,
-		"collection_tasks", json.Format(`
-{"query": {"bool": {"must": [
-  {"match": {"client_id": %q}},
-  {"match": {"flow_id": %q}}
-]}}}`, client_id, flow_id))
+
+	raw, err := cvelo_services.GetElasticRecord(self.ctx,
+		config_obj.OrgId, "collections", flow_id)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(hits) == 0 {
-		return nil, errors.New("Not found")
+	record := &api.ArtifactCollectorContext{}
+	err = json.Unmarshal(raw, record)
+	if err != nil {
+		return nil, err
 	}
 
-	item := &api_proto.ApiFlowRequestDetails{}
-	err = json.Unmarshal(hits[0].JSON, item)
-	return item, err
+	messages := &api_proto.ApiFlowRequestDetails{
+		Items: []*crypto_proto.VeloMessage{},
+	}
+	err = json.Unmarshal([]byte(record.Tasks), &messages.Items)
+	return messages, err
 }
 
 func NewLauncherService(

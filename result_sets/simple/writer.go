@@ -3,11 +3,11 @@ package simple
 import (
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 )
@@ -37,7 +37,7 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	record.JSONData = string(serialized)
 	record.StartRow = self.start_row
 	record.EndRow = self.start_row + int64(total_rows)
-	record.Timestamp = time.Now().Unix()
+	record.Timestamp = utils.Clock.Now().Unix()
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 

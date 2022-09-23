@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"context"
 	"strings"
-	"time"
 
+	"www.velocidex.com/golang/cloudvelo/utils"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -28,7 +28,7 @@ type ClientInfoUpdate struct {
 // client starts up so we get to refresh the record each time. This
 // way there is no need to run an interrogation flow specifically - it
 // just happens automatically.
-func (self ElasticIngestor) HandleClientInfoUpdates(
+func (self Ingestor) HandleClientInfoUpdates(
 	ctx context.Context,
 	message *crypto_proto.VeloMessage) error {
 	if message == nil || message.VQLResponse == nil {
@@ -74,6 +74,11 @@ func (self ElasticIngestor) HandleClientInfoUpdates(
 			}}
 		}
 
+		first_seen_at := old_client_info.FirstSeenAt * 1000
+		if first_seen_at == 0 {
+			first_seen_at = uint64(utils.Clock.Now().UnixNano())
+		}
+
 		err = client_info_manager.Set(ctx,
 			&services.ClientInfo{actions_proto.ClientInfo{
 				ClientId:              message.Source,
@@ -81,9 +86,9 @@ func (self ElasticIngestor) HandleClientInfoUpdates(
 				Fqdn:                  row.Hostname,
 				System:                row.OS,
 				Architecture:          row.Architecture,
-				Ping:                  uint64(time.Now().UnixNano()),
+				Ping:                  uint64(utils.Clock.Now().UnixNano()),
 				MacAddresses:          row.MACAddresses,
-				FirstSeenAt:           old_client_info.FirstSeenAt * 1000,
+				FirstSeenAt:           first_seen_at,
 				Labels:                old_client_info.Labels,
 				LastHuntTimestamp:     old_client_info.LastHuntTimestamp,
 				LastEventTableVersion: old_client_info.LastEventTableVersion,

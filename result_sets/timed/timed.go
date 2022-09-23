@@ -7,6 +7,7 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
@@ -35,7 +36,7 @@ func NewTimedResultSetRecord(
 		vfs_path = filename.AsClientPath()
 	}
 
-	now := time.Now()
+	now := utils.Clock.Now()
 	day := now.Truncate(24 * time.Hour).Unix()
 
 	switch t := path_manager.(type) {
@@ -57,13 +58,13 @@ func NewTimedResultSetRecord(
 			Artifact:  t.FullArtifactName,
 			Type:      "logs",
 			VFSPath:   vfs_path,
-			Timestamp: time.Now().UnixNano(),
+			Timestamp: utils.Clock.Now().UnixNano(),
 			Date:      day,
 		}
 
 	default:
 		return &TimedResultSetRecord{
-			Timestamp: time.Now().UnixNano(),
+			Timestamp: utils.Clock.Now().UnixNano(),
 			Date:      day,
 			VFSPath:   vfs_path,
 		}

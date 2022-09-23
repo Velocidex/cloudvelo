@@ -1,5 +1,6 @@
 {
     "mappings": {
+        "dynamic": false,
         "properties": {
             "org_id":    { "type": "keyword" },
             "nonce":     { "type": "keyword" },

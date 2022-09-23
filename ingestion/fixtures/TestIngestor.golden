@@ -1,0 +1,118 @@
+{
+ "Enrollment": {
+  "pem": "LS0tLS1CRUdJTiBSU0EgUFVCTElDIEtFWS0tLS0tCk1JSUJDZ0tDQVFFQXlVang3VDdaQ0czS0wvS2xuL0tMby8yN0FZWXlFVFJqdnFmaUhjVHBvcTExUk5BZDZqL1oKdFJHYUk2anE3UmhZR0xqWjI4UERXWjQ2bnA5MFM5QkJXbmNxN0JlQUQ1T1dNb1ErTGxkS1dFSWV1eE5mTkVkWQpSQVpIcGxlWkRtcll5U0w4U3ovaUxleFBiRXJUc1g5U2dZSm1xK1M3emNrdlFwVVNtczlNMEVSVHh6R3VGbzdlCi9OMXdra0xvekJkQUxyUXB1R2ZzUDBJY3FxSkR4K3JOSCt0RmJrc2hCMkN1WU5zeHVMN2phb2wwYlJDMmYweXkKQ0JXMnRVZCtrVG5vRUV1dTZRSDh3SVpjbTc2bFBZREtDYllRZm9VZDArWnc5UmxjSmJuUi93dE9lbUZ2NGxySApJcEdDeXZFUXNJR3JiQW84MGRyby8rVzVDUTVzWFZhNFBRSURBUUFCCi0tLS0tRU5EIFJTQSBQVUJMSUMgS0VZLS0tLS0K",
+  "enroll_time": 1661391000
+ },
+ "ClientRecord": {
+  "client_id": "C.1352adc54e292a23",
+  "hostname": "devbox",
+  "system": "linux",
+  "first_seen_at": 1661391000000000000,
+  "ping": 1661391000000000000,
+  "labels": [],
+  "lower_labels": [],
+  "mac_addresses": [
+   "00:0c:29:e3:53:83",
+   "02:42:69:c1:eb:25",
+   "02:42:bc:9a:b8:6e",
+   "02:42:fb:7e:19:f7",
+   "f2:c2:0a:5f:03:f1",
+   "26:1d:10:c6:51:06",
+   "8e:7d:7d:50:5a:00"
+  ],
+  "last_hunt_timestamp": 0,
+  "last_event_table_version": 0,
+  "labels_timestamp": 0,
+  "assigned_hunts": []
+ },
+ "System.VFS.ListDirectory": {
+  "client_id": "C.1352adc54e292a23",
+  "session_id": "F.CCMS0OJQ7LI36",
+  "context": "",
+  "create_time": 0,
+  "start_time": 1661391000000000,
+  "last_active_time": 1661391000000000,
+  "uploaded_files": 0,
+  "uploaded_bytes": 0,
+  "query_stats": [
+   "{\"duration\":21397750,\"names_with_response\":[\"\",\"System.VFS.ListDirectory\"],\"Artifact\":\"System.VFS.ListDirectory\",\"log_rows\":2,\"result_rows\":1,\"query_id\":1,\"total_queries\":1}"
+  ],
+  "tasks": ""
+ },
+ "System.VFS.ListDirectory Results": [
+  {
+   "client_id": "",
+   "flow_id": "",
+   "artifact": "",
+   "type": "",
+   "start_row": 0,
+   "end_row": 1,
+   "vfs_path": "/clients/C.1352adc54e292a23/collections/F.CCMS0OJQ7LI36/logs.json",
+   "data": "{\"client_time\":1663943042,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\"}\n",
+   "total_rows": 1,
+   "timestamp": 1661391000
+  },
+  {
+   "client_id": "",
+   "flow_id": "",
+   "artifact": "",
+   "type": "",
+   "start_row": 1,
+   "end_row": 2,
+   "vfs_path": "/clients/C.1352adc54e292a23/collections/F.CCMS0OJQ7LI36/logs.json",
+   "data": "{\"client_time\":1663943042,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory: Sending response part 0 7.8 kB (1 rows).\"}\n",
+   "total_rows": 2,
+   "timestamp": 1661391000
+  },
+  {
+   "client_id": "",
+   "flow_id": "",
+   "artifact": "",
+   "type": "",
+   "start_row": 0,
+   "end_row": 1,
+   "vfs_path": "/clients/C.1352adc54e292a23/artifacts/System.VFS.ListDirectory/F.CCMS0OJQ7LI36.json",
+   "data": "{\"Directory\":\"\",\"Components\":[],\"Count\":27,\"_Accessor\":\"auto\",\"_JSON\":\"[{\\\"_FullPath\\\":\\\"/Users\\\",\\\"_Accessor\\\":\\\"auto\\\",\\\"_Data\\\":{\\\"DevMajor\\\":253,\\\"DevMinor\\\":0},\\\"Name\\\":\\\"Users\\\",\\\"Size\\\":4096,\\\"Mode\\\":\\\"drwxr-xr-x\\\",\\\"mtime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"atime\\\":\\\"2022-09-11T15:12:27Z\\\",\\\"ctime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"btime\\\":\\\"0001-01-01T00:00:00Z\\\"}]\"}\n",
+   "total_rows": 1,
+   "timestamp": 1661391000
+  },
+  {
+   "client_id": "",
+   "flow_id": "",
+   "artifact": "",
+   "type": "",
+   "start_row": 2,
+   "end_row": 3,
+   "vfs_path": "/clients/C.1352adc54e292a23/collections/F.CCMS0OJQ7LI36/logs.json",
+   "data": "{\"client_time\":1663943042,\"level\":\"INFO\",\"message\":\"Collection is done after 21.109779ms\\n\"}\n",
+   "total_rows": 3,
+   "timestamp": 1661391000
+  },
+  {
+   "client_id": "",
+   "flow_id": "",
+   "artifact": "",
+   "type": "",
+   "start_row": 3,
+   "end_row": 4,
+   "vfs_path": "/clients/C.1352adc54e292a23/collections/F.CCMS0OJQ7LI36/logs.json",
+   "data": "{\"client_time\":1663943042,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":3,\\\"PluginsCalled\\\":2,\\\"FunctionsCalled\\\":4,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":8}\\n\"}\n",
+   "total_rows": 4,
+   "timestamp": 1661391000
+  }
+ ],
+ "System.VFS.DownloadFile": {
+  "client_id": "C.1352adc54e292a23",
+  "session_id": "F.CCM9S0N2QR4H8",
+  "context": "",
+  "create_time": 0,
+  "start_time": 1661391000000000,
+  "last_active_time": 1661391000000000,
+  "uploaded_files": 1,
+  "uploaded_bytes": 784,
+  "query_stats": [
+   "{\"duration\":399915666,\"names_with_response\":[\"\",\"System.VFS.DownloadFile\"],\"Artifact\":\"System.VFS.DownloadFile\",\"log_rows\":2,\"result_rows\":1,\"query_id\":1,\"total_queries\":1}"
+  ],
+  "tasks": ""
+ }
+}

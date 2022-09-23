@@ -6,7 +6,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/logging"
 )
 
-func (self ElasticIngestor) HandleEnrolment(
+func (self Ingestor) HandleEnrolment(
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
