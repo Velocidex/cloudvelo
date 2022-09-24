@@ -21,7 +21,7 @@ jobs:
         opensearch-version: 1.2
 
     - name: Start LocalStack
-        env:
+      env:
           SERVICES: s3
           DEBUG: 1
           DATA_DIR: /tmp/localstack/data
@@ -32,7 +32,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: test
           AWS_DEFAULT_REGION: us-east-1
 
-        run: |
+      run: |
           # install LocalStack cli and awslocal
           pip install localstack awscli-local[ver1]
           # Make sure to pull the latest version of the image
@@ -43,8 +43,8 @@ jobs:
           echo "Waiting for LocalStack startup..."
           localstack wait -t 30
           echo "Startup complete"
-      - name: Run some Tests against LocalStack
-        run: |
+    - name: Initialize localstack
+      run: |
           awslocal s3 mb s3://velociraptor
           awslocal s3 ls
           echo "Test Execution complete!"
