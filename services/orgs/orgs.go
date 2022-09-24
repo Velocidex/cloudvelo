@@ -239,7 +239,7 @@ func (self *OrgManager) Start(
 	datastore.OverrideDatastoreImplementation(
 		cvelo_datastore.NewElasticDatastore(ctx, config_obj))
 
-	file_store_obj, err := filestore.NewS3Filestore(config_obj)
+	file_store_obj, err := filestore.NewS3Filestore(ctx, config_obj)
 	if err != nil {
 		return err
 	}

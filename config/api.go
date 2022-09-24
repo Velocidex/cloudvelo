@@ -58,18 +58,6 @@ func (self *ConfigLoader) ApplyJsonPatch(config_obj *Config) (*Config, error) {
 		return nil, err
 	}
 
-	/*
-		patch, err := jsonpatch.DecodePatch([]byte(self.JSONPatch))
-		if err != nil {
-			return nil, fmt.Errorf("Decoding JSON patch: %w", err)
-		}
-
-		patched, err := patch.Apply(serialized)
-		if err != nil {
-			return nil, fmt.Errorf("Invalid merge patch: %w", err)
-		}
-	*/
-
 	patched, err := jsonpatch.MergePatch(serialized, []byte(self.JSONPatch))
 	if err != nil {
 		return nil, fmt.Errorf("Invalid merge patch: %w", err)
@@ -84,6 +72,23 @@ func (self *ConfigLoader) ApplyJsonPatch(config_obj *Config) (*Config, error) {
 	}
 
 	return result, nil
+}
+
+func (self *ConfigLoader) LoadFromText() (*Config, error) {
+	config_obj := &Config{}
+	err := yaml.UnmarshalStrict([]byte(self.ConfigText), config_obj)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	if self.JSONPatch != "" {
+		config_obj, err = self.ApplyJsonPatch(config_obj)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	return config_obj, self.validateVeloConfig(config_obj)
 }
 
 func (self *ConfigLoader) LoadFilename() (*Config, error) {
@@ -101,7 +106,7 @@ func (self *ConfigLoader) LoadFilename() (*Config, error) {
 	}
 
 	// Now load and verify the velociraptor config
-	return config_obj, nil
+	return config_obj, self.validateVeloConfig(config_obj)
 }
 
 func (self *ConfigLoader) validateVeloConfig(config_obj *Config) error {
@@ -124,19 +129,9 @@ func (self *ConfigLoader) validateVeloConfig(config_obj *Config) error {
 
 func (self *ConfigLoader) Load() (*Config, error) {
 	if self.ConfigText != "" {
-		result := &Config{}
-		err := yaml.UnmarshalStrict([]byte(self.ConfigText), result)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return result, self.validateVeloConfig(result)
-
+		return self.LoadFromText()
 	} else if self.Filename != "" {
-		config_obj, err := self.LoadFilename()
-		if err != nil {
-			return nil, err
-		}
-		return config_obj, self.validateVeloConfig(config_obj)
+		return self.LoadFilename()
 	}
 	return nil, errors.New("Unable to load config from anywhere")
 }

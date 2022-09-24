@@ -2,6 +2,9 @@ package testsuite
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -27,11 +30,23 @@ type CloudTestSuite struct {
 	cancel func()
 }
 
+// Allow an external file to override the config. This allows us to
+// manually test with AWS credentials.
 func (self *CloudTestSuite) LoadConfig() *config.Config {
+	patch := ""
+	override_filename := os.Getenv("VELOCIRAPTOR_TEST_CONFIG_OVERRIDE")
+	if override_filename != "" {
+		data, err := ioutil.ReadFile(override_filename)
+		require.NoError(self.T(), err)
+		fmt.Printf("Will override config with %v\n", override_filename)
+		patch = string(data)
+	}
+
 	loader := config.ConfigLoader{
 		VelociraptorLoader: new(velo_config.Loader).
 			WithRequiredFrontend().WithVerbose(true),
 		ConfigText: SERVER_CONFIG,
+		JSONPatch:  patch,
 	}
 	config_obj, err := loader.Load()
 	require.NoError(self.T(), err)

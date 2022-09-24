@@ -57,3 +57,9 @@ docker:
 
 assets:
 	go run make.go -v Assets
+
+test:
+	go run make.go -v BareAssets
+	go test -v ./foreman/
+	go test -v ./ingestion/
+	go test -v ./filestore/
