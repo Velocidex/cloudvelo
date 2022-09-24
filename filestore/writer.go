@@ -2,7 +2,9 @@ package filestore
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -25,6 +27,8 @@ type S3Writer struct {
 	size        int64
 	upload_id   string
 	part_number int64
+
+	ctx context.Context
 }
 
 func (self *S3Writer) start() error {
@@ -54,6 +58,16 @@ func (self *S3Writer) Size() (int64, error) {
 func (self *S3Writer) Write(data []byte) (size int, err error) {
 	if len(data) == 0 {
 		return 0, nil
+	}
+
+	// Make sure we started. This is needed to ensure we start
+	// creating the multipart upload **after** any truncation is
+	// needed.
+	if self.upload_id == "" {
+		err := self.start()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	self.buf = append(self.buf, data...)
@@ -103,22 +117,22 @@ func (self *S3Writer) writeBuf() (size int, err error) {
 	return
 }
 
+// Note that on S3 truncate is the default behavior anyway as AWS does
+// not support appending to an S3 object.
 func (self *S3Writer) Truncate() error {
 	self.buf = nil
 
-	svc := s3.New(self.session)
-	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(self.config_obj.Cloud.Bucket),
-		Key:    aws.String(self.key),
-	})
-	if err != nil {
-		return err
-	}
+	// Wait here for a reasonable time but not forever!
+	subctx, cancel := context.WithTimeout(self.ctx, 10*time.Second)
+	defer cancel()
 
-	return svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
-		Bucket: aws.String(self.config_obj.Cloud.Bucket),
-		Key:    aws.String(self.key),
-	})
+	svc := s3.New(self.session)
+	_, err := svc.DeleteObjectWithContext(subctx,
+		&s3.DeleteObjectInput{
+			Bucket: aws.String(self.config_obj.Cloud.Bucket),
+			Key:    aws.String(self.key),
+		})
+	return err
 }
 
 func (self *S3Writer) Close() error {

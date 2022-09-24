@@ -62,10 +62,11 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 
 	if self.cloud_config != nil {
 		// Set up the indexes for the new org.
-		file_store_obj, err := filestore.NewS3Filestore(&config.Config{
-			Config: *org_config,
-			Cloud:  *self.cloud_config,
-		})
+		file_store_obj, err := filestore.NewS3Filestore(self.ctx,
+			&config.Config{
+				Config: *org_config,
+				Cloud:  *self.cloud_config,
+			})
 		if err != nil {
 			return nil, err
 		}

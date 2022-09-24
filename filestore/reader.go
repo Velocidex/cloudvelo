@@ -2,8 +2,10 @@ package filestore
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -29,10 +31,22 @@ func (self *S3Reader) Read(buff []byte) (int, error) {
 				fmt.Sprintf("bytes=%d-%d", self.offset,
 					self.offset+int64(len(buff)-1))),
 		})
-	if err == nil {
-		self.offset += n
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "InvalidRange":
+				// Not really an error - this happens at the end of
+				// the file, just return EOF
+				return 0, io.EOF
+			default:
+				return 0, err
+			}
+		}
 	}
-	return int(n), err
+	self.offset += n
+
+	return int(n), nil
 }
 
 func (self *S3Reader) Seek(offset int64, whence int) (int64, error) {

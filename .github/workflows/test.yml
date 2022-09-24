@@ -20,7 +20,37 @@ jobs:
       with:
         opensearch-version: 1.2
 
+    - name: Start LocalStack
+      env:
+          SERVICES: s3
+          DEBUG: 1
+          DATA_DIR: /tmp/localstack/data
+          KINESIS_PROVIDER: kinesalite
+
+          # These have to match up with the config in server.config.yaml
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+
+      run: |
+          # install LocalStack cli and awslocal
+          pip3 install pyOpenSSL --upgrade
+          pip3 install localstack awscli-local[ver1]
+
+          # Make sure to pull the latest version of the image
+          docker pull localstack/localstack
+          # Start LocalStack in the background
+          localstack start -d
+          # Wait 30 seconds for the LocalStack container to become ready before timing out
+          echo "Waiting for LocalStack startup..."
+          localstack wait -t 30
+          echo "Startup complete"
+    - name: Initialize localstack
+      run: |
+          awslocal s3 mb s3://velociraptor
+          awslocal s3 ls
+          echo "Test Execution complete!"
+
     - name: Run tests
       run: |
-        go run make.go -v BareAssets
-        go test -v ./foreman/
+        make test

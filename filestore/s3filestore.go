@@ -1,10 +1,12 @@
 package filestore
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -21,6 +23,7 @@ type S3Filestore struct {
 	config_obj *config.Config
 	session    *session.Session
 	bucket     string
+	ctx        context.Context
 }
 
 func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error) {
@@ -41,9 +44,10 @@ func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, erro
 		config_obj:  self.config_obj,
 		session:     self.session,
 		part_number: 1,
+		ctx:         self.ctx,
 	}
 
-	return result, result.start()
+	return result, nil
 }
 
 // Completion function will be called when the file is committed.
@@ -90,20 +94,18 @@ func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, e
 
 func (self S3Filestore) Delete(filename api.FSPathSpec) error {
 
+	// Wait here for a reasonable time but not forever!
+	subctx, cancel := context.WithTimeout(self.ctx, 100*time.Second)
+	defer cancel()
+
 	key := PathspecToKey(filename)
 	svc := s3.New(self.session)
-	_, err := svc.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: aws.String(self.bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return err
-	}
-
-	return svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
-		Bucket: aws.String(self.bucket),
-		Key:    aws.String(key),
-	})
+	_, err := svc.DeleteObjectWithContext(
+		subctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(self.bucket),
+			Key:    aws.String(key),
+		})
+	return err
 }
 
 func (self S3Filestore) Move(src, dest api.FSPathSpec) error {
@@ -116,6 +118,7 @@ func (self S3Filestore) Close() error {
 }
 
 func NewS3Filestore(
+	ctx context.Context,
 	config_obj *config.Config) (*S3Filestore, error) {
 
 	session, err := GetS3Session(config_obj)
@@ -123,6 +126,7 @@ func NewS3Filestore(
 		config_obj: config_obj,
 		session:    session,
 		bucket:     config_obj.Cloud.Bucket,
+		ctx:        ctx,
 	}, err
 }
 
