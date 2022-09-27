@@ -3,6 +3,7 @@
         "dynamic": false,
         "properties": {
             "client_id": { "type": "keyword" },
+            "flow_id":   { "type": "keyword" },
             "data":      { "type": "text", "index": false },
             "timestamp": { "type": "long" }
         }

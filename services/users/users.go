@@ -166,6 +166,10 @@ func (self *UserManager) GetUser(ctx context.Context, username string) (
 	if err != nil {
 		return nil, err
 	}
+
+	// Make a copy for our caller so we dont mutate the cached
+	// version.
+	result = proto.Clone(result).(*api_proto.VelociraptorUser)
 	result.PasswordHash = nil
 	result.PasswordSalt = nil
 
