@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Velocidex/ttlcache/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -41,7 +42,7 @@ type UserManager struct {
 
 func (self *UserManager) SetUser(
 	ctx context.Context, user_record *api_proto.VelociraptorUser) error {
-	serialized, err := json.Marshal(user_record)
+	serialized, err := protojson.Marshal(user_record)
 	if err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func (self *UserManager) ListUsers(ctx context.Context) (
 		}
 
 		user_record := &api_proto.VelociraptorUser{}
-		err = json.Unmarshal([]byte(record.Record), user_record)
+		err = protojson.Unmarshal([]byte(record.Record), user_record)
 		if err == nil {
 			result = append(result, user_record)
 		}
@@ -136,7 +137,7 @@ func (self *UserManager) GetUserWithHashes(
 		Name: user_record.Username,
 	}
 
-	err = json.Unmarshal(
+	err = protojson.Unmarshal(
 		[]byte(user_record.Record), result)
 	if err != nil {
 		return nil, err
@@ -201,7 +202,7 @@ func (self *UserManager) SetUserOptions(
 		user_record.Org = options.Org
 	}
 
-	serialized, err := json.Marshal(user_record)
+	serialized, err := protojson.Marshal(user_record)
 	if err != nil {
 		return err
 	}
@@ -237,7 +238,7 @@ func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 	if user_record.GUIOptions == "" {
 		return result, nil
 	}
-	err = json.Unmarshal(
+	err = protojson.Unmarshal(
 		[]byte(user_record.GUIOptions), result)
 
 	if result.Customizations == nil {

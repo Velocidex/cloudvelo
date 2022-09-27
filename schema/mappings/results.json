@@ -3,6 +3,7 @@
         "dynamic": false,
         "properties": {
             "client_id":    { "type": "keyword" },
+            "type":         { "type": "keyword" },
             "artifact":     { "type": "keyword" },
             "flow_id":      { "type": "keyword" },
             "data":         { "type": "binary"  },

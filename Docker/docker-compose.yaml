@@ -72,6 +72,7 @@ services:
     image: cvelociraptor
     volumes:
       - ./config:/config/:ro
+#    entrypoint: /cvelociraptor --config /config/server.config.yaml foreman -v --debug
     entrypoint: /cvelociraptor --config /config/server.config.yaml foreman -v
     networks:
       - velociraptor-network

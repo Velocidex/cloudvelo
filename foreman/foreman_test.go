@@ -11,6 +11,7 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
+	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
@@ -208,11 +209,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 		new_plan.MonitoringTablesToClients["Label1"])
 }
 
-func (self *ForemanTestSuite) TestHuntsAllClients() {
-	Clock = &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
-
+func (self *ForemanTestSuite) setupAllHunts() {
 	config_obj := self.ConfigObj.VeloConf()
 
 	start_request := &flows_proto.ArtifactCollectorArgs{
@@ -226,7 +223,8 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			StartRequest: start_request,
 			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24 * time.Hour).UnixNano()),
+			// Expire in 24 hours. Expires is set in uS
+			Expires: uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
 		},
 
 		// This hunt runs only on Label Foo
@@ -235,7 +233,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			StartRequest: start_request,
 			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24 * time.Hour).UnixNano()),
+			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				UnionField: &api_proto.HuntCondition_Labels{
 					Labels: &api_proto.HuntLabelCondition{
@@ -251,7 +249,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			StartRequest: start_request,
 			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24 * time.Hour).UnixNano()),
+			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				ExcludedLabels: &api_proto.HuntLabelCondition{
 					Label: []string{"Foo"},
@@ -259,6 +257,26 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			},
 		},
 	}
+
+	// Create a bunch of hunts to use
+	hunt_service, err := services.GetHuntDispatcher(config_obj)
+	assert.NoError(self.T(), err)
+
+	// Set the hunt directly in the database
+	for _, h := range hunts {
+		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).SetHunt(h)
+		assert.NoError(self.T(), err)
+	}
+}
+
+func (self *ForemanTestSuite) TestHuntsAllClients() {
+	Clock = &utils.MockClock{
+		MockNow: time.Unix(1661391000, 0),
+	}
+
+	config_obj := self.ConfigObj.VeloConf()
+
+	self.setupAllHunts()
 
 	clients := []client_info.ClientInfo{
 		// This client is currently connected
@@ -307,7 +325,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 
 	// See the hunt update plan.
 	plan := NewPlan()
-	err := Foreman{}.CalculateHuntUpdate(self.Ctx, config_obj, hunts, plan)
+	err := Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	// The connected client should run the all client hunt.
@@ -367,7 +385,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 
 	// Calculating the plan again should produce nothing to do.
 	new_plan := NewPlan()
-	err = Foreman{}.CalculateHuntUpdate(self.Ctx, config_obj, hunts, new_plan)
+	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// The plan should be empty as there is nothing to do!
@@ -381,7 +399,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// Get the plan again - this hunt should now be scheduled on the
 	// client.
 	new_plan = NewPlan()
-	err = Foreman{}.CalculateHuntUpdate(self.Ctx, config_obj, hunts, new_plan)
+	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// Only one client will be scheduled now.
@@ -390,6 +408,50 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// Hunt targeting Foo label will be scheduled on the client now.
 	assert.True(self.T(),
 		huntPresent("H.OnlyLabelFoo", new_plan.ClientIdToHunts["C.ConnectedClient"]))
+
+	self.testHuntsExpireInFuture()
+}
+
+func (self *ForemanTestSuite) testHuntsExpireInFuture() {
+	// Test that the hunt expires - move time forward by 25 hours.
+	Clock = &utils.MockClock{
+		MockNow: time.Unix(1661391000+25*60*60, 0),
+	}
+
+	config_obj := self.ConfigObj.VeloConf()
+
+	// Add a new client
+	c := &client_info.ClientInfo{
+		ClientId:      "C.NewClient",
+		Ping:          uint64(Clock.Now().UnixNano()),
+		AssignedHunts: []string{},
+		Labels:        []string{},
+		LowerLabels:   []string{},
+	}
+	err := cvelo_services.SetElasticIndex(
+		self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+	assert.NoError(self.T(), err)
+
+	plan := NewPlan()
+	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
+	assert.NoError(self.T(), err)
+
+	// No hunts scheduled
+	assert.True(self.T(), len(plan.ClientIdToHunts) == 0)
+
+	hunt_service, err := services.GetHuntDispatcher(config_obj)
+	assert.NoError(self.T(), err)
+
+	// All the hunts are stopped now because they all expired.
+	hunt_list, err := hunt_service.ListHunts(
+		self.Ctx, config_obj, &api_proto.ListHuntsRequest{
+			Count: 1000,
+		})
+	assert.NoError(self.T(), err)
+
+	for _, hunt := range hunt_list.Items {
+		assert.Equal(self.T(), api_proto.Hunt_STOPPED, hunt.State)
+	}
 }
 
 func TestForeman(t *testing.T) {

@@ -319,6 +319,15 @@ func NewOrgManager(
 		services.RegisterOrgManager(service)
 	}
 
+	// Cleanup when the context is removed.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		<-ctx.Done()
+		services.RegisterOrgManager(nil)
+	}()
+
 	return service, service.Start(ctx, config_obj, wg)
 }
 
@@ -340,6 +349,15 @@ func NewClientOrgManager(
 	if err != nil {
 		services.RegisterOrgManager(service)
 	}
+
+	// Cleanup when the context is removed.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		<-ctx.Done()
+		services.RegisterOrgManager(nil)
+	}()
 
 	return service, service.StartClientOrgManager(ctx, config_obj, wg)
 }

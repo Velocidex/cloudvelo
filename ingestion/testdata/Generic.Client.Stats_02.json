@@ -1,0 +1,14 @@
+{
+ "session_id": "F.Monitoring",
+ "request_id": 980,
+ "response_id": 1664246489016650335,
+ "source": "C.1352adc54e292a23",
+ "auth_state": 1,
+ "LogMessage": {
+  "id": 1,
+  "message": "Time 120: Generic.Client.Stats: Sending response part 0 1.0 kB (11 rows).",
+  "timestamp": 1664246489016642,
+  "artifact": "Generic.Client.Stats",
+  "level": "DEFAULT"
+ }
+}

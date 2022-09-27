@@ -162,7 +162,7 @@ func (self Foreman) GetActiveHunts(
 		}
 
 		// Check if the hunt is expired and stop it if it is
-		if hunt.Expires < uint64(Clock.Now().UnixNano()) {
+		if hunt.Expires < uint64(Clock.Now().UnixNano()/1000) {
 			err := self.stopHunt(ctx, org_config_obj, hunt)
 			if err != nil {
 				return nil, err
@@ -233,19 +233,18 @@ func (self Foreman) Start(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
 
-			case <-time.After(time.Second):
+			case <-time.After(5 * time.Second):
 				err := self.RunOnce(ctx, config_obj)
 				if err != nil {
-					logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 					logger.Error("Foreman: %v", err)
 				}
-				return
 			}
 		}
 	}()
