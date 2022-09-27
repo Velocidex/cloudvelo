@@ -137,6 +137,18 @@ func (self *IngestionTestSuite) TestIngestor() {
 	assert.NoError(self.T(), err)
 	golden.Set("System.VFS.DownloadFile", record)
 
+	// Get Client Event Monitoring
+	// Clear the results so we get a clean golden image.
+	err = cvelo_services.DeleteByQuery(
+		ctx, "test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+
+	self.ingestGoldenMessages(ctx, ingestor, "Generic.Client.Stats")
+	records, err = cvelo_services.QueryElasticRaw(ctx,
+		"test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	golden.Set("Generic.Client.Stats Results", records)
+
 	goldie.Assert(self.T(), "TestIngestor", json.MustMarshalIndent(golden))
 }
 

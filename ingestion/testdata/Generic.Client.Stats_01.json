@@ -1,0 +1,22 @@
+{
+ "session_id": "F.Monitoring",
+ "response_id": 1664246489016657057,
+ "source": "C.1352adc54e292a23",
+ "auth_state": 1,
+ "VQLResponse": {
+  "JSONLResponse": "{\"Timestamp\":1664246379.037654,\"CPU\":5.56,\"RSS\":83447808,\"CPUPercent\":null}\n{\"Timestamp\":1664246389.0389478,\"CPU\":5.93,\"RSS\":72527872,\"CPUPercent\":0.036995213198136666}\n{\"Timestamp\":1664246399.0391533,\"CPU\":6,\"RSS\":73875456,\"CPUPercent\":0.006999856141185939}\n{\"Timestamp\":1664246409.0397468,\"CPU\":6.12,\"RSS\":72306688,\"CPUPercent\":0.011999287933643665}\n{\"Timestamp\":1664246419.040297,\"CPU\":6.18,\"RSS\":73654272,\"CPUPercent\":0.005999669856118451}\n{\"Timestamp\":1664246429.0415347,\"CPU\":6.26,\"RSS\":65314816,\"CPUPercent\":0.007999010017847958}\n{\"Timestamp\":1664246439.0423741,\"CPU\":6.36,\"RSS\":62390272,\"CPUPercent\":0.009999160598648414}\n{\"Timestamp\":1664246449.0437052,\"CPU\":6.42,\"RSS\":62619648,\"CPUPercent\":0.005999201451737721}\n{\"Timestamp\":1664246459.0448549,\"CPU\":6.5,\"RSS\":64479232,\"CPUPercent\":0.007999080382213527}\n{\"Timestamp\":1664246469.0458136,\"CPU\":6.619999999999999,\"RSS\":61812736,\"CPUPercent\":0.011998849692949804}\n{\"Timestamp\":1664246479.047109,\"CPU\":6.68,\"RSS\":63152128,\"CPUPercent\":0.005999222903775355}\n",
+  "Columns": [
+   "Timestamp",
+   "CPU",
+   "RSS",
+   "CPUPercent"
+  ],
+  "query_id": 3,
+  "Query": {
+   "Name": "Generic.Client.Stats",
+   "VQL": "SELECT * FROM if(then=Generic_Client_Stats_0_0, condition=precondition_Generic_Client_Stats_0, else={SELECT * FROM scope() WHERE log(message='Query skipped due to precondition') AND FALSE})"
+  },
+  "timestamp": 1664246489016595,
+  "total_rows": 11
+ }
+}

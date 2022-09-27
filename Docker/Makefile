@@ -1,6 +1,7 @@
 up:
 	mkdir -p .localstack/data
 	cp .localstack/template/* .localstack/data
+	docker-compose build
 	docker-compose --profile all up -d
 
 down:
