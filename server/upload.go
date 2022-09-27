@@ -44,6 +44,7 @@ func (self *Communicator) StartMultipartUpload(
 
 	svc := s3.New(self.session)
 	key := filestore.PathspecToKey(
+		self.config_obj,
 		path_specs.NewUnsafeFilestorePath(request.Components...).
 			SetType(api.PATH_TYPE_FILESTORE_ANY))
 	resp, err := svc.CreateMultipartUpload(
