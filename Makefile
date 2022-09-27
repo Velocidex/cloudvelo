@@ -63,3 +63,4 @@ test:
 	go test -v ./foreman/
 	go test -v ./ingestion/
 	go test -v ./filestore/
+	go test -v ./services/...
