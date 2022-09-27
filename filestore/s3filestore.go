@@ -31,7 +31,7 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 	return &S3Reader{
 		session:    self.session,
 		downloader: downloader,
-		key:        PathspecToKey(filename),
+		key:        PathspecToKey(self.config_obj, filename),
 		bucket:     self.bucket,
 		filename:   filename,
 	}, nil
@@ -40,7 +40,7 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 // Async write - same as WriteFileWithCompletion with BackgroundWriter
 func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, error) {
 	result := &S3Writer{
-		key:         PathspecToKey(filename),
+		key:         PathspecToKey(self.config_obj, filename),
 		config_obj:  self.config_obj,
 		session:     self.session,
 		part_number: 1,
@@ -67,7 +67,7 @@ func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, e
 	// Get the list of items
 	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: aws.String(self.bucket),
-		Prefix: aws.String(PathspecToKey(
+		Prefix: aws.String(PathspecToKey(self.config_obj,
 			dirname.SetType(api.PATH_TYPE_DATASTORE_DIRECTORY))),
 	})
 	if err != nil {
@@ -98,7 +98,7 @@ func (self S3Filestore) Delete(filename api.FSPathSpec) error {
 	subctx, cancel := context.WithTimeout(self.ctx, 100*time.Second)
 	defer cancel()
 
-	key := PathspecToKey(filename)
+	key := PathspecToKey(self.config_obj, filename)
 	svc := s3.New(self.session)
 	_, err := svc.DeleteObjectWithContext(
 		subctx, &s3.DeleteObjectInput{
