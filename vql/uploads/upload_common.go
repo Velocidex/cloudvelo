@@ -19,8 +19,6 @@ import (
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/executor"
-	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
@@ -29,7 +27,11 @@ import (
 // Initial request specifies the destination and receives an upload
 // key.
 type UploadRequest struct {
-	// A path where the file should be stored inside the bucket.
+	ClientId  string `json:"client_id"`
+	SessionId string `json:"session_id"`
+	Accessor  string `json:"accessor"`
+
+	// The components of the path on the client.
 	Components []string `json:"components"`
 }
 
@@ -73,9 +75,11 @@ type Uploader struct {
 
 	exe *executor.ClientExecutor
 
-	file_store_path api.FSPathSpec
+	path *accessors.OSPath
 
+	client_id  string
 	session_id string
+	accessor   string
 	mtime      time.Time
 	atime      time.Time
 	ctime      time.Time
@@ -90,7 +94,10 @@ type Uploader struct {
 func (self *Uploader) Start(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", self.start_url,
 		strings.NewReader(json.MustMarshalString(&UploadRequest{
-			Components: self.file_store_path.Components(),
+			ClientId:   self.client_id,
+			SessionId:  self.session_id,
+			Accessor:   self.accessor,
+			Components: self.path.Components,
 		})))
 	if err != nil {
 		return err
@@ -208,10 +215,12 @@ func (self *Uploader) Close() error {
 		SessionId: self.session_id,
 		FileBuffer: &actions_proto.FileBuffer{
 			Pathspec: &actions_proto.PathSpec{
-				Path: self.file_store_path.AsClientPath(),
+				// This is the string form that will be shown in the
+				// GUI.
+				Path:       self.path.String(),
+				Accessor:   self.accessor,
+				Components: self.path.Components,
 			},
-			// This is the s3 path that was used.
-			Reference:    self.file_store_path.AsClientPath(),
 			Size:         self.offset,
 			StoredSize:   self.offset,
 			Eof:          true,
@@ -282,12 +291,11 @@ func (self *UploaderFactory) NewUploader(
 		ctx:             ctx,
 		exe:             self.exe,
 		session_tracker: self.GetTracker(session_id),
+		session_id:      session_id,
+		client_id:       self.client_id,
 		owner:           self,
-		file_store_path: path_specs.NewUnsafeFilestorePath(
-			"clients", self.client_id, "collections",
-			session_id, "uploads", accessor).
-			AddChild(path.Components...).
-			SetType(api.PATH_TYPE_FILESTORE_ANY),
+		accessor:        accessor,
+		path:            path,
 	}
 
 	return result, result.Start(ctx)

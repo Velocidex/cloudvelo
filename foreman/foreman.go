@@ -95,12 +95,14 @@ func (self Foreman) getClientQueryForHunt(hunt *api_proto.Hunt) string {
 		}
 	}
 
+	hunt_create_time_ns := hunt.CreateTime * 1000
+
 	// Get all clients that were active in the last hour that need
 	// to get the hunt.
 	return json.Format(clientsLaterThanHuntQuery,
 		must_not_condition, hunt.HuntId,
 		extra_conditions,
-		hunt.CreateTime,
+		hunt_create_time_ns,
 		Clock.Now().Add(-time.Hour).UnixNano())
 }
 

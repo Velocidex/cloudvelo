@@ -5,9 +5,11 @@ import (
 	"context"
 	"strings"
 
+	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
+	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -118,14 +120,28 @@ func (self Ingestor) HandleSystemVfsUpload(
 
 		accessor := row.Accessor
 		if accessor == "" {
-			accessor = "file"
+			accessor = "auto"
 		}
 
+		// Here row.Components are the client's VFS components, we
+		// need to convert it into a VFSDownloadInfoPath proto. Inside
+		// that the Components field is the full filestore path
 		if len(row.Components) > 0 {
-			components := append([]string{message.Source, accessor},
+			// Record where the actual file was stored.
+			row.FSComponents = filestore.S3ComponentsForClientUpload(
+				&uploads.UploadRequest{
+					ClientId:   message.Source,
+					SessionId:  message.SessionId,
+					Accessor:   accessor,
+					Components: row.Components,
+				})
+
+			// The containing directory will contain an additional
+			// download record.
+			dir_components := append([]string{message.Source, accessor},
 				row.Components[:len(row.Components)-1]...)
 			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
-			id := services.MakeId(utils.JoinComponents(components, "/"))
+			id := services.MakeId(utils.JoinComponents(dir_components, "/"))
 			dir_downloads, _ := downloads[id]
 			dir_downloads = append(dir_downloads, json.MustMarshalString(row))
 			downloads[id] = dir_downloads

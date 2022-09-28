@@ -12,8 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
-	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
@@ -42,11 +40,9 @@ func (self *Communicator) StartMultipartUpload(
 		return
 	}
 
+	// Formulate the filestore path from the upload request.
 	svc := s3.New(self.session)
-	key := filestore.PathspecToKey(
-		self.config_obj,
-		path_specs.NewUnsafeFilestorePath(request.Components...).
-			SetType(api.PATH_TYPE_FILESTORE_ANY))
+	key := filestore.S3KeyForClientUpload(self.config_obj.VeloConf(), request)
 	resp, err := svc.CreateMultipartUpload(
 		&s3.CreateMultipartUploadInput{
 			Bucket:      aws.String(self.config_obj.Cloud.Bucket),

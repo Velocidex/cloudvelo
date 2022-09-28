@@ -108,6 +108,5 @@ func Upload(
 		StoredSize: uploader.offset,
 		Sha256:     hex.EncodeToString(uploader.sha_sum.Sum(nil)),
 		Md5:        hex.EncodeToString(uploader.md5_sum.Sum(nil)),
-		Reference:  uploader.file_store_path.AsClientPath(),
 	}, nil
 }

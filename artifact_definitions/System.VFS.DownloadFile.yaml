@@ -42,7 +42,6 @@ sources:
              Upload.StoredSize AS StoredSize,
              Upload.Sha256 AS Sha256,
              Upload.Md5 AS Md5,
-             Upload.Reference AS FSPath,
              Path.Components AS _Components
       FROM if(condition=Recursively,
         then={ SELECT * FROM download_recursive},

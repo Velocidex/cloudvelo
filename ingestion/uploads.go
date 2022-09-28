@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/Velocidex/ordereddict"
+	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
+	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -36,6 +38,9 @@ ctx._source.uploaded_bytes += params.uploaded_bytes
 `
 )
 
+// Uploads are being sent separately to the server handler by the
+// client. The FileBuffer message only sends metadata about the
+// upload.
 func (self Ingestor) HandleUploads(
 	ctx context.Context,
 	config_obj *config_proto.Config,
@@ -47,9 +52,17 @@ func (self Ingestor) HandleUploads(
 
 	response := message.FileBuffer
 
+	// Figure out where in the filestore the server's
+	// StartMultipartUpload placed it.
+	components := filestore.S3ComponentsForClientUpload(&uploads.UploadRequest{
+		ClientId:   message.Source,
+		SessionId:  message.SessionId,
+		Accessor:   message.FileBuffer.Pathspec.Accessor,
+		Components: message.FileBuffer.Pathspec.Components,
+	})
+
 	path_manager := paths.NewFlowPathManager(
 		message.Source, message.SessionId)
-
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
 		file_store_factory, path_manager.UploadMetadata(), json.NoEncOpts,
@@ -69,6 +82,7 @@ func (self Ingestor) HandleUploads(
 			Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
 			Set("started", cvelo_utils.Clock.Now()).
 			Set("vfs_path", response.Pathspec.Path).
+			Set("_Components", components).
 			Set("file_size", response.Size).
 			Set("uploaded_size", response.StoredSize))
 
