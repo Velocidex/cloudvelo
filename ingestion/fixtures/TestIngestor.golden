@@ -123,7 +123,7 @@
    "type": "results",
    "timestamp": 1661391000000000000,
    "date": 1661385600,
-   "vfs_path": "/clients/C.1352adc54e292a23/monitoring/Generic.Client.Stats/2022-09-27.json",
+   "vfs_path": "/clients/C.1352adc54e292a23/monitoring/Generic.Client.Stats/2022-08-25.json",
    "data": "{\"Timestamp\":1664246379.037654,\"CPU\":5.56,\"RSS\":83447808,\"CPUPercent\":null,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246389.0389478,\"CPU\":5.93,\"RSS\":72527872,\"CPUPercent\":0.036995213198136666,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246399.0391533,\"CPU\":6,\"RSS\":73875456,\"CPUPercent\":0.006999856141185939,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246409.0397468,\"CPU\":6.12,\"RSS\":72306688,\"CPUPercent\":0.011999287933643665,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246419.040297,\"CPU\":6.18,\"RSS\":73654272,\"CPUPercent\":0.005999669856118451,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246429.0415347,\"CPU\":6.26,\"RSS\":65314816,\"CPUPercent\":0.007999010017847958,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246439.0423741,\"CPU\":6.36,\"RSS\":62390272,\"CPUPercent\":0.009999160598648414,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246449.0437052,\"CPU\":6.42,\"RSS\":62619648,\"CPUPercent\":0.005999201451737721,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246459.0448549,\"CPU\":6.5,\"RSS\":64479232,\"CPUPercent\":0.007999080382213527,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246469.0458136,\"CPU\":6.619999999999999,\"RSS\":61812736,\"CPUPercent\":0.011998849692949804,\"ClientId\":\"C.1352adc54e292a23\"}\n{\"Timestamp\":1664246479.047109,\"CPU\":6.68,\"RSS\":63152128,\"CPUPercent\":0.005999222903775355,\"ClientId\":\"C.1352adc54e292a23\"}\n"
   },
   {
@@ -133,7 +133,7 @@
    "type": "logs",
    "timestamp": 1661391000000000000,
    "date": 1661385600,
-   "vfs_path": "/clients/C.1352adc54e292a23/monitoring_logs/Generic.Client.Stats/2022-09-27.json",
+   "vfs_path": "/clients/C.1352adc54e292a23/monitoring_logs/Generic.Client.Stats/2022-08-25.json",
    "data": "{\"client_time\":1664246489,\"level\":\"DEFAULT\",\"message\":\"Time 120: Generic.Client.Stats: Sending response part 0 1.0 kB (11 rows).\"}"
   }
  ]

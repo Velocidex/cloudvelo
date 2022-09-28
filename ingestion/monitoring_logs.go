@@ -5,6 +5,7 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
+	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -35,6 +36,7 @@ func (self Ingestor) HandleMonitoringLogs(
 	if err != nil {
 		return err
 	}
+	log_path_manager.Clock = cvelo_utils.Clock
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(
@@ -84,6 +86,7 @@ func (self Ingestor) HandleMonitoringResponses(
 	if err != nil {
 		return err
 	}
+	path_manager.Clock = cvelo_utils.Clock
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(

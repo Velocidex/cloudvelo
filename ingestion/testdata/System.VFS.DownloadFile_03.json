@@ -3,13 +3,17 @@
  "source": "C.1352adc54e292a23",
  "auth_state": 1,
  "FileBuffer": {
-  "pathspec": {
-   "path": "/clients/C.1352adc54e292a23/collections/F.CCM9S0N2QR4H8/uploads/auto/etc/fstab"
+ "pathspec": {
+     "path": "/etc/fstab",
+     "components": [
+         "etc",
+         "fstab"
+     ],
+     "accessor": "auto"
   },
   "size": 784,
   "stored_size": 784,
   "eof": true,
-  "mtime": 1617455950,
-  "reference": "/clients/C.1352adc54e292a23/collections/F.CCM9S0N2QR4H8/uploads/auto/etc/fstab"
+  "mtime": 1617455950
  }
 }

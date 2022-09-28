@@ -17,14 +17,14 @@ type VFSRecord struct {
 }
 
 type DownloadRow struct {
-	Accessor   string   `json:"Accessor"`
-	Components []string `json:"_Components"`
-	FSPath     string   `json:"FSPath"`
-	Size       uint64   `json:"Size"`
-	StoredSize uint64   `json:"StoredSize"`
-	Sha256     string   `json:"Sha256"`
-	Md5        string   `json:"Md5"`
-	Mtime      uint64   `json:"mtime"`
+	Accessor     string   `json:"Accessor"`
+	Components   []string `json:"_Components"`
+	FSComponents []string `json:"FSPath"`
+	Size         uint64   `json:"Size"`
+	StoredSize   uint64   `json:"StoredSize"`
+	Sha256       string   `json:"Sha256"`
+	Md5          string   `json:"Md5"`
+	Mtime        uint64   `json:"mtime"`
 }
 
 // Render the root level pseudo directory. This provides anchor points
@@ -82,11 +82,10 @@ func (self *VFSService) renderDBVFS(
 		if err == nil && len(row.Components) > 0 {
 			name := row.Components[len(row.Components)-1]
 			downloads[name] = &flows_proto.VFSDownloadInfo{
-				Components: row.Components,
+				Components: row.FSComponents,
 				Size:       row.Size,
 				MD5:        row.Md5,
 				SHA256:     row.Sha256,
-				VfsPath:    row.FSPath,
 				Mtime:      row.Mtime,
 			}
 		}
