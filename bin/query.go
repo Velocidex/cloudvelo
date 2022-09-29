@@ -73,7 +73,7 @@ func doQuery() error {
 			output_path_spec)
 
 		// Install the uploader globally
-		uploads.SetUploaderService(config_obj, "C.1234", nil)
+		uploads.SetUploaderService(config_obj, "C.1234", nil, nil)
 	}
 
 	manager, err := services.GetRepositoryManager(config_obj)

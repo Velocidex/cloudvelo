@@ -123,6 +123,13 @@ func (self *IngestionTestSuite) TestIngestor() {
 	assert.NoError(self.T(), err)
 	golden.Set("System.VFS.ListDirectory Results", records)
 
+	// Check the VFS entry for the top directory now - There should be
+	// no downloads yet but a full directory listing.
+	records, err = cvelo_services.QueryElasticRaw(ctx,
+		"test", "vfs", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	golden.Set("System.VFS.ListDirectory vfs", records)
+
 	// Test VFS.DownloadFile special handling.
 	err = cvelo_services.SetElasticIndex(ctx, "test",
 		"collections", "F.CCM9S0N2QR4H8", &api.ArtifactCollectorContext{
@@ -136,6 +143,13 @@ func (self *IngestionTestSuite) TestIngestor() {
 		"test", "collections", "F.CCM9S0N2QR4H8")
 	assert.NoError(self.T(), err)
 	golden.Set("System.VFS.DownloadFile", record)
+
+	// Check the VFS entry for the top directory now - it should
+	// incorporate both the directory list AND the downloads now.
+	records, err = cvelo_services.QueryElasticRaw(ctx,
+		"test", "vfs", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	golden.Set("System.VFS.DownloadFile vfs", records)
 
 	// Get Client Event Monitoring
 	// Clear the results so we get a clean golden image.
