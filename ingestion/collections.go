@@ -6,6 +6,7 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -13,12 +14,27 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+const (
+	// Add an error status only if no other error statuses were
+	// present. This allows us to fail a collection when an error
+	// level message is received, but there could be many error level
+	// messages, we only record the first one.
+	logErrorPainlessScript = `
+if(ctx._source.errored == 0) {
+   ctx._source.query_stats.add(params.status);
+}
+ctx._source.errored++;
+`
+)
+
 func (self Ingestor) HandleLogs(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
@@ -44,6 +60,22 @@ func (self Ingestor) HandleLogs(
 		Set("client_time", int64(row.Timestamp)/1000000).
 		Set("level", row.Level).
 		Set("message", row.Message))
+
+	// If the log is of type error, update the collection status to
+	// fail it.
+	if row.Level == logging.ERROR {
+		// Create a fake error status and append it to the collection
+		// record. This will show the collection as failed and include
+		// the log message as the reason in the GUI.
+		query := json.Format(updateQuery, logErrorPainlessScript,
+			cvelo_utils.Clock.Now().UnixNano()/1000,
+			json.MustMarshalString(&crypto_proto.VeloStatus{
+				Status:       crypto_proto.VeloStatus_GENERIC_ERROR,
+				ErrorMessage: row.Message,
+			}))
+		return cvelo_services.UpdateIndex(ctx, config_obj.OrgId,
+			"collections", message.SessionId, query)
+	}
 
 	return nil
 }

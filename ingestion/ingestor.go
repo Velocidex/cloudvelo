@@ -89,7 +89,7 @@ func (self Ingestor) Process(
 	// Handle regular collections - use simple result sets to store
 	// them.
 	if message.LogMessage != nil {
-		return self.HandleLogs(config_obj, message)
+		return self.HandleLogs(ctx, config_obj, message)
 	}
 
 	if message.VQLResponse != nil {
