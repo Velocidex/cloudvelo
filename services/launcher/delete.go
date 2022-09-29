@@ -84,7 +84,6 @@ func (self *Launcher) DeleteFlow(
 	r.delete_index("Log", "results", "vfs_path",
 		flow_path_manager.Log().AsClientPath())
 	r.delete_index("CollectionContext", "collections", "session_id", flow_id)
-	r.delete_index("Task", "collection_tasks", "session_id", flow_id)
 
 	// All notebook and their cells
 	notebook_id := fmt.Sprintf("N.%s-%s", flow_id, client_id)

@@ -30,6 +30,8 @@ const getAllItemsQuery = `
 
 type IngestionTestSuite struct {
 	*testsuite.CloudTestSuite
+
+	golden *ordereddict.Dict
 }
 
 func (self *IngestionTestSuite) ingestGoldenMessages(
@@ -58,6 +60,116 @@ func (self *IngestionTestSuite) ingestGoldenMessages(
 	}
 }
 
+func (self *IngestionTestSuite) testEnrollment(
+	ctx context.Context, ingestor *Ingestor) {
+
+	self.ingestGoldenMessages(ctx, ingestor, "Enrollment")
+
+	record, err := cvelo_services.GetElasticRecord(ctx,
+		"test", "client_keys", "C.1352adc54e292a23-test")
+	assert.NoError(self.T(), err)
+	self.golden.Set("Enrollment", record)
+
+	// Replay the Client.Info.Updates monitoring messages these should
+	// create a new client record (This is the equivalent of the old
+	// interrogation flow but happens automatically now).
+	self.ingestGoldenMessages(ctx, ingestor, "Client.Info.Updates")
+
+	record, err = cvelo_services.GetElasticRecord(ctx,
+		"test", "clients", "C.1352adc54e292a23")
+	assert.NoError(self.T(), err)
+	self.golden.Set("ClientRecord", record)
+
+	// We do not record any results though.
+	records, err := cvelo_services.QueryElasticRaw(ctx,
+		"test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), 0, len(records))
+}
+
+func (self *IngestionTestSuite) testListDirectory(
+	ctx context.Context, ingestor *Ingestor) {
+
+	// Test VFS.ListDirectory special handling.
+	err := cvelo_services.SetElasticIndex(ctx, "test",
+		"collections", "F.CCMS0OJQ7LI36", &api.ArtifactCollectorContext{
+			ClientId:   "C.1352adc54e292a23",
+			SessionId:  "F.CCMS0OJQ7LI36",
+			QueryStats: []string{},
+		})
+
+	self.ingestGoldenMessages(ctx, ingestor, "System.VFS.ListDirectory")
+	record, err := cvelo_services.GetElasticRecord(ctx,
+		"test", "collections", "F.CCMS0OJQ7LI36")
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.ListDirectory", record)
+
+	records, err := cvelo_services.QueryElasticRaw(ctx,
+		"test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.ListDirectory Results", records)
+
+	// Check the VFS entry for the top directory now - There should be
+	// no downloads yet but a full directory listing.
+	records, err = cvelo_services.QueryElasticRaw(ctx,
+		"test", "vfs", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.ListDirectory vfs", records)
+}
+
+func (self *IngestionTestSuite) testErrorLogs(
+	ctx context.Context, ingestor *Ingestor) {
+	// Test that an errored log fails the collection.
+	self.ingestGoldenMessages(ctx, ingestor, "ErroredLog")
+
+	record, err := cvelo_services.GetElasticRecord(ctx,
+		"test", "collections", "F.CCMS0OJQ7LI36")
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.ListDirectory after Error Log", record)
+}
+
+func (self *IngestionTestSuite) testVFSDownload(
+	ctx context.Context, ingestor *Ingestor) {
+
+	// Test VFS.DownloadFile special handling.
+	err := cvelo_services.SetElasticIndex(ctx, "test",
+		"collections", "F.CCM9S0N2QR4H8", &api.ArtifactCollectorContext{
+			ClientId:   "C.1352adc54e292a23",
+			SessionId:  "F.CCM9S0N2QR4H8",
+			QueryStats: []string{},
+		})
+
+	self.ingestGoldenMessages(ctx, ingestor, "System.VFS.DownloadFile")
+	record, err := cvelo_services.GetElasticRecord(ctx,
+		"test", "collections", "F.CCM9S0N2QR4H8")
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.DownloadFile", record)
+
+	// Check the VFS entry for the top directory now - it should
+	// incorporate both the directory list AND the downloads now.
+	records, err := cvelo_services.QueryElasticRaw(ctx,
+		"test", "vfs", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	self.golden.Set("System.VFS.DownloadFile vfs", records)
+
+}
+
+func (self *IngestionTestSuite) testClientEventMonitoring(
+	ctx context.Context, ingestor *Ingestor) {
+
+	// Get Client Event Monitoring Clear the results so we get a clean
+	// golden image.
+	err := cvelo_services.DeleteByQuery(
+		ctx, "test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+
+	self.ingestGoldenMessages(ctx, ingestor, "Generic.Client.Stats")
+	records, err := cvelo_services.QueryElasticRaw(ctx,
+		"test", "results", getAllItemsQuery)
+	assert.NoError(self.T(), err)
+	self.golden.Set("Generic.Client.Stats Results", records)
+}
+
 func (self *IngestionTestSuite) TestIngestor() {
 	cvelo_utils.Clock = &utils.MockClock{
 		MockNow: time.Unix(1661391000, 0),
@@ -80,90 +192,13 @@ func (self *IngestionTestSuite) TestIngestor() {
 	ingestor, err := NewIngestor(self.ConfigObj, crypto_manager)
 	assert.NoError(self.T(), err)
 
-	self.ingestGoldenMessages(ctx, ingestor, "Enrollment")
+	self.testEnrollment(ctx, ingestor)
+	self.testListDirectory(ctx, ingestor)
+	self.testErrorLogs(ctx, ingestor)
+	self.testVFSDownload(ctx, ingestor)
+	self.testClientEventMonitoring(ctx, ingestor)
 
-	golden := ordereddict.NewDict()
-	record, err := cvelo_services.GetElasticRecord(ctx,
-		"test", "client_keys", "C.1352adc54e292a23-test")
-	assert.NoError(self.T(), err)
-	golden.Set("Enrollment", record)
-
-	// Replay the Client.Info.Updates monitoring messages these should
-	// create a new client record (This is the equivalent of the old
-	// interrogation flow but happens automatically now).
-	self.ingestGoldenMessages(ctx, ingestor, "Client.Info.Updates")
-
-	record, err = cvelo_services.GetElasticRecord(ctx,
-		"test", "clients", "C.1352adc54e292a23")
-	assert.NoError(self.T(), err)
-	golden.Set("ClientRecord", record)
-
-	// We do not record any results though.
-	records, err := cvelo_services.QueryElasticRaw(ctx,
-		"test", "results", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	assert.Equal(self.T(), 0, len(records))
-
-	// Test VFS.ListDirectory special handling.
-	err = cvelo_services.SetElasticIndex(ctx, "test",
-		"collections", "F.CCMS0OJQ7LI36", &api.ArtifactCollectorContext{
-			ClientId:   "C.1352adc54e292a23",
-			SessionId:  "F.CCMS0OJQ7LI36",
-			QueryStats: []string{},
-		})
-
-	self.ingestGoldenMessages(ctx, ingestor, "System.VFS.ListDirectory")
-	record, err = cvelo_services.GetElasticRecord(ctx,
-		"test", "collections", "F.CCMS0OJQ7LI36")
-	assert.NoError(self.T(), err)
-	golden.Set("System.VFS.ListDirectory", record)
-
-	records, err = cvelo_services.QueryElasticRaw(ctx,
-		"test", "results", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	golden.Set("System.VFS.ListDirectory Results", records)
-
-	// Check the VFS entry for the top directory now - There should be
-	// no downloads yet but a full directory listing.
-	records, err = cvelo_services.QueryElasticRaw(ctx,
-		"test", "vfs", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	golden.Set("System.VFS.ListDirectory vfs", records)
-
-	// Test VFS.DownloadFile special handling.
-	err = cvelo_services.SetElasticIndex(ctx, "test",
-		"collections", "F.CCM9S0N2QR4H8", &api.ArtifactCollectorContext{
-			ClientId:   "C.1352adc54e292a23",
-			SessionId:  "F.CCM9S0N2QR4H8",
-			QueryStats: []string{},
-		})
-
-	self.ingestGoldenMessages(ctx, ingestor, "System.VFS.DownloadFile")
-	record, err = cvelo_services.GetElasticRecord(ctx,
-		"test", "collections", "F.CCM9S0N2QR4H8")
-	assert.NoError(self.T(), err)
-	golden.Set("System.VFS.DownloadFile", record)
-
-	// Check the VFS entry for the top directory now - it should
-	// incorporate both the directory list AND the downloads now.
-	records, err = cvelo_services.QueryElasticRaw(ctx,
-		"test", "vfs", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	golden.Set("System.VFS.DownloadFile vfs", records)
-
-	// Get Client Event Monitoring
-	// Clear the results so we get a clean golden image.
-	err = cvelo_services.DeleteByQuery(
-		ctx, "test", "results", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-
-	self.ingestGoldenMessages(ctx, ingestor, "Generic.Client.Stats")
-	records, err = cvelo_services.QueryElasticRaw(ctx,
-		"test", "results", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	golden.Set("Generic.Client.Stats Results", records)
-
-	goldie.Assert(self.T(), "TestIngestor", json.MustMarshalIndent(golden))
+	goldie.Assert(self.T(), "TestIngestor", json.MustMarshalIndent(self.golden))
 }
 
 func TestIngestor(t *testing.T) {
@@ -171,5 +206,6 @@ func TestIngestor(t *testing.T) {
 		CloudTestSuite: &testsuite.CloudTestSuite{
 			Indexes: []string{"clients", "client_keys", "results", "collections"},
 		},
+		golden: ordereddict.NewDict(),
 	})
 }

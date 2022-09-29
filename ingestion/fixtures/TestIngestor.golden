@@ -37,7 +37,8 @@
   "query_stats": [
    "{\"duration\":21397750,\"names_with_response\":[\"\",\"System.VFS.ListDirectory\"],\"Artifact\":\"System.VFS.ListDirectory\",\"log_rows\":2,\"result_rows\":1,\"query_id\":1,\"total_queries\":1}"
   ],
-  "tasks": ""
+  "tasks": "",
+  "errored": 0
  },
  "System.VFS.ListDirectory Results": [
   {
@@ -112,6 +113,22 @@
    "data": "{\"Response\":\"[{\\\"_FullPath\\\":\\\"/hello.txt\\\",\\\"_Accessor\\\":\\\"auto\\\",\\\"_Data\\\":{\\\"DevMajor\\\":253,\\\"DevMinor\\\":0},\\\"Name\\\":\\\"hello.txt\\\",\\\"Size\\\":784,\\\"Mode\\\":\\\"-rwxr-xr-x\\\",\\\"mtime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"atime\\\":\\\"2022-09-11T15:12:27Z\\\",\\\"ctime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"btime\\\":\\\"0001-01-01T00:00:00Z\\\"}]\",\"Columns\":[\"_FullPath\",\"_Accessor\",\"_Data\",\"Name\",\"Size\",\"Mode\",\"mtime\",\"atime\",\"ctime\",\"btime\"],\"total_rows\":27,\"client_id\":\"C.1352adc54e292a23\",\"flow_id\":\"F.CCMS0OJQ7LI36\"}"
   }
  ],
+ "System.VFS.ListDirectory after Error Log": {
+  "client_id": "C.1352adc54e292a23",
+  "session_id": "F.CCMS0OJQ7LI36",
+  "context": "",
+  "create_time": 0,
+  "start_time": 1661391000000000,
+  "last_active_time": 1661391000000000,
+  "uploaded_files": 0,
+  "uploaded_bytes": 0,
+  "query_stats": [
+   "{\"duration\":21397750,\"names_with_response\":[\"\",\"System.VFS.ListDirectory\"],\"Artifact\":\"System.VFS.ListDirectory\",\"log_rows\":2,\"result_rows\":1,\"query_id\":1,\"total_queries\":1}",
+   "{\"status\":10,\"error_message\":\"Something went wrong!\"}"
+  ],
+  "tasks": "",
+  "errored": 1
+ },
  "System.VFS.DownloadFile": {
   "client_id": "C.1352adc54e292a23",
   "session_id": "F.CCM9S0N2QR4H8",
@@ -124,7 +141,8 @@
   "query_stats": [
    "{\"duration\":399915666,\"names_with_response\":[\"\",\"System.VFS.DownloadFile\"],\"Artifact\":\"System.VFS.DownloadFile\",\"log_rows\":2,\"result_rows\":1,\"query_id\":1,\"total_queries\":1}"
   ],
-  "tasks": ""
+  "tasks": "",
+  "errored": 0
  },
  "System.VFS.DownloadFile vfs": [
   {
