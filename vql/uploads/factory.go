@@ -1,10 +1,12 @@
 package uploads
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/crypto"
 	"www.velocidex.com/golang/velociraptor/executor"
 )
 
@@ -35,6 +37,10 @@ type UploaderFactory struct {
 
 	mu              sync.Mutex
 	session_tracker map[string]*SessionTracker
+
+	// A Crypto manager so we can talk to the Upload handlers on the
+	// server directly.
+	manager crypto.ICryptoManager
 }
 
 // Really simple because this is not expected to be very large.
@@ -86,14 +92,25 @@ func (self *UploaderFactory) ReturnTracker(tracker *SessionTracker) int {
 func SetUploaderService(
 	config_obj *config_proto.Config,
 	client_id string,
-	exe *executor.ClientExecutor) {
+	manager crypto.ICryptoManager,
+	exe *executor.ClientExecutor) error {
 	mu.Lock()
 	defer mu.Unlock()
+
+	if config_obj.Client == nil {
+		return errors.New("No client configured")
+	}
+	server_name := config_obj.Client.PinnedServerName
+	if server_name == "" {
+		server_name = "VelociraptorServer"
+	}
 
 	gUploaderFactory = &UploaderFactory{
 		config_obj:      config_obj,
 		exe:             exe,
 		client_id:       client_id,
 		session_tracker: make(map[string]*SessionTracker),
+		manager:         manager,
 	}
+	return nil
 }

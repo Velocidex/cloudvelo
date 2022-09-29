@@ -57,9 +57,6 @@ func StartClientServices(
 		return nil, fmt.Errorf("Can not create executor: %w", err)
 	}
 
-	uploads.SetUploaderService(
-		config_obj, writeback.ClientId, exe)
-
 	// Wait for all services to properly start
 	// before we begin the comms.
 	sm := services.NewServiceManager(ctx, config_obj)
@@ -75,10 +72,16 @@ func StartClientServices(
 		return sm, err
 	}
 
-	err = http_comms.StartHttpCommunicatorService(
+	comm, err := http_comms.StartHttpCommunicatorService(
 		ctx, sm.Wg, config_obj, exe, on_error)
 	if err != nil {
 		return sm, err
+	}
+
+	err = uploads.SetUploaderService(
+		config_obj, writeback.ClientId, comm.Manager, exe)
+	if err != nil {
+		return nil, err
 	}
 
 	err = executor.StartEventTableService(

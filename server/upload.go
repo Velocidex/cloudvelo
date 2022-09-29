@@ -20,10 +20,35 @@ const (
 	maxRetries = 10
 )
 
+// All communication with the server is secured by the same underlying
+// crypto manager. Verification is essentially free because the cipher
+// protobuf is cached on both ends. An RSA operation is only needed to
+// verify it once.
+func (self *Communicator) verifyToken(r *http.Request) error {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		return errors.New("No token provided")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(auth)
+	if err != nil {
+		return err
+	}
+
+	_, err = self.crypto_manager.Decrypt(decoded)
+	return err
+}
+
 // Receive a POST from the client to start the upload.
 //
 func (self *Communicator) StartMultipartUpload(
 	w http.ResponseWriter, r *http.Request) {
+	err := self.verifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	serialized, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)

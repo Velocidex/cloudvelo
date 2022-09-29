@@ -74,6 +74,10 @@ type Uploader struct {
 	parts []*s3.CompletedPart
 
 	exe *executor.ClientExecutor
+	// The token is used to authenticate to the upload endpoints. It
+	// consists of a normal empty cipher_text just like the regular
+	// POST data but the server can use it to verify the caller.
+	token string
 
 	path *accessors.OSPath
 
@@ -103,7 +107,8 @@ func (self *Uploader) Start(ctx context.Context) error {
 		return err
 	}
 
-	req.Header["Content-Type"] = []string{"application/json"}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", self.token)
 
 	resp, err := self.client.Do(req)
 	if err != nil {
@@ -155,6 +160,8 @@ func (self *Uploader) Put(buf []byte) error {
 		return err
 	}
 
+	req.Header.Set("Authorization", self.token)
+
 	resp, err := self.client.Do(req)
 	if err != nil {
 		return err
@@ -197,6 +204,8 @@ func (self *Uploader) Close() error {
 	if err != nil {
 		return err
 	}
+
+	req.Header.Set("Authorization", self.token)
 
 	resp, err := self.client.Do(req)
 	if err != nil {
@@ -274,6 +283,22 @@ func (self *UploaderFactory) NewUploader(
 		return nil, err
 	}
 
+	var cipher_text []byte
+	if self.manager != nil {
+		server_name := "VelociraptorServer"
+		if self.config_obj.Client != nil &&
+			self.config_obj.Client.PinnedServerName != "" {
+			server_name = self.config_obj.Client.PinnedServerName
+		}
+
+		cipher_text, err = self.manager.Encrypt(
+			nil, crypto_proto.PackedMessageList_UNCOMPRESSED,
+			self.config_obj.Client.Nonce, server_name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	http_client, err := networking.GetDefaultHTTPClient(
 		self.config_obj.Client, "")
 	if err != nil {
@@ -296,6 +321,7 @@ func (self *UploaderFactory) NewUploader(
 		owner:           self,
 		accessor:        accessor,
 		path:            path,
+		token:           base64.StdEncoding.EncodeToString(cipher_text),
 	}
 
 	return result, result.Start(ctx)

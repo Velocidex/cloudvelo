@@ -4,10 +4,9 @@
  "auth_state": 1,
  "FileBuffer": {
  "pathspec": {
-     "path": "/etc/fstab",
+     "path": "/hello.txt",
      "components": [
-         "etc",
-         "fstab"
+         "hello.txt"
      ],
      "accessor": "auto"
   },

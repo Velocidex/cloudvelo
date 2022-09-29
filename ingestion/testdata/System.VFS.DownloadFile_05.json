@@ -5,7 +5,7 @@
  "source": "C.1352adc54e292a23",
  "auth_state": 1,
  "VQLResponse": {
-  "JSONLResponse": "{\"Path\":\"/etc/fstab\",\"Accessor\":\"auto\",\"Size\":784,\"StoredSize\":784,\"Sha256\":\"f70a5bf6c762e49248284586e113473fdcedbd8433b0287820bf7a0607ebd60c\",\"Md5\":\"544b886b7e4c99b807103a4ef584a8c7\",\"_Components\":[\"etc\",\"fstab\"]}\n",
+  "JSONLResponse": "{\"Path\":\"/hello.txt\",\"Accessor\":\"auto\",\"Size\":784,\"StoredSize\":784,\"Sha256\":\"f70a5bf6c762e49248284586e113473fdcedbd8433b0287820bf7a0607ebd60c\",\"Md5\":\"544b886b7e4c99b807103a4ef584a8c7\",\"_Components\":[\"hello.txt\"]}\n",
   "Columns": [
    "Path",
    "Accessor",

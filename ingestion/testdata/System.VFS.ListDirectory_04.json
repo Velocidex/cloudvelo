@@ -6,7 +6,7 @@
  "source": "C.1352adc54e292a23",
  "auth_state": 1,
  "VQLResponse": {
-  "JSONLResponse": "{\"Directory\":\"\",\"Components\":[],\"Count\":27,\"_Accessor\":\"auto\",\"_JSON\":\"[{\\\"_FullPath\\\":\\\"/Users\\\",\\\"_Accessor\\\":\\\"auto\\\",\\\"_Data\\\":{\\\"DevMajor\\\":253,\\\"DevMinor\\\":0},\\\"Name\\\":\\\"Users\\\",\\\"Size\\\":4096,\\\"Mode\\\":\\\"drwxr-xr-x\\\",\\\"mtime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"atime\\\":\\\"2022-09-11T15:12:27Z\\\",\\\"ctime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"btime\\\":\\\"0001-01-01T00:00:00Z\\\"}]\"}\n",
+  "JSONLResponse": "{\"Directory\":\"\",\"Components\":[],\"Count\":27,\"_Accessor\":\"auto\",\"_JSON\":\"[{\\\"_FullPath\\\":\\\"/hello.txt\\\",\\\"_Accessor\\\":\\\"auto\\\",\\\"_Data\\\":{\\\"DevMajor\\\":253,\\\"DevMinor\\\":0},\\\"Name\\\":\\\"hello.txt\\\",\\\"Size\\\":784,\\\"Mode\\\":\\\"-rwxr-xr-x\\\",\\\"mtime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"atime\\\":\\\"2022-09-11T15:12:27Z\\\",\\\"ctime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"btime\\\":\\\"0001-01-01T00:00:00Z\\\"}]\"}\n",
   "Columns": [
    "Directory",
    "Components",
