@@ -54,14 +54,14 @@ func (self *Launcher) CancelFlow(
 	}
 
 	// Queue a cancel message to the client.
-	client_manager, err := services.GetClientInfoManager(config_obj)
+	client_info_manager, err := services.GetClientInfoManager(config_obj)
 	if err != nil {
 		return nil, err
 	}
 
 	// Queue a cancellation message to the client for this flow
 	// id.
-	err = client_manager.QueueMessageForClient(ctx, client_id,
+	err = client_info_manager.QueueMessageForClient(ctx, client_id,
 		&crypto_proto.VeloMessage{
 			Cancel:    &crypto_proto.Cancel{},
 			SessionId: flow_id,

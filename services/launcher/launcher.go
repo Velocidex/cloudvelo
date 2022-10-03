@@ -167,12 +167,12 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	}
 
 	// Actually queue the messages to the client
-	client_manager, err := services.GetClientInfoManager(config_obj)
+	client_info_manager, err := services.GetClientInfoManager(config_obj)
 	if err != nil {
 		return "", err
 	}
 
-	client_manager.QueueMessagesForClient(ctx, client_id, tasks, true /* notify */)
+	client_info_manager.QueueMessagesForClient(ctx, client_id, tasks, true /* notify */)
 
 	return collection_context.SessionId, nil
 }

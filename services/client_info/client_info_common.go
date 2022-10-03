@@ -27,7 +27,7 @@ var (
 `
 )
 
-func (self ClientInfoManager) QueueMessageForClient(
+func (self ClientInfoQueuer) QueueMessageForClient(
 	ctx context.Context, client_id string,
 	req *crypto_proto.VeloMessage,
 	notify bool, completion func()) error {
@@ -55,7 +55,7 @@ type ClientTask struct {
 }
 
 // Get the client's tasks and remove them from the queue.
-func (self ClientInfoManager) GetClientTasks(
+func (self ClientInfoBase) GetClientTasks(
 	ctx context.Context, client_id string) ([]*crypto_proto.VeloMessage, error) {
 
 	query := json.Format(getClientTasksQuery, client_id)
@@ -91,7 +91,7 @@ func (self ClientInfoManager) GetClientTasks(
 }
 
 // Get the client's tasks and remove them from the queue.
-func (self ClientInfoManager) PeekClientTasks(
+func (self ClientInfoBase) PeekClientTasks(
 	ctx context.Context, client_id string) ([]*crypto_proto.VeloMessage, error) {
 
 	query := json.Format(getClientTasksQuery, client_id)
