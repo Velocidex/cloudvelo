@@ -113,6 +113,8 @@ func (self Foreman) CalculateHuntUpdate(
 	org_config_obj *config_proto.Config,
 	hunts []*api_proto.Hunt, plan *Plan) error {
 
+	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+
 	// Prepare a plan of all the hunts we are going to launch right
 	// now.
 	for _, hunt := range hunts {
@@ -134,6 +136,10 @@ func (self Foreman) CalculateHuntUpdate(
 
 			planned_hunts, _ := plan.ClientIdToHunts[client_info.ClientId]
 			plan.ClientIdToHunts[client_info.ClientId] = append(planned_hunts, hunt)
+
+			if logger != nil {
+				logger.Debug("Planned Hunts: %v, %v", client_info.ClientId, planned_hunts)
+			}
 		}
 	}
 
@@ -175,6 +181,11 @@ func (self Foreman) GetActiveHunts(
 		result = append(result, hunt)
 	}
 
+	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+	if logger != nil {
+		logger.Debug("Active Hunts: %v", result)
+	}
+
 	return result, nil
 }
 
@@ -213,18 +224,45 @@ func (self Foreman) RunOnce(
 	ctx context.Context,
 	org_config_obj *config_proto.Config) error {
 
-	plan := NewPlan()
-	err := self.UpdateHuntMembership(ctx, org_config_obj, plan)
+	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+
+	org_manager, err := services.GetOrgManager()
 	if err != nil {
 		return err
 	}
 
-	err = self.UpdateMonitoringTable(ctx, org_config_obj, plan)
-	if err != nil {
-		return err
+	for _, org := range org_manager.ListOrgs() {
+		org_config_obj.OrgId = org.OrgId
+		if logger != nil {
+			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
+		}
+		plan := NewPlan()
+		err := self.UpdateHuntMembership(ctx, org_config_obj, plan)
+		if err != nil {
+			if logger != nil {
+				logger.Error("UpdateHuntMembership, orgId=%v: %v", org_config_obj.OrgId, err)
+			}
+			continue
+		}
+
+		err = self.UpdateMonitoringTable(ctx, org_config_obj, plan)
+		if err != nil {
+			if logger != nil {
+				logger.Error("UpdateMonitoringTable, orgId=%v: %v", org_config_obj.OrgId, err)
+			}
+			continue
+		}
+
+		err = plan.Close(ctx, org_config_obj)
+		if err != nil {
+			if logger != nil {
+				logger.Error("Close, orgId=%v: %v", org_config_obj.OrgId, err)
+			}
+			continue
+		}
 	}
 
-	return plan.Close(ctx, org_config_obj)
+	return nil
 }
 
 func (self Foreman) Start(
