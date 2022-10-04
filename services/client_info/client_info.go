@@ -33,10 +33,19 @@ type ClientInfo struct {
 }
 
 type ClientInfoManager struct {
+	ClientInfoBase
+	ClientInfoQueuer
+}
+
+type ClientInfoBase struct {
 	config_obj *config_proto.Config
 }
 
-func (self *ClientInfoManager) Set(
+type ClientInfoQueuer struct {
+	config_obj *config_proto.Config
+}
+
+func (self *ClientInfoBase) Set(
 	ctx context.Context, client_info *services.ClientInfo) error {
 	lower_labels := make([]string, 0, len(client_info.Labels))
 	for _, label := range client_info.Labels {
@@ -61,14 +70,14 @@ func (self *ClientInfoManager) Set(
 		})
 }
 
-func (self ClientInfoManager) Remove(
+func (self ClientInfoBase) Remove(
 	ctx context.Context, client_id string) {
 	cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
 		"clients", client_id, true)
 }
 
 // Get a single entry from a client id
-func (self ClientInfoManager) Get(
+func (self ClientInfoBase) Get(
 	ctx context.Context, client_id string) (
 	*services.ClientInfo, error) {
 	hit, err := cvelo_services.GetElasticRecord(
@@ -91,17 +100,17 @@ func (self ClientInfoManager) Get(
 	return &services.ClientInfo{result}, nil
 }
 
-func (self ClientInfoManager) GetStats(
+func (self ClientInfoBase) GetStats(
 	ctx context.Context, client_id string) (*services.Stats, error) {
 	return nil, errors.New("ClientInfoManager.GetStats Not implemented")
 }
 
-func (self ClientInfoManager) UpdateStats(
+func (self ClientInfoBase) UpdateStats(
 	ctx context.Context, client_id string, stats *services.Stats) error {
 	return errors.New("ClientInfoManager.UpdateStats Not implemented")
 }
 
-func (self ClientInfoManager) QueueMessagesForClient(
+func (self ClientInfoQueuer) QueueMessagesForClient(
 	ctx context.Context,
 	client_id string,
 	req []*crypto_proto.VeloMessage,
@@ -115,7 +124,7 @@ func (self ClientInfoManager) QueueMessagesForClient(
 	return nil
 }
 
-func (self ClientInfoManager) QueueMessageForMultipleClients(
+func (self ClientInfoQueuer) QueueMessageForMultipleClients(
 	ctx context.Context,
 	client_ids []string,
 	req *crypto_proto.VeloMessage,
@@ -129,19 +138,24 @@ func (self ClientInfoManager) QueueMessageForMultipleClients(
 	return nil
 }
 
-func (self ClientInfoManager) UnQueueMessageForClient(
+func (self ClientInfoQueuer) UnQueueMessageForClient(
 	ctx context.Context,
 	client_id string, req *crypto_proto.VeloMessage) error {
 	return nil
 }
 
-func (self ClientInfoManager) Flush(ctx context.Context, client_id string) {
+func (self ClientInfoBase) Flush(ctx context.Context, client_id string) {
+}
+
+func NewClientInfoBase(config_obj *config_proto.Config) ClientInfoBase {
+	return ClientInfoBase{config_obj: config_obj}
 }
 
 func NewClientInfoManager(config_obj *config_proto.Config) (*ClientInfoManager, error) {
 
 	service := &ClientInfoManager{
-		config_obj: config_obj,
+		ClientInfoBase:   NewClientInfoBase(config_obj),
+		ClientInfoQueuer: ClientInfoQueuer{config_obj: config_obj},
 	}
 	return service, nil
 }
