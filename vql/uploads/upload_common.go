@@ -33,6 +33,9 @@ type UploadRequest struct {
 
 	// The components of the path on the client.
 	Components []string `json:"components"`
+
+	// Type idx is an index.
+	Type string `json:"type"`
 }
 
 // Key to be used for subsequent requests.
@@ -91,7 +94,11 @@ type Uploader struct {
 
 	session_tracker *SessionTracker
 
-	owner *UploaderFactory
+	// This indicates which type of file it is:
+	// 1. "idx" is an index file
+	// empty is a regular file.
+	uploader_type string
+	owner         *UploaderFactory
 }
 
 // Initiate the upload request and get a key for the parts.
@@ -102,6 +109,7 @@ func (self *Uploader) Start(ctx context.Context) error {
 			SessionId:  self.session_id,
 			Accessor:   self.accessor,
 			Components: self.path.Components,
+			Type:       self.uploader_type,
 		})))
 	if err != nil {
 		return err
@@ -274,7 +282,7 @@ func (self *UploaderFactory) GetURL() (string, error) {
 
 func (self *UploaderFactory) NewUploader(
 	ctx context.Context,
-	session_id, accessor string,
+	session_id, accessor, uploader_type string,
 	path *accessors.OSPath) (*Uploader, error) {
 
 	// Choose a random URL to upload to
@@ -321,6 +329,7 @@ func (self *UploaderFactory) NewUploader(
 		owner:           self,
 		accessor:        accessor,
 		path:            path,
+		uploader_type:   uploader_type,
 		token:           base64.StdEncoding.EncodeToString(cipher_text),
 	}
 

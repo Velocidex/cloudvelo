@@ -20,13 +20,23 @@ var (
 
 func PathspecToKey(config_obj *config.Config,
 	path_spec api.FSPathSpec) string {
-	return strings.TrimPrefix(
-		path_spec.AsFilestoreFilename(&config_proto.Config{
+
+	base_path := path_spec.
+		SetType(api.PATH_TYPE_FILESTORE_ANY)
+
+	key := strings.TrimPrefix(
+		base_path.AsFilestoreFilename(&config_proto.Config{
 			Datastore: &config_proto.DatastoreConfig{
 				FilestoreDirectory: "orgs/" +
 					utils.NormalizedOrgId(config_obj.OrgId),
 			},
 		}), "/")
+
+	if path_spec.Type() == api.PATH_TYPE_FILESTORE_SPARSE_IDX {
+		key += ".idx"
+	}
+
+	return key
 }
 
 // Build an S3 key from a client upload request.
@@ -36,6 +46,8 @@ func S3KeyForClientUpload(
 	components := append([]string{"orgs",
 		utils.NormalizedOrgId(org_id)},
 		S3ComponentsForClientUpload(request)...)
+
+	// Support index files.
 	return strings.Join(components, "/")
 }
 
@@ -51,5 +63,13 @@ func S3ComponentsForClientUpload(request *uploads.UploadRequest) []string {
 	client_path := strings.Join(request.Components, "\x00")
 	h := sha256.New()
 	h.Write([]byte(client_path))
-	return append(base, fmt.Sprintf("%02x", h.Sum(nil)))
+
+	file_name := fmt.Sprintf("%02x", h.Sum(nil))
+
+	// Support index files.
+	if request.Type == "idx" {
+		file_name += ".idx"
+	}
+
+	return append(base, file_name)
 }

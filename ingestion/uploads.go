@@ -52,17 +52,22 @@ func (self Ingestor) HandleUploads(
 
 	response := message.FileBuffer
 
-	// Figure out where in the filestore the server's
-	// StartMultipartUpload placed it.
-	components := filestore.S3ComponentsForClientUpload(&uploads.UploadRequest{
+	upload_request := &uploads.UploadRequest{
 		ClientId:   message.Source,
 		SessionId:  message.SessionId,
 		Accessor:   message.FileBuffer.Pathspec.Accessor,
 		Components: message.FileBuffer.Pathspec.Components,
-	})
+	}
 
-	path_manager := paths.NewFlowPathManager(
-		message.Source, message.SessionId)
+	if message.FileBuffer.Index != nil {
+		upload_request.Type = "idx"
+	}
+
+	// Figure out where in the filestore the server's
+	// StartMultipartUpload placed it.
+	components := filestore.S3ComponentsForClientUpload(upload_request)
+
+	path_manager := paths.NewFlowPathManager(message.Source, message.SessionId)
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
 		file_store_factory, path_manager.UploadMetadata(), json.NoEncOpts,
@@ -83,6 +88,7 @@ func (self Ingestor) HandleUploads(
 			Set("started", cvelo_utils.Clock.Now()).
 			Set("vfs_path", response.Pathspec.Path).
 			Set("_Components", components).
+			Set("_Type", upload_request.Type).
 			Set("file_size", response.Size).
 			Set("uploaded_size", response.StoredSize))
 
