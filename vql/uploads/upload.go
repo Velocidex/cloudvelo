@@ -14,7 +14,8 @@ import (
 	"www.velocidex.com/golang/vfilter"
 )
 
-const BUFF_SIZE = 5 * 1024 * 1024
+// S3 required a minimum of 5mb per multi part upload
+const BUFF_SIZE = 10 * 1024 * 1024
 
 // TODO: Support sparse uploads
 func Upload(
@@ -67,19 +68,20 @@ func Upload(
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := uploader.Close()
-		if err != nil {
-			scope.Log("ERROR: Finalizing %v: %v",
-				dest, err)
-		}
-	}()
 
 	uploader.session_id = session_id
 	uploader.mtime = mtime
 	uploader.atime = atime
 	uploader.ctime = ctime
 	uploader.btime = btime
+
+	// Try to upload a sparse file.
+	/*
+		range_reader, ok := reader.(uploads.RangeReader)
+		if ok {
+			return UploadSparse(ctx, uploader, reader)
+		}
+	*/
 
 	buf := make([]byte, BUFF_SIZE)
 	for {
@@ -100,6 +102,14 @@ func Upload(
 
 	// If we get here it all went well - commit the result.
 	uploader.Commit()
+
+	err = uploader.Close()
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
 
 	return &uploads.UploadResponse{
 		Path:       ospath.String(),

@@ -134,7 +134,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
@@ -167,7 +166,7 @@ require (
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
 	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20220830062011-3a8f0f1aeae9 // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20221002031343-1a16839fafb8 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20220506020923-9fac492a9b0d // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20220617011920-94df2342d0b7 // indirect
@@ -197,7 +196,7 @@ replace www.velocidex.com/golang/velociraptor => ./velociraptor
 // replace github.com/Velocidex/etw => /home/mic/projects/etw
 // replace github.com/Velocidex/grpc-go-pool => /home/mic/projects/grpc-go-pool
 
-
 // These are needed to replace these dependencies with the Velocidex forks.
 replace github.com/russross/blackfriday/v2 => github.com/Velocidex/blackfriday/v2 v2.0.2-0.20200811050547-4f26a09e2b3b
+
 replace github.com/alecthomas/chroma => github.com/Velocidex/chroma v0.6.8-0.20200418131129-82edc291369c

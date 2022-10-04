@@ -11,11 +11,11 @@ docker-compose --profile dev up
 Make a bucket for use by Velociraptor
 
 ```
-aws s3 --endpoint http://localhost:4566/ mb s3://velociraptor
+aws s3 --endpoint-url http://localhost:4566/ --no-verify-ssl mb s3://velociraptor
 ```
 
 You can use the AWS cli to inspect the local buckets created by localstack.
 
 ```
-aws s3 --endpoint http://localhost:4566/ ls
+aws s3 --endpoint-url http://localhost:4566/ --no-verify-ssl ls s3://velociraptor/
 ```

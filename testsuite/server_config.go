@@ -8,7 +8,7 @@ version:
   build_time: "2022-04-14T02:23:05+10:00"
 Client:
   server_urls:
-  - https://localhost:8000/
+  - https://localhost:8100/
   ca_certificate: |
     -----BEGIN CERTIFICATE-----
     MIIDTDCCAjSgAwIBAgIRAJH2OrT69FpC7IT3ZeZLmXgwDQYJKoZIhvcNAQELBQAw
@@ -34,6 +34,7 @@ Client:
   writeback_darwin: /etc/velociraptor.writeback.yaml
   writeback_linux: /tmp/velociraptor.writeback.yaml
   writeback_windows: $ProgramFiles\Velociraptor\velociraptor.writeback.yaml
+  use_self_signed_ssl: true
   max_poll: 10
   windows_installer:
     service_name: Velociraptor
@@ -158,7 +159,7 @@ Frontend:
   do_not_compress_artifacts: true
   hostname: localhost
   bind_address: 0.0.0.0
-  bind_port: 8000
+  bind_port: 8100
   certificate: |
     -----BEGIN CERTIFICATE-----
     MIIDVzCCAj+gAwIBAgIQXLWPVriqs2Kut250ctZckDANBgkqhkiG9w0BAQsFADAa

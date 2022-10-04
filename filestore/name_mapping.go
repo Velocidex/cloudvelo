@@ -31,11 +31,10 @@ func PathspecToKey(config_obj *config.Config,
 
 // Build an S3 key from a client upload request.
 func S3KeyForClientUpload(
-	config_obj *config_proto.Config,
-	request *uploads.UploadRequest) string {
+	org_id string, request *uploads.UploadRequest) string {
 
 	components := append([]string{"orgs",
-		utils.NormalizedOrgId(config_obj.OrgId)},
+		utils.NormalizedOrgId(org_id)},
 		S3ComponentsForClientUpload(request)...)
 	return strings.Join(components, "/")
 }
