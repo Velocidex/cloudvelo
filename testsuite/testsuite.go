@@ -28,6 +28,8 @@ type CloudTestSuite struct {
 	Sm     *services.Service
 	Ctx    context.Context
 	cancel func()
+
+	writeback_file string
 }
 
 // Allow an external file to override the config. This allows us to
@@ -54,16 +56,34 @@ func (self *CloudTestSuite) LoadConfig() *config.Config {
 	return config_obj
 }
 
+func (self *CloudTestSuite) SetupSuite() {
+	if self.ConfigObj == nil {
+		self.ConfigObj = self.LoadConfig()
+	}
+
+	tempfile, err := ioutil.TempFile("", "test")
+	assert.NoError(self.T(), err)
+
+	self.writeback_file = tempfile.Name()
+
+	tempfile.Write([]byte(writeback_file))
+	tempfile.Close()
+
+	self.ConfigObj.Client.WritebackLinux = tempfile.Name()
+	self.ConfigObj.Client.WritebackWindows = tempfile.Name()
+	self.ConfigObj.Client.WritebackDarwin = tempfile.Name()
+}
+
+func (self *CloudTestSuite) TearDownSuite() {
+	os.Remove(self.writeback_file)
+}
+
 func (self *CloudTestSuite) TearDownTest() {
 	self.cancel()
 	self.Sm.Close()
 }
 
 func (self *CloudTestSuite) SetupTest() {
-	if self.ConfigObj == nil {
-		self.ConfigObj = self.LoadConfig()
-	}
-
 	self.Ctx, self.cancel = context.WithTimeout(context.Background(),
 		time.Second*60)
 

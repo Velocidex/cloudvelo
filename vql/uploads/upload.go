@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"io"
 	"time"
 
 	"www.velocidex.com/golang/velociraptor/accessors"
@@ -14,9 +13,12 @@ import (
 	"www.velocidex.com/golang/vfilter"
 )
 
-const BUFF_SIZE = 5 * 1024 * 1024
+// S3 required a minimum of 5mb per multi part upload
+var (
+	BUFF_SIZE       = 10 * 1024 * 1024
+	MAX_FILE_LENGTH = uint64(10 * 1000000000) // 10 Gb
+)
 
-// TODO: Support sparse uploads
 func Upload(
 	ctx context.Context,
 	config_obj *config_proto.Config,
@@ -41,7 +43,7 @@ func Upload(
 
 	dest := ospath
 	if name != "" {
-		accessor_obj, err := accessors.GetAccessor(accessor, scope)
+		accessor_obj, err := accessors.GetAccessor("file", scope)
 		if err != nil {
 			return nil, err
 		}
@@ -51,6 +53,75 @@ func Upload(
 			return nil, err
 		}
 	}
+
+	// A regular uploader for bulk data.
+	uploader, err := makeUploader(
+		ctx, scope, dest, accessor, name,
+		mtime, atime, ctime, btime, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Try to upload a sparse file.
+	range_reader, ok := reader.(uploads.RangeReader)
+	if ok {
+		// A new uploader for the index file.
+		idx_uploader, err := makeUploader(
+			ctx, scope, dest, accessor, name, mtime,
+			atime, ctime, btime, "idx")
+		if err != nil {
+			return nil, err
+		}
+
+		return UploadSparse(ctx, dest, idx_uploader, uploader, range_reader)
+	}
+
+	buffer := NewBufferWriter(uploader)
+	err = buffer.Copy(reader, MAX_FILE_LENGTH)
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	err = buffer.Flush()
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	// If we get here it all went well - commit the result.
+	uploader.Commit()
+
+	err = uploader.Close()
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	return &uploads.UploadResponse{
+		Path:       dest.String(),
+		StoredName: name,
+		Size:       uploader.offset,
+		StoredSize: uploader.offset,
+		Sha256:     hex.EncodeToString(uploader.sha_sum.Sum(nil)),
+		Md5:        hex.EncodeToString(uploader.md5_sum.Sum(nil)),
+	}, nil
+}
+
+func makeUploader(
+	ctx context.Context,
+	scope vfilter.Scope,
+	dest *accessors.OSPath,
+	accessor string,
+	name string,
+	mtime, atime, ctime, btime time.Time,
+	uploader_type string) (*Uploader, error) {
 
 	// Get the session ID
 	session_id_any, pres := scope.Resolve("_SessionId")
@@ -63,50 +134,16 @@ func Upload(
 		return nil, errors.New("Session ID not found")
 	}
 
-	uploader, err := gUploaderFactory.NewUploader(ctx, session_id, accessor, dest)
+	uploader, err := gUploaderFactory.NewUploader(
+		ctx, session_id, accessor, uploader_type, dest)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := uploader.Close()
-		if err != nil {
-			scope.Log("ERROR: Finalizing %v: %v",
-				dest, err)
-		}
-	}()
 
-	uploader.session_id = session_id
 	uploader.mtime = mtime
 	uploader.atime = atime
 	uploader.ctime = ctime
 	uploader.btime = btime
 
-	buf := make([]byte, BUFF_SIZE)
-	for {
-		n, err := reader.Read(buf)
-		if err != nil && err != io.EOF && n == 0 {
-			return nil, err
-		}
-
-		if n == 0 {
-			break
-		}
-
-		err = uploader.Put(buf[:n])
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// If we get here it all went well - commit the result.
-	uploader.Commit()
-
-	return &uploads.UploadResponse{
-		Path:       ospath.String(),
-		StoredName: name,
-		Size:       uploader.offset,
-		StoredSize: uploader.offset,
-		Sha256:     hex.EncodeToString(uploader.sha_sum.Sum(nil)),
-		Md5:        hex.EncodeToString(uploader.md5_sum.Sum(nil)),
-	}, nil
+	return uploader, nil
 }

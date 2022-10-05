@@ -14,6 +14,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
@@ -24,26 +25,30 @@ const (
 // crypto manager. Verification is essentially free because the cipher
 // protobuf is cached on both ends. An RSA operation is only needed to
 // verify it once.
-func (self *Communicator) verifyToken(r *http.Request) error {
+func (self *Communicator) verifyToken(r *http.Request) (org_id string, err error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
-		return errors.New("No token provided")
+		return "", errors.New("No token provided")
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(auth)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = self.crypto_manager.Decrypt(decoded)
-	return err
+	msg_info, err := self.crypto_manager.Decrypt(decoded)
+	if err != nil {
+		return "", err
+	}
+
+	return utils.OrgIdFromClientId(msg_info.Source), err
 }
 
 // Receive a POST from the client to start the upload.
 //
 func (self *Communicator) StartMultipartUpload(
 	w http.ResponseWriter, r *http.Request) {
-	err := self.verifyToken(r)
+	org_id, err := self.verifyToken(r)
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -67,7 +72,7 @@ func (self *Communicator) StartMultipartUpload(
 
 	// Formulate the filestore path from the upload request.
 	svc := s3.New(self.session)
-	key := filestore.S3KeyForClientUpload(self.config_obj.VeloConf(), request)
+	key := filestore.S3KeyForClientUpload(org_id, request)
 	resp, err := svc.CreateMultipartUpload(
 		&s3.CreateMultipartUploadInput{
 			Bucket:      aws.String(self.config_obj.Cloud.Bucket),
@@ -119,6 +124,11 @@ func extractUploadRequest(in url.Values) (
 
 func (self *Communicator) GetUploadPart(
 	w http.ResponseWriter, r *http.Request) {
+	_, err := self.verifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	req, err := extractUploadRequest(r.URL.Query())
 	if err != nil || req.Part < 0 ||
@@ -200,6 +210,12 @@ func (self *Communicator) completeUpload(
 
 func (self *Communicator) CompleteMultipartUpload(
 	w http.ResponseWriter, r *http.Request) {
+	_, err := self.verifyToken(r)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	serialized, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
