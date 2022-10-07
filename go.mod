@@ -166,7 +166,7 @@ require (
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
 	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20221002031343-1a16839fafb8 // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20221005063440-bc82c4606033 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20220506020923-9fac492a9b0d // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20220617011920-94df2342d0b7 // indirect
