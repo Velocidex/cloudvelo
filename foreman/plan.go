@@ -134,18 +134,18 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 		logger.Info("Update Client Monitoring Tables %v on %v clients: %v",
 			key, len(clients), slice(clients, 10))
 
-		err := self.sendMessageToClients(ctx, org_config_obj, message, clients)
+		// Update all the client records to the latest event table
+		// version
+		query := json.Format(updateAllClientEventVersion, clients,
+			Clock.Now().UnixNano())
+
+		err := cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
+			"clients", query)
 		if err != nil {
 			return err
 		}
 
-		// Update all the client records to the latest event table
-		// versiono
-		query := json.Format(updateAllClientEventVersion, clients,
-			Clock.Now().UnixNano())
-
-		err = cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
-			"clients", query)
+		err = self.sendMessageToClients(ctx, org_config_obj, message, clients)
 		if err != nil {
 			return err
 		}
@@ -183,23 +183,21 @@ func (self *Plan) ExecuteHuntUpdate(
 			continue
 		}
 
-		request := hunt.StartRequest
-		request.Creator = hunt.HuntId
-
 		logger.Info("Scheduling hunt %v on %v clients: %v", hunt.HuntId,
 			len(clients), slice(clients, 10))
-		err := self.scheduleRequestOnClients(ctx, org_config_obj, hunt.StartRequest, clients)
-		if err != nil {
-			return err
-		}
 
 		query := json.Format(updateAllClientHuntId, clients, hunt_id,
 			Clock.Now().UnixNano())
 
 		// Update all the client records to the latest hunt timestamp
 		// and mark them as having executed this hunt.
-		err = cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
+		err := cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
 			"clients", query)
+		if err != nil {
+			return err
+		}
+
+		err = self.scheduleRequestOnClients(ctx, org_config_obj, hunt.StartRequest, clients)
 		if err != nil {
 			return err
 		}
