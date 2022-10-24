@@ -2,7 +2,6 @@ package clients
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -62,10 +61,6 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
-		// XXX - Need to delete client files in S3
-		// user_mru shouldn't get deleted entirely
-		// results has docs with empty client_id ?
-
 		// Delete flows and associated uploaded files
 		launcher, err := services.GetLauncher(config_obj)
 		if err != nil {
@@ -80,7 +75,6 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 		}
 
 		for _, f := range flows.Items {
-			fmt.Println("Deleting flow: ", f.SessionId)
 			scope.Log("client_delete: deleting flow: %s", f.SessionId)
 			_, err = launcher.DeleteFlow(ctx, config_obj, arg.ClientId, f.SessionId, arg.ReallyDoIt)
 			if err != nil {
@@ -94,10 +88,9 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			"hunt_flows", "clients", "vfs", "tasks", "ping"}
 		for _, index := range indexes {
 			if arg.ReallyDoIt {
-				scope.Log("client_delete: clearing index: %s", index)
 				err = removeClientDocs(ctx, config_obj, index, arg.ClientId)
 				if err != nil {
-					scope.Log("client_delete: %s", err)
+					scope.Log("client_delete: %s : %s", index, err)
 					return
 				}
 			}
@@ -138,8 +131,6 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 
 func removeClientDocs(ctx context.Context,
 	config_obj *config_proto.Config, index string, clientId string) error {
-
-	fmt.Println("\n\nDeleting from org, index, client:", config_obj.OrgId, index, clientId)
 
 	return cvelo_services.DeleteByQuery(
 		ctx, config_obj.OrgId, index,
