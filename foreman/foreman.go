@@ -93,6 +93,25 @@ func (self Foreman) getClientQueryForHunt(hunt *api_proto.Hunt) string {
 				`{"terms": {"labels": %q}},`,
 				hunt.Condition.ExcludedLabels.Label)
 		}
+
+		os_condition := hunt.Condition.GetOs()
+		if os_condition != nil &&
+			os_condition.Os != api_proto.HuntOsCondition_ALL {
+			os_name := ""
+			switch os_condition.Os {
+			case api_proto.HuntOsCondition_WINDOWS:
+				os_name = "windows"
+			case api_proto.HuntOsCondition_LINUX:
+				os_name = "linux"
+			case api_proto.HuntOsCondition_OSX:
+				os_name = "darwin"
+			}
+
+			if os_name != "" {
+				extra_conditions += json.Format(
+					`{"term": {"system": %q}},`, os_name)
+			}
+		}
 	}
 
 	hunt_create_time_ns := hunt.CreateTime * 1000
