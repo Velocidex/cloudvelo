@@ -56,6 +56,15 @@ func (self *Launcher) DeleteFlow(
 					SetType(api.PATH_TYPE_FILESTORE_ANY)
 
 				r.delete_index("Upload", "vfs", "vfs_path", pathspec.AsClientPath())
+
+				if really_do_it {
+					fmt.Println("Deleting file: ", pathspec)
+					err = file_store_factory.Delete(pathspec)
+					if err != nil {
+						fmt.Println("Failed to delete file: ", err)
+						return nil, err
+					}
+				}
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package vql_plugins
 
 import (
+	_ "www.velocidex.com/golang/cloudvelo/vql/server/clients"
 	_ "www.velocidex.com/golang/cloudvelo/vql/server/downloads"
 	_ "www.velocidex.com/golang/cloudvelo/vql/server/flows"
 	_ "www.velocidex.com/golang/cloudvelo/vql/server/hunts"
