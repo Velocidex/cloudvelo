@@ -78,7 +78,7 @@ func (self *S3FilestoreTest) TestS3FileWriting() {
 	// Make sure the underlying key name reflects the org name in it
 	keys := self.checkForKey()
 	assert.Equal(self.T(), 1, len(keys))
-	assert.Equal(self.T(), "orgs/test/Test/file", keys[0])
+	assert.Equal(self.T(), "orgs/test/Test/file.json", keys[0])
 
 	// Now delete the file.
 	err = file_store_factory.Delete(test_file)
