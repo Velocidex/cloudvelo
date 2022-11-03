@@ -32,10 +32,7 @@ func PathspecToKey(config_obj *config.Config,
 			},
 		}), "/")
 
-	if path_spec.Type() == api.PATH_TYPE_FILESTORE_SPARSE_IDX {
-		key += ".idx"
-	}
-
+	key += api.GetExtensionForFilestore(path_spec)
 	return key
 }
 

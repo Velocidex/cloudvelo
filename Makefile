@@ -46,6 +46,9 @@ debug_frontend:
 reset_elastic:
 	$(BINARY) $(CONFIG_ARGS) elastic reset --recreate $(INDEX)
 
+windows:
+	go run make.go -v Windows
+
 linux_m1:
 	go run make.go -v LinuxM1
 

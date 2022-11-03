@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/cloudvelo/config"
+	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
@@ -28,7 +29,8 @@ type S3Writer struct {
 	upload_id   string
 	part_number int64
 
-	ctx context.Context
+	ctx       context.Context
+	path_spec api.FSPathSpec
 }
 
 func (self *S3Writer) start() error {
