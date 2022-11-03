@@ -253,6 +253,7 @@ func (self Communicator) Start(
 			http_server.Addr)
 		ln, err := net.Listen("tcp", http_server.Addr)
 		if err != nil {
+			logger.Error("Frontend server error %v", err)
 			return
 		}
 

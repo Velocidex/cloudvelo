@@ -74,6 +74,10 @@ func (self Nofitier) NotifyListener(config_obj *config_proto.Config, id, tag str
 // Notify a directly connected listener.
 func (self Nofitier) NotifyDirectListener(id string) {}
 
+func (self Nofitier) CountConnectedClients() uint64 {
+	return 0
+}
+
 // Notify in the near future - no guarantee of delivery.
 func (self Nofitier) NotifyListenerAsync(config_obj *config_proto.Config, id, tag string) {}
 

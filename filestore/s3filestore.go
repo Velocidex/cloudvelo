@@ -41,6 +41,7 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, error) {
 	result := &S3Writer{
 		key:         PathspecToKey(self.config_obj, filename),
+		path_spec:   filename,
 		config_obj:  self.config_obj,
 		session:     self.session,
 		part_number: 1,

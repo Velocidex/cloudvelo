@@ -38,7 +38,7 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 			return
 		}
 
-		logger, err := server_artifacts.NewServerLogger(
+		logger, err := server_artifacts.NewServerLogger(self.ctx,
 			collection_context_manager, config_obj, collection_context.SessionId)
 		if err != nil {
 			return
