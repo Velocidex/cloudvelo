@@ -59,7 +59,10 @@ func (self *NotebookManager) GetSharedNotebooks(
 			continue
 		}
 
-		result = append(result, item)
+		if !item.Hidden {
+			result = append(result, item)
+		}
+
 	}
 	return result, nil
 }
