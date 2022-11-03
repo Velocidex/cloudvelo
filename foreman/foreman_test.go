@@ -361,10 +361,6 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	assert.True(self.T(),
 		!huntPresent("H.OnlyLabelFoo", plan.ClientIdToHunts["C.AlreadyRanAllClients"]))
 
-	// Now execute the plan
-	err = plan.ExecuteHuntUpdate(self.Ctx, config_obj)
-	assert.NoError(self.T(), err)
-
 	// Close the plan to finish updating the clients
 	err = plan.Close(self.Ctx, config_obj)
 	assert.NoError(self.T(), err)
@@ -451,6 +447,166 @@ func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 
 	for _, hunt := range hunt_list.Items {
 		assert.Equal(self.T(), api_proto.Hunt_STOPPED, hunt.State)
+	}
+}
+
+func (self *ForemanTestSuite) setupOSHunts() {
+	config_obj := self.ConfigObj.VeloConf()
+
+	start_request := &flows_proto.ArtifactCollectorArgs{
+		Artifacts: []string{"Generic.Client.Info"},
+	}
+
+	hunts := []*api_proto.Hunt{
+		{
+			HuntId:       "H.AllOSes",
+			StartRequest: start_request,
+			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			State:        api_proto.Hunt_RUNNING,
+			// Expire in 24 hours. Expires is set in uS
+			Expires: uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+		},
+
+		// This hunt runs only on Windows machines
+		{
+			HuntId:       "H.WindowsOnly",
+			StartRequest: start_request,
+			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			State:        api_proto.Hunt_RUNNING,
+			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Condition: &api_proto.HuntCondition{
+				UnionField: &api_proto.HuntCondition_Os{
+					Os: &api_proto.HuntOsCondition{
+						Os: api_proto.HuntOsCondition_WINDOWS,
+					},
+				},
+			},
+		},
+
+		// This hunt runs only on Linux machines
+		{
+			HuntId:       "H.LinuxOnly",
+			StartRequest: start_request,
+			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			State:        api_proto.Hunt_RUNNING,
+			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Condition: &api_proto.HuntCondition{
+				UnionField: &api_proto.HuntCondition_Os{
+					Os: &api_proto.HuntOsCondition{
+						Os: api_proto.HuntOsCondition_LINUX,
+					},
+				},
+			},
+		},
+	}
+
+	// Create a bunch of hunts to use
+	hunt_service, err := services.GetHuntDispatcher(config_obj)
+	assert.NoError(self.T(), err)
+
+	// Set the hunt directly in the database
+	for _, h := range hunts {
+		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).SetHunt(h)
+		assert.NoError(self.T(), err)
+	}
+}
+
+func (self *ForemanTestSuite) TestHuntsByOS() {
+	Clock = &utils.MockClock{
+		MockNow: time.Unix(1661391000, 0),
+	}
+
+	config_obj := self.ConfigObj.VeloConf()
+
+	self.setupOSHunts()
+
+	clients := []client_info.ClientInfo{
+		{
+			ClientId:      "C.Windows1",
+			Ping:          uint64(Clock.Now().UnixNano()),
+			AssignedHunts: []string{},
+			Labels:        []string{},
+			LowerLabels:   []string{},
+			System:        "windows",
+		},
+		{
+			ClientId:      "C.Windows2",
+			Ping:          uint64(Clock.Now().UnixNano()),
+			AssignedHunts: []string{},
+			Labels:        []string{},
+			LowerLabels:   []string{},
+			System:        "windows",
+		},
+		{
+			ClientId:      "C.Linux1",
+			Ping:          uint64(Clock.Now().UnixNano()),
+			AssignedHunts: []string{},
+			Labels:        []string{},
+			LowerLabels:   []string{},
+			System:        "linux",
+		},
+		{
+			ClientId:      "C.Linux2",
+			Ping:          uint64(Clock.Now().UnixNano()),
+			AssignedHunts: []string{},
+			Labels:        []string{},
+			LowerLabels:   []string{},
+			System:        "linux",
+		},
+	}
+
+	// Add these clients directly into the index.
+	for _, c := range clients {
+		err := cvelo_services.SetElasticIndex(
+			self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+		assert.NoError(self.T(), err)
+	}
+
+	// See the hunt update plan.
+	plan := NewPlan()
+	err := Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
+	assert.NoError(self.T(), err)
+
+	windowsExpected := []string{"H.AllOSes", "H.WindowsOnly"}
+	linuxExpected := []string{"H.AllOSes", "H.LinuxOnly"}
+	self.checkPlannedHunts(plan, "C.Windows1", windowsExpected)
+	self.checkPlannedHunts(plan, "C.Windows2", windowsExpected)
+	self.checkPlannedHunts(plan, "C.Linux1", linuxExpected)
+	self.checkPlannedHunts(plan, "C.Linux2", linuxExpected)
+
+	// Close the plan to finish updating the clients
+	err = plan.Close(self.Ctx, config_obj)
+	assert.NoError(self.T(), err)
+
+	self.checkAssignedHunts("C.Windows1", windowsExpected)
+	self.checkAssignedHunts("C.Windows2", windowsExpected)
+	self.checkAssignedHunts("C.Linux1", linuxExpected)
+	self.checkAssignedHunts("C.Linux2", linuxExpected)
+
+	// Calculating the plan again should produce nothing to do.
+	new_plan := NewPlan()
+	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
+	assert.NoError(self.T(), err)
+
+	// The plan should be empty as there is nothing to do!
+	assert.True(self.T(), len(new_plan.ClientIdToHunts) == 0)
+}
+
+func (self *ForemanTestSuite) checkPlannedHunts(plan *Plan, clientId string, expectedHunts []string) {
+	plannedHunts := plan.ClientIdToHunts[clientId]
+	assert.True(self.T(), len(plannedHunts) == len(expectedHunts))
+
+	for _, hunt := range expectedHunts {
+		assert.True(self.T(), huntPresent(hunt, plannedHunts))
+	}
+}
+
+func (self *ForemanTestSuite) checkAssignedHunts(clientId string, expectedHunts []string) {
+	client := self.getClientRecord(clientId)
+	assert.True(self.T(), len(client.AssignedHunts) == len(expectedHunts))
+
+	for _, hunt := range expectedHunts {
+		assert.Contains(self.T(), client.AssignedHunts, hunt)
 	}
 }
 
