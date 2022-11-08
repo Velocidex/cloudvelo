@@ -1,7 +1,8 @@
-package users
+package acl_manager
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/Velocidex/ttlcache/v2"
@@ -11,6 +12,7 @@ import (
 	acl_proto "www.velocidex.com/golang/velociraptor/acls/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/services/acl_manager"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -19,21 +21,29 @@ type ACLRecord struct {
 }
 
 type ACLManager struct {
-	*acls.ACLManager
-
-	ctx context.Context
-
-	lru *ttlcache.Cache
+	ctx        context.Context
+	config_obj *config_proto.Config
+	lru        *ttlcache.Cache
 }
 
-func NewACLManager(ctx context.Context) *ACLManager {
+func NewACLManager(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	config_obj *config_proto.Config) *ACLManager {
 	acl_manager := &ACLManager{
-		ACLManager: &acls.ACLManager{},
 		ctx:        ctx,
+		config_obj: config_obj,
 		lru:        ttlcache.NewCache(),
 	}
 	acl_manager.lru.SetTTL(10 * time.Second)
 	return acl_manager
+}
+
+func (self ACLManager) CheckAccessWithToken(
+	token *acl_proto.ApiClientACL,
+	permission acls.ACL_PERMISSION, args ...string) (bool, error) {
+	return acl_manager.ACLManager{}.CheckAccessWithToken(
+		token, permission, args...)
 }
 
 func (self ACLManager) GetPolicy(
