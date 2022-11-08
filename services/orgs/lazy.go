@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/services/acl_manager"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
@@ -93,4 +94,8 @@ func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {
 
 func (self *LazyServiceContainer) BroadcastService() (services.BroadcastService, error) {
 	return broadcast.NewBroadcastService(self.config_obj), nil
+}
+
+func (self *LazyServiceContainer) ACLManager() (services.ACLManager, error) {
+	return acl_manager.NewACLManager(self.ctx, self.wg, self.config_obj), nil
 }

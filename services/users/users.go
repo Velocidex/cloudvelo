@@ -13,7 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/velociraptor/acls"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -288,10 +287,6 @@ func StartUserManager(
 	service.lru.SetTTL(10 * time.Second)
 
 	services.RegisterUserManager(service)
-
-	// Register our new acl manager.
-	acl_manager := NewACLManager(ctx)
-	acls.SetACLManager(acl_manager)
 
 	return nil
 }
