@@ -82,7 +82,7 @@ func (self Foreman) getClientQueryForHunt(hunt *api_proto.Hunt) string {
 	must_not_condition := ""
 	if hunt.Condition != nil {
 		labels := hunt.Condition.GetLabels()
-		if labels != nil {
+		if labels != nil && len(labels.Label) > 0 {
 			extra_conditions += json.Format(
 				`{"terms": {"labels": %q}},`, labels.Label)
 		}

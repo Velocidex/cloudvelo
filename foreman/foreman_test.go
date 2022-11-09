@@ -243,6 +243,20 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			},
 		},
 
+		// This hunt has an empty list of required labels
+		{
+			HuntId:       "H.EmptyLabels",
+			StartRequest: start_request,
+			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			State:        api_proto.Hunt_RUNNING,
+			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Condition: &api_proto.HuntCondition{
+				UnionField: &api_proto.HuntCondition_Labels{
+					Labels: &api_proto.HuntLabelCondition{},
+				},
+			},
+		},
+
 		// This hunt excludes Label Foo
 		{
 			HuntId:       "H.ExceptLabelFoo",
@@ -360,6 +374,17 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// receive the hunt targeting that label.
 	assert.True(self.T(),
 		!huntPresent("H.OnlyLabelFoo", plan.ClientIdToHunts["C.AlreadyRanAllClients"]))
+
+	// All online clients should have the empty label hunt
+	assert.True(self.T(),
+		huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.ConnectedClient"]))
+	assert.True(self.T(),
+		huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.WithLabelFoo"]))
+	assert.True(self.T(),
+		huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.AlreadyRanAllClients"]))
+	// Offline client doesn't receive it
+	assert.True(self.T(),
+		!huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.OfflineClient"]))
 
 	// Close the plan to finish updating the clients
 	err = plan.Close(self.Ctx, config_obj)
