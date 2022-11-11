@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -21,6 +23,28 @@ import (
 
 var (
 	Clock utils.Clock = &utils.RealClock{}
+
+	huntCountGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "foreman_hunt_gauge",
+			Help: "Number of active hunts (per organization).",
+		},
+		[]string{"orgId"},
+	)
+
+	orgCountGauge = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "foreman_org_gauge",
+			Help: "Number of orgs managed by Foreman.",
+		},
+	)
+
+	runCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "foreman_run_counter",
+			Help: "Count of Foreman runs.",
+		},
+	)
 )
 
 const (
@@ -216,6 +240,8 @@ func (self Foreman) UpdateHuntMembership(
 		return err
 	}
 
+	huntCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(hunts)))
+
 	// Get an update plan
 	err = self.CalculateHuntUpdate(ctx, org_config_obj, hunts, plan)
 	if err != nil {
@@ -250,7 +276,10 @@ func (self Foreman) RunOnce(
 		return err
 	}
 
-	for _, org := range org_manager.ListOrgs() {
+	orgs := org_manager.ListOrgs()
+	orgCountGauge.Set(float64(len(orgs)))
+
+	for _, org := range orgs {
 		org_config_obj.OrgId = org.OrgId
 		if logger != nil {
 			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
@@ -303,6 +332,8 @@ func (self Foreman) Start(
 				err := self.RunOnce(ctx, config_obj)
 				if err != nil {
 					logger.Error("Foreman: %v", err)
+				} else {
+					runCounter.Inc()
 				}
 			}
 		}
