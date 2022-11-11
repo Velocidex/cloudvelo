@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
@@ -15,6 +17,24 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
+)
+
+var (
+	eventsCountGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "foreman_events_gauge",
+			Help: "Number of active client events applied to all clients (per organization).",
+		},
+		[]string{"orgId"},
+	)
+
+	eventsByLabelCountGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "foreman_events_by_label_gauge",
+			Help: "Number of active client events applied to a specific label (per organization).",
+		},
+		[]string{"orgId"},
+	)
 )
 
 const (
@@ -107,6 +127,9 @@ func (self Foreman) CalculateEventTable(
 	}
 
 	state := client_monitoring_service.GetClientMonitoringState()
+
+	eventsCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(state.Artifacts.Specs)))
+	eventsByLabelCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(state.LabelEvents)))
 
 	// When do we need to update the client's monitoring table:
 	// 1. The client was recently seen
