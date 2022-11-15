@@ -22,7 +22,8 @@ const (
           "bool": {
             "should": [
               {"match": {"creator" : %q}},
-              {"match": {"collaborators": %q}}
+              {"match": {"shared": %q}},
+              {"match": {"public": true}}
            ]}
         },
         {"match": {"type": "User"}}
