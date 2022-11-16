@@ -58,7 +58,7 @@ func listAvailableEventArtifacts(
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
 		config_obj.OrgId, "results",
-		json.Format(getAvailableArtifactsQuery, in.ClientId, "results"))
+		json.Format(getAvailableArtifactsQuery, in.ClientId, "logs"))
 	if err != nil {
 		return nil, err
 	}
