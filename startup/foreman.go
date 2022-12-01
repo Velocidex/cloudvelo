@@ -39,5 +39,6 @@ func StartForeman(
 		return sm, err
 	}
 
-	return sm, sm.Start(foreman.StartForemanService)
+	err = foreman.StartForemanService(sm.Ctx, sm.Wg, config_obj)
+	return sm, err
 }
