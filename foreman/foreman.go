@@ -11,6 +11,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -316,20 +317,20 @@ func (self Foreman) RunOnce(
 func (self Foreman) Start(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+		logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
 
-			case <-time.After(5 * time.Second):
-				err := self.RunOnce(ctx, config_obj)
+			case <-time.After(time.Duration(config_obj.Cloud.ForemanIntervalSeconds) * time.Second):
+				err := self.RunOnce(ctx, config_obj.VeloConf())
 				if err != nil {
 					logger.Error("Foreman: %v", err)
 				} else {
@@ -344,7 +345,7 @@ func (self Foreman) Start(
 
 func StartForemanService(ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 	return Foreman{}.Start(ctx, wg, config_obj)
 }
 

@@ -32,6 +32,8 @@ type ElasticConfiguration struct {
 	Endpoint          string `json:"endpoint"`
 	NoVerifyCert      bool   `json:"no_verify_cert"`
 	Bucket            string `json:"bucket"`
+
+	ForemanIntervalSeconds int `json:"foreman_interval_seconds"`
 }
 
 // Create a new cloud config object which contains the original

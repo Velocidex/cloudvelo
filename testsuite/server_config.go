@@ -284,6 +284,7 @@ Cloud:
   credentials_key: test
   credentials_secret: test
   no_verify_cert: true
+  foreman_interval_seconds: 5
 `
 
 const writeback_file = `
