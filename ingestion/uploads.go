@@ -21,7 +21,7 @@ import (
 const (
 	updateUploadStatsScript = `
 ctx._source.uploaded_files += params.uploaded_files;
-ctx._source.uploaded_bytes += params.uploaded_bytes
+ctx._source.uploaded_bytes = ctx._source.uploaded_bytes + params.uploaded_bytes
 `
 
 	updateUploadStats = `

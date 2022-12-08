@@ -5,6 +5,6 @@
      "addresses": [
          "http://localhost:9200/"
      ],
-     "endpoint": "https://localhost:4566/"
+     "endpoint": "http://localhost:4566/"
  }
 }

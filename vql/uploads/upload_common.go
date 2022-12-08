@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/http_comms"
@@ -58,8 +59,9 @@ type UploadCompletionRequest struct {
 }
 
 type Uploader struct {
-	client *http.Client
-	ctx    context.Context
+	client     *http.Client
+	ctx        context.Context
+	config_obj *config_proto.Config
 
 	// The key for multipart uploads.
 	key       string
@@ -326,6 +328,7 @@ func (self *UploaderFactory) NewUploader(
 	}
 
 	result := &Uploader{
+		config_obj:      self.config_obj,
 		start_url:       fmt.Sprintf("%supload/start", base_url),
 		put_url:         fmt.Sprintf("%supload/put", base_url),
 		commit_url:      fmt.Sprintf("%supload/commit", base_url),
