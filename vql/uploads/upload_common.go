@@ -101,6 +101,18 @@ type Uploader struct {
 	owner         *UploaderFactory
 }
 
+// In the client's VFS we store files as subdirectories of the
+// root. This means we can not represent a proper pathspec (because
+// navigation is tree based). For very complex OSPath paths, we encode
+// them as JSON and use a single component.
+func (self *Uploader) getComponents(path *accessors.OSPath) []string {
+	if path.DelegatePath() != "" {
+		return []string{path.String()}
+	}
+
+	return path.Components
+}
+
 // Initiate the upload request and get a key for the parts.
 func (self *Uploader) Start(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", self.start_url,
@@ -108,7 +120,7 @@ func (self *Uploader) Start(ctx context.Context) error {
 			ClientId:   self.client_id,
 			SessionId:  self.session_id,
 			Accessor:   self.accessor,
-			Components: self.path.Components,
+			Components: self.getComponents(self.path),
 			Type:       self.uploader_type,
 		})))
 	if err != nil {
@@ -236,7 +248,7 @@ func (self *Uploader) Close() error {
 				// GUI.
 				Path:       self.path.String(),
 				Accessor:   self.accessor,
-				Components: self.path.Components,
+				Components: self.getComponents(self.path),
 			},
 			Size:         self.offset,
 			StoredSize:   self.offset,
