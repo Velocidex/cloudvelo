@@ -195,8 +195,8 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 	test_file := path_specs.NewSafeFilestorePath("clients",
 		"C.1352adc54e292a23", "collections", "F.1231",
 		"uploads", "sparse",
-		// sha256 of "sparse.txt"
-		"3f7b4a2f88f351e985c568f0a01fcaf67d5847f740a08ccb58ca73a1d147fa75").
+		// sha256 of "/sparse.txt"
+		"0be2d1424fd102c85547fbcb46838ebe8617d98bb088c0bce5ab70234da97e90").
 		SetType(api.PATH_TYPE_FILESTORE_ANY)
 	self.clearFilestorePath(org_config_obj, test_file)
 
@@ -232,7 +232,7 @@ func (self *UploaderTestSuite) TestSparseUploader() {
    "DelegateAccessor": "data",
    "Path": "[{\"Offset\":0,\"Length\":5},{\"Offset\":10,\"Length\":5}]"
 }`).
-			Set("name", `sparse.txt`))
+			Set("name", `/sparse.txt`))
 
 	upload_res, ok := res.(*velo_uploads.UploadResponse)
 	assert.True(self.T(), ok)

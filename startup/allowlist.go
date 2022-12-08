@@ -63,7 +63,7 @@ var (
 		"timeline",
 		"unzip",
 		"uploads",
-		"yara",
+		//		"yara",
 	}
 
 	allowed_functions = []string{

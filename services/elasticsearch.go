@@ -19,10 +19,10 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	opensearch "github.com/opensearch-project/opensearch-go"
-	opensearchapi "github.com/opensearch-project/opensearch-go/opensearchapi"
-	"github.com/opensearch-project/opensearch-go/opensearchutil"
-	requestsigner "github.com/opensearch-project/opensearch-go/signer/aws"
+	opensearch "github.com/opensearch-project/opensearch-go/v2"
+	opensearchapi "github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
+	requestsigner "github.com/opensearch-project/opensearch-go/v2/signer/aws"
 
 	"www.velocidex.com/golang/cloudvelo/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"

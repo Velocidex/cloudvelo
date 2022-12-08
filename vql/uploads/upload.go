@@ -25,7 +25,7 @@ func Upload(
 	scope vfilter.Scope,
 	ospath *accessors.OSPath,
 	accessor string,
-	name string,
+	name *accessors.OSPath,
 	size int64, // Expected size.
 	mtime, atime, ctime, btime time.Time,
 	reader accessors.ReadSeekCloser) (*uploads.UploadResponse, error) {
@@ -42,16 +42,8 @@ func Upload(
 	}
 
 	dest := ospath
-	if name != "" {
-		accessor_obj, err := accessors.GetAccessor("file", scope)
-		if err != nil {
-			return nil, err
-		}
-
-		dest, err = accessor_obj.ParsePath(name)
-		if err != nil {
-			return nil, err
-		}
+	if name != nil {
+		dest = name
 	}
 
 	// A regular uploader for bulk data.
@@ -104,14 +96,18 @@ func Upload(
 		}, nil
 	}
 
-	return &uploads.UploadResponse{
+	result := &uploads.UploadResponse{
 		Path:       dest.String(),
-		StoredName: name,
 		Size:       uploader.offset,
 		StoredSize: uploader.offset,
 		Sha256:     hex.EncodeToString(uploader.sha_sum.Sum(nil)),
 		Md5:        hex.EncodeToString(uploader.md5_sum.Sum(nil)),
-	}, nil
+	}
+
+	if name != nil {
+		result.StoredName = name.String()
+	}
+	return result, nil
 }
 
 func makeUploader(
@@ -119,7 +115,7 @@ func makeUploader(
 	scope vfilter.Scope,
 	dest *accessors.OSPath,
 	accessor string,
-	name string,
+	name *accessors.OSPath,
 	mtime, atime, ctime, btime time.Time,
 	uploader_type string) (*Uploader, error) {
 

@@ -18,6 +18,9 @@ var (
 	}
 )
 
+// This function converts from a filestore pathspect to the S3
+// key. Due to limitations in s3 key lengths the key needs to be
+// compressed down with a hash.
 func PathspecToKey(config_obj *config.Config,
 	path_spec api.FSPathSpec) string {
 
