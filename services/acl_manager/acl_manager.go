@@ -12,8 +12,12 @@ import (
 	acl_proto "www.velocidex.com/golang/velociraptor/acls/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/services/acl_manager"
+	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
+)
+
+var (
+	acl_lru = ttlcache.NewCache()
 )
 
 type ACLRecord struct {
@@ -23,7 +27,6 @@ type ACLRecord struct {
 type ACLManager struct {
 	ctx        context.Context
 	config_obj *config_proto.Config
-	lru        *ttlcache.Cache
 }
 
 func NewACLManager(
@@ -33,24 +36,16 @@ func NewACLManager(
 	acl_manager := &ACLManager{
 		ctx:        ctx,
 		config_obj: config_obj,
-		lru:        ttlcache.NewCache(),
 	}
-	acl_manager.lru.SetTTL(10 * time.Second)
 	return acl_manager
-}
-
-func (self ACLManager) CheckAccessWithToken(
-	token *acl_proto.ApiClientACL,
-	permission acls.ACL_PERMISSION, args ...string) (bool, error) {
-	return acl_manager.ACLManager{}.CheckAccessWithToken(
-		token, permission, args...)
 }
 
 func (self ACLManager) GetPolicy(
 	config_obj *config_proto.Config,
 	principal string) (*acl_proto.ApiClientACL, error) {
 
-	permissions_any, err := self.lru.Get(principal)
+	key := config_obj.OrgId + "/" + principal
+	permissions_any, err := acl_lru.Get(key)
 	if err == nil {
 		permissions, ok := permissions_any.(*acl_proto.ApiClientACL)
 		if ok {
@@ -77,7 +72,7 @@ func (self ACLManager) GetPolicy(
 		return nil, err
 	}
 
-	self.lru.Set(principal, permissions)
+	acl_lru.Set(key, permissions)
 	return permissions, err
 }
 
@@ -96,7 +91,8 @@ func (self ACLManager) SetPolicy(
 	config_obj *config_proto.Config,
 	principal string, acl_obj *acl_proto.ApiClientACL) error {
 
-	self.lru.Set(principal, acl_obj)
+	key := config_obj.OrgId + "/" + principal
+	acl_lru.Set(key, acl_obj)
 	return cvelo_services.SetElasticIndex(self.ctx,
 		config_obj.OrgId,
 		"acls", principal, &ACLRecord{
@@ -124,7 +120,7 @@ func (self ACLManager) CheckAccess(
 	}
 
 	for _, permission := range permissions {
-		ok, err := self.CheckAccessWithToken(acl_obj, permission)
+		ok, err := services.CheckAccessWithToken(acl_obj, permission)
 		if !ok || err != nil {
 			return ok, err
 		}
@@ -148,4 +144,8 @@ func (self ACLManager) GrantRoles(
 		}
 	}
 	return self.SetPolicy(config_obj, principal, new_policy)
+}
+
+func init() {
+	acl_lru.SetTTL(10 * time.Second)
 }

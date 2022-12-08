@@ -3,7 +3,7 @@ module www.velocidex.com/golang/cloudvelo
 go 1.18
 
 require (
-	github.com/Velocidex/ordereddict v0.0.0-20220428153415-da46091cd216
+	github.com/Velocidex/ordereddict v0.0.0-20221110130714-6a7cb85851cd
 	github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20211116035050-ddd93fed62f5
 	github.com/Velocidex/yaml/v2 v2.2.8
@@ -11,14 +11,15 @@ require (
 	github.com/aws/aws-sdk-go v1.44.118
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/magefile/mage v1.14.0
-	github.com/opensearch-project/opensearch-go v1.1.0
+	github.com/opensearch-project/opensearch-go/v2 v2.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.12.2
 	github.com/sebdah/goldie v1.0.0
 	github.com/stretchr/testify v1.8.1
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
-	www.velocidex.com/golang/vfilter v0.0.0-20221101121437-3c06b865adbf
+	www.velocidex.com/golang/vfilter v0.0.0-20221124045546-c666c341aec3
 )
 
 require (
@@ -40,7 +41,7 @@ require (
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-magic v0.0.0-20211018155418-c5dc48282f28 // indirect
-	github.com/Velocidex/go-yara v1.1.10-0.20220406053739-d57cdcd99667 // indirect
+	github.com/Velocidex/go-yara v1.1.10-0.20221202090138-c7dde4c43aa4 // indirect
 	github.com/Velocidex/grpc-go-pool v1.2.2-0.20211129003310-ece3b3fe13f4 // indirect
 	github.com/Velocidex/json v0.0.0-20220224052537-92f3c0326e5a // indirect
 	github.com/Velocidex/pkcs7 v0.0.0-20210524015001-8d1eee94a157 // indirect
@@ -122,7 +123,6 @@ require (
 	github.com/pkg/sftp v1.13.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
@@ -167,7 +167,7 @@ require (
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
 	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20221101112551-e6275f2bbaa3 // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20221117122413-b97c856cb140 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20220506020923-9fac492a9b0d // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20220617011920-94df2342d0b7 // indirect

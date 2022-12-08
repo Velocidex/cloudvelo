@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opensearch-project/opensearch-go"
+	"github.com/opensearch-project/opensearch-go/v2"
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/crypto/server"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"

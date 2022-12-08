@@ -35,7 +35,7 @@ func createInitialUsers(
 		user_record, err := users_manager.GetUser(ctx, user.Name)
 		if err != nil || user_record.Name != user.Name {
 			logger.Info("Initial user %v not present, creating", user.Name)
-			new_user, err := users.NewUserRecord(user.Name)
+			new_user, err := users.NewUserRecord(config_obj, user.Name)
 			if err != nil {
 				return err
 			}
@@ -71,9 +71,9 @@ func createInitialUsers(
 					return err
 				}
 
-				new_user.Orgs = append(new_user.Orgs, &api_proto.Org{
-					Name: org_config_obj.OrgName,
-					Id:   org_config_obj.OrgId,
+				new_user.Orgs = append(new_user.Orgs, &api_proto.OrgRecord{
+					Name:  org_config_obj.OrgName,
+					OrgId: org_config_obj.OrgId,
 				})
 
 				// Give them the administrator role in the respective org

@@ -56,6 +56,9 @@ type serverPublicKeyResolver struct {
 	ctx context.Context
 }
 
+func (self *serverPublicKeyResolver) Delete(client_id string) {
+}
+
 func (self *serverPublicKeyResolver) GetPublicKey(
 	config_obj *config_proto.Config,
 	client_id string) (*rsa.PublicKey, bool) {
