@@ -38,8 +38,8 @@ services:
       - DATA_DIR=/tmp/localstack/data
       - KINESIS_PROVIDER=kinesalite
       # These have to match up with the config in server.config.yaml
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
       - AWS_DEFAULT_REGION=us-east-1
     volumes:
       - "./.localstack:/tmp/localstack"
