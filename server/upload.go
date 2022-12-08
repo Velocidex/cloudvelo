@@ -21,6 +21,14 @@ const (
 	maxRetries = 10
 )
 
+func (self *Communicator) log(message string, args ...interface{}) {
+	return
+
+	logger := logging.GetLogger(self.config_obj.VeloConf(),
+		&logging.FrontendComponent)
+	logger.Info(message, args...)
+}
+
 // All communication with the server is secured by the same underlying
 // crypto manager. Verification is essentially free because the cipher
 // protobuf is cached on both ends. An RSA operation is only needed to
@@ -73,17 +81,20 @@ func (self *Communicator) StartMultipartUpload(
 	// Formulate the filestore path from the upload request.
 	svc := s3.New(self.session)
 	key := filestore.S3KeyForClientUpload(org_id, request)
-	resp, err := svc.CreateMultipartUpload(
-		&s3.CreateMultipartUploadInput{
-			Bucket:      aws.String(self.config_obj.Cloud.Bucket),
-			Key:         aws.String(key),
-			ContentType: aws.String("application/binary"),
-		})
+	s3_request := &s3.CreateMultipartUploadInput{
+		Bucket:      aws.String(self.config_obj.Cloud.Bucket),
+		Key:         aws.String(key),
+		ContentType: aws.String("application/binary"),
+	}
+
+	resp, err := svc.CreateMultipartUpload(s3_request)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
 		return
 	}
+
+	self.log("StartMultipartUpload %v", s3_request)
 
 	if resp.UploadId == nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -203,6 +214,8 @@ func (self *Communicator) completeUpload(
 			Parts: parts,
 		},
 	}
+
+	self.log("CompleteMultipartUpload %v", completeInput)
 
 	_, err := svc.CompleteMultipartUpload(completeInput)
 	return err

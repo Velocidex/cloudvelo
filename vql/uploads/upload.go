@@ -43,7 +43,7 @@ func Upload(
 
 	dest := ospath
 	if name != nil {
-		name = ospath
+		dest = name
 	}
 
 	// A regular uploader for bulk data.
