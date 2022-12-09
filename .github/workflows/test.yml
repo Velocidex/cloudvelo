@@ -54,3 +54,17 @@ jobs:
     - name: Run tests
       run: |
         make test
+
+    - name: Upload Build Artifacts
+      if: ${{ failure() }}
+      shell: bash
+      run: |
+        mkdir -p artifact_output/
+        go test -v ./vql/uploads/ ./foreman/ ./ingestion/ -update
+        cp -a ./vql/uploads/fixtures/* ./foreman/fixtures/* ./ingestion/fixtures/* artifact_output/
+
+    - uses: actions/upload-artifact@master
+      if: ${{ failure() }}
+      with:
+        name: artifact
+        path: artifact_output
