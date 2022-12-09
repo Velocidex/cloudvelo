@@ -1,4 +1,5 @@
 #Maven
+artifact/
 target/
 pom.xml.tag
 pom.xml.releaseBackup

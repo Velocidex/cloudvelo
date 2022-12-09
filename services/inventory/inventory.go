@@ -2,47 +2,46 @@ package inventory
 
 import (
 	"context"
-	"net"
-	"net/http"
+	"errors"
 	"sync"
-	"time"
 
+	artifacts_proto "www.velocidex.com/golang/velociraptor/artifacts/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
-	"www.velocidex.com/golang/velociraptor/services/inventory"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
+
+var (
+	notImplementedError = errors.New("Inventory service not supported")
+)
+
+type Dummy struct{}
+
+func (self Dummy) Get() *artifacts_proto.ThirdParty {
+	return nil
+}
+
+func (self Dummy) ProbeToolInfo(name string) (*artifacts_proto.Tool, error) {
+	return nil, notImplementedError
+}
+
+func (self Dummy) GetToolInfo(ctx context.Context, config_obj *config_proto.Config,
+	tool string) (*artifacts_proto.Tool, error) {
+	return nil, notImplementedError
+}
+
+func (self Dummy) AddTool(config_obj *config_proto.Config,
+	tool *artifacts_proto.Tool, opts services.ToolOptions) error {
+	return notImplementedError
+}
+
+func (self Dummy) RemoveTool(config_obj *config_proto.Config, tool_name string) error {
+	return notImplementedError
+}
 
 func NewInventoryDummyService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (services.Inventory, error) {
 
-	inventory_service := &inventory.Dummy{
-		Clock: utils.RealClock{},
-		Client: &http.Client{
-			Transport: &http.Transport{
-				DialContext: (&net.Dialer{
-					Timeout:   300 * time.Second,
-					KeepAlive: 300 * time.Second,
-					DualStack: true,
-				}).DialContext,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       300 * time.Second,
-				TLSHandshakeTimeout:   100 * time.Second,
-				ExpectContinueTimeout: 10 * time.Second,
-				ResponseHeaderTimeout: 100 * time.Second,
-			},
-		},
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer inventory_service.Close(config_obj)
-
-		<-ctx.Done()
-	}()
-
-	return inventory_service, nil
+	return Dummy{}, nil
 }

@@ -15,6 +15,7 @@ import (
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
 	"www.velocidex.com/golang/cloudvelo/ingestion/testdata"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
+	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
@@ -58,6 +59,9 @@ func (self *IngestionTestSuite) ingestGoldenMessages(
 			assert.NoError(self.T(), err)
 		}
 	}
+
+	err = services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
 }
 
 func (self *IngestionTestSuite) testEnrollment(
@@ -84,6 +88,7 @@ func (self *IngestionTestSuite) testEnrollment(
 	records, err := cvelo_services.QueryElasticRaw(ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
+	sort_records(records)
 	assert.Equal(self.T(), 0, len(records))
 }
 
@@ -107,6 +112,7 @@ func (self *IngestionTestSuite) testListDirectory(
 	records, err := cvelo_services.QueryElasticRaw(ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
+	sort_records(records)
 	self.golden.Set("System.VFS.ListDirectory Results", records)
 
 	// Check the VFS entry for the top directory now - There should be
@@ -114,6 +120,7 @@ func (self *IngestionTestSuite) testListDirectory(
 	records, err = cvelo_services.QueryElasticRaw(ctx,
 		"test", "vfs", getAllItemsQuery)
 	assert.NoError(self.T(), err)
+	sort_records(records)
 	self.golden.Set("System.VFS.ListDirectory vfs", records)
 }
 
@@ -150,6 +157,7 @@ func (self *IngestionTestSuite) testVFSDownload(
 	records, err := cvelo_services.QueryElasticRaw(ctx,
 		"test", "vfs", getAllItemsQuery)
 	assert.NoError(self.T(), err)
+	sort_records(records)
 	self.golden.Set("System.VFS.DownloadFile vfs", records)
 
 }
@@ -167,6 +175,7 @@ func (self *IngestionTestSuite) testClientEventMonitoring(
 	records, err := cvelo_services.QueryElasticRaw(ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
+	sort_records(records)
 	self.golden.Set("Generic.Client.Stats Results", records)
 }
 
@@ -207,5 +216,13 @@ func TestIngestor(t *testing.T) {
 			Indexes: []string{"clients", "client_keys", "results", "collections"},
 		},
 		golden: ordereddict.NewDict(),
+	})
+}
+
+func sort_records(records []json.RawMessage) {
+	sort.Slice(records, func(i, j int) bool {
+		lhs := string(records[i])
+		rhs := string(records[j])
+		return lhs < rhs
 	})
 }

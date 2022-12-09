@@ -67,45 +67,56 @@ func (self *VFSService) renderDBVFS(
 		return nil, err
 	}
 
-	if len(record.Downloads) == 0 {
-		return result, nil
-	}
-
-	json.Dump(record.Downloads)
-
-	// When there are downloads we need to merge them into the
-	// results.
-	downloads := make(map[string]*flows_proto.VFSDownloadInfo)
-	for _, serialized := range record.Downloads {
-		row := &DownloadRow{}
-		err = json.Unmarshal([]byte(serialized), row)
-		if err == nil && len(row.Components) > 0 {
-			name := row.Components[len(row.Components)-1]
-			downloads[name] = &flows_proto.VFSDownloadInfo{
-				Components: row.FSComponents,
-				Size:       row.Size,
-				MD5:        row.Md5,
-				SHA256:     row.Sha256,
-				Mtime:      row.Mtime,
-			}
-		}
-	}
-
 	rows, err := utils.ParseJsonToDicts([]byte(result.Response))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, row := range rows {
-		name, pres := row.GetString("Name")
-		if !pres {
-			continue
+	directory_limit := 1000
+	if config_obj.Defaults != nil &&
+		config_obj.Defaults.MaxVfsDirectorySize > 0 {
+		directory_limit = int(config_obj.Defaults.MaxVfsDirectorySize)
+	}
+
+	// TODO: Right now the GUI is being limited to fixed number of
+	// results because large directory listing is very expensive on
+	// the GUI. We should fix the UI to be able to handle very large
+	// directories.
+	if len(rows) >= directory_limit {
+		rows = rows[:directory_limit]
+		result.TotalRows = uint64(directory_limit)
+	}
+
+	// No downloads, we do not need to actually parse the JSON
+	if len(record.Downloads) > 0 {
+		// When there are downloads we need to merge them into the
+		// results.
+		downloads := make(map[string]*flows_proto.VFSDownloadInfo)
+		for _, serialized := range record.Downloads {
+			row := &DownloadRow{}
+			err = json.Unmarshal([]byte(serialized), row)
+			if err == nil && len(row.Components) > 0 {
+				name := row.Components[len(row.Components)-1]
+				downloads[name] = &flows_proto.VFSDownloadInfo{
+					Components: row.FSComponents,
+					Size:       row.Size,
+					MD5:        row.Md5,
+					SHA256:     row.Sha256,
+					Mtime:      row.Mtime,
+				}
+			}
 		}
 
-		download_info, pres := downloads[name]
-		if pres {
-			row.Set("Download", download_info)
-			json.Dump(row)
+		for _, row := range rows {
+			name, pres := row.GetString("Name")
+			if !pres {
+				continue
+			}
+
+			download_info, pres := downloads[name]
+			if pres {
+				row.Update("Download", download_info)
+			}
 		}
 	}
 
