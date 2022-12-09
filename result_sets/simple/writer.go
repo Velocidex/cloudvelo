@@ -41,8 +41,7 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 
-	services.SetElasticIndex(
-		self.ctx, self.org_id, "results", "", record)
+	services.SetElasticIndexAsync(self.org_id, "results", "", record)
 }
 
 func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {

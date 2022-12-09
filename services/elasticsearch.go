@@ -47,7 +47,7 @@ var (
 
 	logger *logging.LogContext
 
-	bulk_indexer opensearchutil.BulkIndexer
+	bulk_indexer *BulkIndexer
 )
 
 // The logger is normally installed in the start up sequence with
@@ -150,6 +150,10 @@ func FlushIndex(
 	res, err := opensearchapi.IndicesRefreshRequest{
 		Index: []string{GetIndex(org_id, index)},
 	}.Do(ctx, client)
+
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
 
@@ -826,6 +830,86 @@ func MakeId(item string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+type BulkIndexer struct {
+	opensearchutil.BulkIndexer
+	ctx        context.Context
+	config_obj *config_proto.Config
+	mu         sync.Mutex
+
+	indexes map[string]bool
+}
+
+func (self *BulkIndexer) Add(ctx context.Context, item opensearchutil.BulkIndexerItem) error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	self.indexes[item.Index] = true
+	return self.BulkIndexer.Add(ctx, item)
+}
+
+func (self *BulkIndexer) Close() error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	elastic_client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
+		opensearchutil.BulkIndexerConfig{
+			Client:        elastic_client,
+			FlushInterval: time.Second * 10,
+			OnFlushStart: func(ctx context.Context) context.Context {
+				logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+				logger.Debug("Flushing bulk indexer.")
+				return ctx
+			},
+			OnError: func(ctx context.Context, err error) {
+				if err != nil {
+					logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+					logger.Error("BulkIndexerConfig: %v", err)
+				}
+			},
+		})
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	err = self.BulkIndexer.Close(ctx)
+	if err != nil {
+		return err
+	}
+
+	indexes := []string{}
+	for i := range self.indexes {
+		indexes = append(indexes, i)
+	}
+	res, err := opensearchapi.IndicesRefreshRequest{
+		Index: indexes,
+	}.Do(ctx, elastic_client)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	self.BulkIndexer = new_bulk_indexer
+	return nil
+}
+
+func FlushBulkIndexer() error {
+	mu.Lock()
+	b := bulk_indexer
+	mu.Unlock()
+
+	if b != nil {
+		return b.Close()
+	}
+	return nil
+}
+
 func StartBulkIndexService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
@@ -835,14 +919,20 @@ func StartBulkIndexService(
 		return err
 	}
 
-	logger := logging.GetLogger(
-		config_obj.VeloConf(), &logging.FrontendComponent)
-
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
-			Client: elastic_client,
+			Client:        elastic_client,
+			FlushInterval: time.Second * 10,
+			OnFlushStart: func(ctx context.Context) context.Context {
+				logger := logging.GetLogger(
+					config_obj.VeloConf(), &logging.FrontendComponent)
+				logger.Debug("Flushing bulk indexer.")
+				return ctx
+			},
 			OnError: func(ctx context.Context, err error) {
 				if err != nil {
+					logger := logging.GetLogger(
+						config_obj.VeloConf(), &logging.FrontendComponent)
 					logger.Error("BulkIndexerConfig: %v", err)
 				}
 			},
@@ -852,7 +942,12 @@ func StartBulkIndexService(
 	}
 
 	mu.Lock()
-	bulk_indexer = new_bulk_indexer
+	bulk_indexer = &BulkIndexer{
+		BulkIndexer: new_bulk_indexer,
+		config_obj:  config_obj.VeloConf(),
+		ctx:         ctx,
+		indexes:     make(map[string]bool),
+	}
 	mu.Unlock()
 
 	// Ensure we flush the indexer before we exit.
@@ -861,11 +956,7 @@ func StartBulkIndexService(
 		defer wg.Done()
 		<-ctx.Done()
 
-		subctx, cancel := context.WithTimeout(context.Background(),
-			30*time.Second)
-		defer cancel()
-
-		bulk_indexer.Close(subctx)
+		FlushBulkIndexer()
 	}()
 
 	return err

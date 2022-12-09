@@ -29,9 +29,11 @@ sources:
            accessor=Accessor)
       })
 
-      SELECT * FROM if(condition=Depth,
-      then=RecursiveLS,
-      else={
-        SELECT * FROM vfs_ls(
+      LET ParentLS = SELECT * FROM vfs_ls(
            components=Components, accessor=Accessor)
-      })
+
+      SELECT * FROM if(condition=Depth,
+      then={
+         SELECT * FROM chain(a= ParentLS, b=RecursiveLS)
+      },
+      else=ParentLS)

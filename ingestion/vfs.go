@@ -70,7 +70,9 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 			Downloads:  []string{},
 			JSONData:   json.MustMarshalString(vfs_response),
 		}
-		err = services.SetElasticIndex(ctx,
+
+		// Write these asynchronously because there are many records.
+		err = services.SetElasticIndexAsync(
 			config_obj.OrgId, "vfs", id, record)
 		if err != nil {
 			return err

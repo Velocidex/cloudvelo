@@ -15,6 +15,7 @@ import (
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
 	"www.velocidex.com/golang/cloudvelo/ingestion/testdata"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
+	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
@@ -58,6 +59,9 @@ func (self *IngestionTestSuite) ingestGoldenMessages(
 			assert.NoError(self.T(), err)
 		}
 	}
+
+	err = services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
 }
 
 func (self *IngestionTestSuite) testEnrollment(
