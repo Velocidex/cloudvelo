@@ -4,6 +4,7 @@ package indexing
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -156,6 +157,9 @@ func (self *Indexer) searchClientsByHost(
 	}
 
 	terms := []string{json.Format(fieldSearchQuery, "hostname", hostname)}
+	if hostname == "*" {
+		terms = []string{allClientsQuery}
+	}
 	return self.searchWithTerms(ctx, in.Filter, terms, in.Offset, in.Limit)
 }
 
@@ -260,6 +264,8 @@ func (self *Indexer) searchWithTerms(
 	offset, limit uint64) (
 	*api_proto.SearchClientsResponse, error) {
 
+	fmt.Printf("Search terms: %v\n\n", terms)
+
 	// Show clients that pinged more recently than 10 min ago
 	if filter == api_proto.SearchClientsRequest_ONLINE {
 		terms = append(terms, json.Format(recentClientsQuery,
@@ -269,6 +275,8 @@ func (self *Indexer) searchWithTerms(
 	query := json.Format(
 		getAllClientsQuery, strings.Join(terms, ","),
 		json.Format(limitQueryPart, offset, limit+1))
+
+	fmt.Printf("Query: %v\n\n", query)
 
 	hits, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId, "clients", query)
