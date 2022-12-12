@@ -198,13 +198,7 @@ func _UpdateIndex(
 		return nil
 	}
 
-	response := ordereddict.NewDict()
-	err = response.UnmarshalJSON(data)
-	if err != nil {
-		return err
-	}
-
-	return makeElasticError(response)
+	return makeElasticError(data)
 }
 
 func UpdateByQuery(
@@ -236,13 +230,7 @@ func UpdateByQuery(
 		return nil
 	}
 
-	response := ordereddict.NewDict()
-	err = response.UnmarshalJSON(data)
-	if err != nil {
-		return err
-	}
-
-	return makeElasticError(response)
+	return makeElasticError(data)
 }
 
 func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
@@ -302,13 +290,7 @@ func _SetElasticIndex(
 		return nil
 	}
 
-	response := ordereddict.NewDict()
-	err = response.UnmarshalJSON(data)
-	if err != nil {
-		return err
-	}
-
-	return makeElasticError(response)
+	return makeElasticError(data)
 }
 
 type _ElasticHit struct {
@@ -373,7 +355,7 @@ func GetElasticRecord(
 	response := ordereddict.NewDict()
 	err = response.UnmarshalJSON(data)
 	if err != nil {
-		return nil, err
+		return nil, makeElasticError(data)
 	}
 
 	found_any, pres := response.Get("found")
@@ -384,7 +366,7 @@ func GetElasticRecord(
 		}
 	}
 
-	return nil, makeElasticError(response)
+	return nil, makeElasticError(data)
 }
 
 // Automatically take care of paging by returning a channel.  Query
@@ -501,13 +483,7 @@ func DeleteByQuery(
 		return nil
 	}
 
-	response := ordereddict.NewDict()
-	err = response.UnmarshalJSON(data)
-	if err != nil {
-		return err
-	}
-
-	return makeElasticError(response)
+	return makeElasticError(data)
 }
 
 func QueryElasticAggregations(
@@ -537,19 +513,13 @@ func QueryElasticAggregations(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		response := ordereddict.NewDict()
-		err = response.UnmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, makeElasticError(response)
+		return nil, makeElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, err
+		return nil, makeElasticError(data)
 	}
 
 	var results []string
@@ -604,19 +574,13 @@ func QueryElasticRaw(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		response := ordereddict.NewDict()
-		err = response.UnmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, makeElasticError(response)
+		return nil, makeElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, err
+		return nil, makeElasticError(data)
 	}
 
 	var results []json.RawMessage
@@ -654,19 +618,13 @@ func QueryElasticIds(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		response := ordereddict.NewDict()
-		err = response.UnmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, makeElasticError(response)
+		return nil, makeElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, err
+		return nil, makeElasticError(data)
 	}
 
 	var results []string
@@ -708,19 +666,13 @@ func QueryElastic(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		response := ordereddict.NewDict()
-		err = response.UnmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, makeElasticError(response)
+		return nil, makeElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, err
+		return nil, makeElasticError(data)
 	}
 
 	var results []Result
@@ -813,7 +765,13 @@ func StartElasticSearchService(config_obj *config.Config) error {
 	return nil
 }
 
-func makeElasticError(response *ordereddict.Dict) error {
+func makeElasticError(data []byte) error {
+	response := ordereddict.NewDict()
+	err := response.UnmarshalJSON(data)
+	if err != nil {
+		return fmt.Errorf("Elastic Error: %v", string(data))
+	}
+
 	err_type := utils.GetString(response, "error.type")
 	err_reason := utils.GetString(response, "error.reason")
 	if false && err_type != "" && err_reason != "" {
