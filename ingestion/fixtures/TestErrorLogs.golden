@@ -1,0 +1,34 @@
+{
+ "System.VFS.ListDirectory after Error Log": [
+  {
+   "client_id": "C.1352adc54e292a23",
+   "session_id": "F.CCMS0OJQ7LI36",
+   "context": "",
+   "create_time": 0,
+   "start_time": 0,
+   "last_active_time": 1661391002000000000,
+   "uploaded_files": 0,
+   "uploaded_bytes": 0,
+   "query_stats": null,
+   "tasks": "",
+   "errored": 0,
+   "timestamp": 1661391001000000000
+  },
+  {
+   "client_id": "C.1352adc54e292a23",
+   "session_id": "F.CCMS0OJQ7LI36",
+   "context": "",
+   "create_time": 0,
+   "start_time": 0,
+   "last_active_time": 0,
+   "uploaded_files": 0,
+   "uploaded_bytes": 0,
+   "query_stats": [
+    "{\"status\":10,\"error_message\":\"Something went wrong!\"}"
+   ],
+   "tasks": "",
+   "errored": 0,
+   "timestamp": 1661391003000000000
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "System.VFS.DownloadFile": {
+  "client_id": "C.1352adc54e292a23",
+  "session_id": "F.CCM9S0N2QR4H8",
+  "context": "",
+  "create_time": 0,
+  "start_time": 0,
+  "last_active_time": 0,
+  "uploaded_files": 1,
+  "uploaded_bytes": 784,
+  "query_stats": [],
+  "tasks": "",
+  "errored": 0,
+  "timestamp": 0
+ },
+ "System.VFS.DownloadFile vfs": [
+  {
+   "client_id": "C.1352adc54e292a23",
+   "components": [
+    "C.1352adc54e292a23",
+    "auto"
+   ],
+   "downloads": [
+    "{\"Accessor\":\"auto\",\"_Components\":[\"hello.txt\"],\"FSPath\":[\"clients\",\"C.1352adc54e292a23\",\"collections\",\"F.CCM9S0N2QR4H8\",\"uploads\",\"auto\",\"734cad14909bedfafb5b273b6b0eb01fbfa639587d217f78ce9639bba41f4415\"],\"Size\":784,\"StoredSize\":784,\"Sha256\":\"f70a5bf6c762e49248284586e113473fdcedbd8433b0287820bf7a0607ebd60c\",\"Md5\":\"544b886b7e4c99b807103a4ef584a8c7\",\"mtime\":1661391010}"
+   ],
+   "data": "{\"Response\":\"[{\\\"_FullPath\\\":\\\"/hello.txt\\\",\\\"_Accessor\\\":\\\"auto\\\",\\\"_Data\\\":{\\\"DevMajor\\\":253,\\\"DevMinor\\\":0},\\\"Name\\\":\\\"hello.txt\\\",\\\"Size\\\":784,\\\"Mode\\\":\\\"-rwxr-xr-x\\\",\\\"mtime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"atime\\\":\\\"2022-09-11T15:12:27Z\\\",\\\"ctime\\\":\\\"2022-06-24T12:59:30Z\\\",\\\"btime\\\":\\\"0001-01-01T00:00:00Z\\\"}]\",\"Columns\":[\"_FullPath\",\"_Accessor\",\"_Data\",\"Name\",\"Size\",\"Mode\",\"mtime\",\"atime\",\"ctime\",\"btime\"],\"total_rows\":27,\"client_id\":\"C.1352adc54e292a23\",\"flow_id\":\"F.CCMS0OJQ7LI36\"}"
+  }
+ ]
+}
