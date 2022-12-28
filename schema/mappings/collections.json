@@ -4,6 +4,7 @@
         "properties": {
             "client_id":           { "type": "keyword" },
             "session_id":          { "type": "keyword" },
+            "timestamp":           { "type": "long" },
             "create_time":         { "type": "long" },
             "start_time":          { "type": "long" },
             "uploaded_files":      { "type": "long" },

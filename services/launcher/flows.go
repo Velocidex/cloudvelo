@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"errors"
+	"sort"
 	"time"
 
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -50,23 +51,41 @@ func (self Launcher) GetFlows(
 		return nil, err
 	}
 
-	result := &api_proto.ApiFlowResponse{}
+	lookup := make(map[string]*cvelo_schema_api.ArtifactCollectorContext)
+
 	for _, hit := range hits {
 		item := &cvelo_schema_api.ArtifactCollectorContext{}
 		err = json.Unmarshal(hit, &item)
 		if err == nil {
-			flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(item)
-			if err == nil {
-				cleanUpContext(flow)
-				result.Items = append(result.Items, flow)
+			record, pres := lookup[item.SessionId]
+			if !pres {
+				record = &cvelo_schema_api.ArtifactCollectorContext{}
 			}
+			mergeRecords(record, item)
+			lookup[item.SessionId] = record
 		}
 	}
+
+	result := &api_proto.ApiFlowResponse{}
+	for _, record := range lookup {
+		flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(record)
+		if err == nil {
+			cleanUpContext(flow)
+			result.Items = append(result.Items, flow)
+		}
+	}
+
+	// Show newer sessions before older sessions.
+	sort.Slice(result.Items, func(i, j int) bool {
+		return result.Items[i].SessionId > result.Items[j].SessionId
+	})
+
 	return result, nil
 }
 
 const getFlowDetailsQuery = `
 {
+  "sort": [{"timestamp": {"order": "asc"}}],
   "query": {
      "bool": {
        "must": [
@@ -95,13 +114,19 @@ func (self *Launcher) GetFlowDetails(
 		return nil, NotFoundError
 	}
 
-	item := &cvelo_schema_api.ArtifactCollectorContext{}
-	err = json.Unmarshal(hits[0], item)
-	if err != nil {
-		return nil, err
+	result := &cvelo_schema_api.ArtifactCollectorContext{}
+
+	for _, hit := range hits {
+		item := &cvelo_schema_api.ArtifactCollectorContext{}
+		err = json.Unmarshal(hit, item)
+		if err != nil {
+			return nil, err
+		}
+
+		mergeRecords(result, item)
 	}
 
-	flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(item)
+	flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(result)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +137,29 @@ func (self *Launcher) GetFlowDetails(
 		Context:            flow,
 		AvailableDownloads: availableDownloads,
 	}, nil
+}
+
+func mergeRecords(output, input *cvelo_schema_api.ArtifactCollectorContext) {
+	if len(input.QueryStats) > 0 {
+		output.QueryStats = append(output.QueryStats, input.QueryStats...)
+	}
+
+	if input.Raw != "" {
+		output.Raw = input.Raw
+	}
+
+	if input.SessionId != "" {
+		output.SessionId = input.SessionId
+		output.ClientId = input.ClientId
+	}
+
+	if input.CreateTime > 0 {
+		output.CreateTime = input.CreateTime
+	}
+
+	if input.LastActive > 0 {
+		output.LastActive = input.LastActive
+	}
 }
 
 // availableDownloads returns the prepared zip downloads available to
