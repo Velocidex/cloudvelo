@@ -13,19 +13,19 @@ import (
 
 // We use the database to manipulate exposed fields.
 type ArtifactCollectorContext struct {
-	ClientId      string   `json:"client_id,omitempty"`
-	SessionId     string   `json:"session_id,omitempty"`
-	Raw           string   `json:"context,omitempty"`
-	CreateTime    uint64   `json:"create_time,omitempty"`
-	StartTime     uint64   `json:"start_time,omitempty"`
-	LastActive    uint64   `json:"last_active_time,omitempty"`
-	UploadedFiles uint64   `json:"uploaded_files,omitempty"`
-	UploadedBytes uint64   `json:"uploaded_bytes,omitempty"`
-	QueryStats    []string `json:"query_stats,omitempty"`
-	Tasks         string   `json:"tasks,omitempty"`
-	Errored       uint64   `json:"errored,omitempty"`
+	ClientId      string   `json:"client_id"`
+	SessionId     string   `json:"session_id"`
+	Raw           string   `json:"context"`
+	CreateTime    uint64   `json:"create_time"`
+	StartTime     uint64   `json:"start_time"`
+	LastActive    uint64   `json:"last_active_time"`
+	UploadedFiles uint64   `json:"uploaded_files"`
+	UploadedBytes uint64   `json:"uploaded_bytes"`
+	QueryStats    []string `json:"query_stats"`
+	Tasks         string   `json:"tasks"`
+	Errored       uint64   `json:"errored"`
 
-	Timestamp int64 `json:"timestamp,omitempty"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 func ArtifactCollectorContextToProto(
