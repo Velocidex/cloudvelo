@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/sebdah/goldie"
@@ -116,6 +117,10 @@ func (self *IngestionTestSuite) TestEnrollment() {
 }
 
 func (self *IngestionTestSuite) TestListDirectory() {
+	// To keep things stable we mock the clock to be constant.
+	cvelo_utils.Clock = &utils.MockClock{
+		MockNow: time.Unix(1661391000, 0),
+	}
 
 	client_id := "C.1352adc54e292a23"
 	flow_id := "F.CCMS0OJQ7LI36"
@@ -258,16 +263,6 @@ func (self *IngestionTestSuite) SetupTest() {
 
 	self.ingestor, err = NewIngestor(self.ConfigObj, crypto_manager)
 	assert.NoError(self.T(), err)
-
-	/*
-		self.testEnrollment(ctx, ingestor)
-		self.testListDirectory(ctx, ingestor)
-		self.testErrorLogs(ctx, ingestor)
-			self.testVFSDownload(ctx, ingestor)
-		self.testClientEventMonitoring(ctx, ingestor)
-
-		goldie.Assert(self.T(), "TestIngestor", json.MustMarshalIndent(self.golden))
-	*/
 }
 
 func (self *IngestionTestSuite) TearDownTest() {
