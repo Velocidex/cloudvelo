@@ -19,7 +19,8 @@ type VFSService struct {
 	config_obj *config_proto.Config
 }
 
-func (self *VFSService) ListDirectory(
+func (self *VFSService) ListDirectories(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string,
 	components []string) (*api_proto.VFSListResponse, error) {
@@ -28,7 +29,7 @@ func (self *VFSService) ListDirectory(
 		return renderRootVFS(client_id), nil
 	}
 
-	return self.renderDBVFS(config_obj, client_id, components)
+	return renderDBVFS(ctx, config_obj, client_id, components)
 }
 
 func (self *VFSService) StatDirectory(

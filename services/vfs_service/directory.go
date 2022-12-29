@@ -1,11 +1,18 @@
 package vfs_service
 
 import (
+	"context"
+
+	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
+	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/paths"
+	"www.velocidex.com/golang/velociraptor/paths/artifacts"
+	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -40,18 +47,20 @@ func renderRootVFS(client_id string) *api_proto.VFSListResponse {
 	}
 }
 
-func (self *VFSService) renderDBVFS(
+// Render VFS nodes with VQL collection + uploads.
+func renderDBVFS(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string,
 	components []string) (*api_proto.VFSListResponse, error) {
 
 	result := &api_proto.VFSListResponse{}
 	components = append([]string{client_id}, components...)
+
 	id := services.MakeId(utils.JoinComponents(components, "/"))
 	record := &VFSRecord{}
-
-	serialized, err := services.GetElasticRecord(self.ctx,
-		self.config_obj.OrgId, "vfs", id)
+	serialized, err := services.GetElasticRecord(ctx,
+		config_obj.OrgId, "vfs", id)
 	if err != nil {
 		// Empty responses mean the directory is empty.
 		return result, nil
@@ -67,60 +76,80 @@ func (self *VFSService) renderDBVFS(
 		return nil, err
 	}
 
-	rows, err := utils.ParseJsonToDicts([]byte(result.Response))
+	// Empty responses mean the directory is empty - no need to
+	// worry about downloads.
+	if result.TotalRows == 0 {
+		return result, nil
+	}
+
+	// The artifact that contains the actual data may vary a bit - let
+	// the metadata dictate it.
+	artifact_name := result.Artifact
+	if artifact_name == "" {
+		artifact_name = "System.VFS.ListDirectory"
+	}
+
+	// Open the original flow result set
+	path_manager := artifacts.NewArtifactPathManagerWithMode(
+		config_obj, result.ClientId, result.FlowId,
+		artifact_name, paths.MODE_CLIENT)
+
+	file_store_factory := file_store.GetFileStore(config_obj)
+	reader, err := result_sets.NewResultSetReader(
+		file_store_factory, path_manager.Path())
+	if err != nil {
+		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+		logger.Error("Unable to read artifact: %v", err)
+		return result, nil
+	}
+	defer reader.Close()
+
+	err = reader.SeekToRow(int64(result.StartIdx))
 	if err != nil {
 		return nil, err
 	}
 
-	directory_limit := 1000
-	if config_obj.Defaults != nil &&
-		config_obj.Defaults.MaxVfsDirectorySize > 0 {
-		directory_limit = int(config_obj.Defaults.MaxVfsDirectorySize)
-	}
+	// If the row refers to a downloaded file, we mark it
+	// with the download details.
+	count := result.StartIdx
+	rows := []*ordereddict.Dict{}
+	columns := []string{}
 
-	// TODO: Right now the GUI is being limited to fixed number of
-	// results because large directory listing is very expensive on
-	// the GUI. We should fix the UI to be able to handle very large
-	// directories.
-	if len(rows) >= directory_limit {
-		rows = rows[:directory_limit]
-		result.TotalRows = uint64(directory_limit)
-	}
-
-	// No downloads, we do not need to actually parse the JSON
-	if len(record.Downloads) > 0 {
-		// When there are downloads we need to merge them into the
-		// results.
-		downloads := make(map[string]*flows_proto.VFSDownloadInfo)
-		for _, serialized := range record.Downloads {
-			row := &DownloadRow{}
-			err = json.Unmarshal([]byte(serialized), row)
-			if err == nil && len(row.Components) > 0 {
-				name := row.Components[len(row.Components)-1]
-				downloads[name] = &flows_proto.VFSDownloadInfo{
-					Components: row.FSComponents,
-					Size:       row.Size,
-					MD5:        row.Md5,
-					SHA256:     row.Sha256,
-					Mtime:      row.Mtime,
-				}
-			}
+	// Filter the files to produce only the directories. This should
+	// be a lot less than total files and so should not take too much
+	// memory.
+	for row := range reader.Rows(ctx) {
+		count++
+		if count > result.EndIdx {
+			break
 		}
 
-		for _, row := range rows {
-			name, pres := row.GetString("Name")
-			if !pres {
-				continue
-			}
+		// Only return directories here for the tree widget.
+		mode, ok := row.GetString("Mode")
+		if !ok || mode == "" || mode[0] != 'd' {
+			continue
+		}
 
-			download_info, pres := downloads[name]
-			if pres {
-				row.Update("Download", download_info)
-			}
+		rows = append(rows, row)
+
+		if len(columns) == 0 {
+			columns = row.Keys()
+		}
+
+		// Protect the tree widget from being too large.
+		if len(rows) > 2000 {
+			break
 		}
 	}
 
-	result.Response = json.MustMarshalString(rows)
+	encoded_rows, err := json.MarshalIndent(rows)
+	if err != nil {
+		return nil, err
+	}
 
+	result.Response = string(encoded_rows)
+
+	// Add a Download column as the first column.
+	result.Columns = columns
 	return result, nil
 }

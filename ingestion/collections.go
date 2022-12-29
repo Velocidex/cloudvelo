@@ -101,7 +101,7 @@ func (self Ingestor) HandleResponses(
 
 	// Handle special types of responses
 	switch message.VQLResponse.Query.Name {
-	case "System.VFS.ListDirectory":
+	case "System.VFS.ListDirectory/Stats":
 		_ = self.HandleSystemVfsListDirectory(ctx, config_obj, message)
 
 	case "System.VFS.DownloadFile":
