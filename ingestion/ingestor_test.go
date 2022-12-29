@@ -3,8 +3,8 @@ package ingestion
 import (
 	"context"
 	"io/fs"
+	"path"
 	"sort"
-	"strings"
 	"sync"
 	"testing"
 
@@ -60,7 +60,7 @@ type IngestionTestSuite struct {
 
 func (self *IngestionTestSuite) ingestGoldenMessages(
 	ctx context.Context, ingestor *Ingestor, prefix string) {
-	files, err := testdata.FS.ReadDir(".")
+	files, err := testdata.FS.ReadDir(prefix)
 	assert.NoError(self.T(), err)
 
 	sort.Slice(files, func(i, j int) bool {
@@ -68,19 +68,17 @@ func (self *IngestionTestSuite) ingestGoldenMessages(
 	})
 
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), prefix) {
-			data, err := fs.ReadFile(testdata.FS, file.Name())
-			assert.NoError(self.T(), err)
+		data, err := fs.ReadFile(testdata.FS, path.Join(prefix, file.Name()))
+		assert.NoError(self.T(), err)
 
-			message := &crypto_proto.VeloMessage{}
-			err = json.Unmarshal(data, message)
-			assert.NoError(self.T(), err)
+		message := &crypto_proto.VeloMessage{}
+		err = json.Unmarshal(data, message)
+		assert.NoError(self.T(), err)
 
-			message.OrgId = "test"
+		message.OrgId = "test"
 
-			err = ingestor.Process(ctx, message)
-			assert.NoError(self.T(), err)
-		}
+		err = ingestor.Process(ctx, message)
+		assert.NoError(self.T(), err)
 	}
 
 	err = cvelo_services.FlushBulkIndexer()
@@ -282,7 +280,7 @@ func (self *IngestionTestSuite) TearDownTest() {
 func TestIngestor(t *testing.T) {
 	suite.Run(t, &IngestionTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients", "client_keys", "results", "collections"},
+			Indexes: []string{"clients", "client_keys", "results", "vfs", "collections"},
 		},
 	})
 }

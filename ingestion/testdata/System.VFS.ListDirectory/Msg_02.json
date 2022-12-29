@@ -1,13 +1,14 @@
 {
- "session_id": "F.CCMS0OJQ7LI36",
+ "session_id": "F.CEMSQDBR1Q74U",
+ "query_id": 2,
  "request_id": 980,
  "urgent": true,
- "response_id": 1663943042241373236,
- "source": "C.1352adc54e292a23",
+ "response_id": 1672334655239879338,
+ "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "LogMessage": {
   "message": "Starting query execution.\n",
-  "timestamp": 1663943042241372,
+  "timestamp": 1672334655239877,
   "artifact": "System.VFS.ListDirectory",
   "level": "INFO"
  }

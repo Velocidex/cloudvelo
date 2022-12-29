@@ -28,6 +28,9 @@ type ElasticSimpleResultSetWriter struct {
 	truncated bool
 
 	ctx context.Context
+
+	// If this is set writes will be syncrounous
+	sync bool
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
@@ -41,7 +44,11 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 
-	services.SetElasticIndexAsync(self.org_id, "results", "", record)
+	if self.sync {
+		services.SetElasticIndex(self.ctx, self.org_id, "results", "", record)
+	} else {
+		services.SetElasticIndexAsync(self.org_id, "results", "", record)
+	}
 }
 
 func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
@@ -128,4 +135,6 @@ func (self *ElasticSimpleResultSetWriter) Close() {
 	self.Flush()
 }
 
-func (self ElasticSimpleResultSetWriter) SetSync() {}
+func (self *ElasticSimpleResultSetWriter) SetSync() {
+	self.sync = true
+}

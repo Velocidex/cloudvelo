@@ -1,0 +1,15 @@
+{
+ "session_id": "F.CEMSQDBR1Q74U",
+ "query_id": 1,
+ "request_id": 980,
+ "urgent": true,
+ "response_id": 1672334655240171351,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "LogMessage": {
+  "message": "Starting query execution.\n",
+  "timestamp": 1672334655240168,
+  "artifact": "System.VFS.ListDirectory/Stats",
+  "level": "INFO"
+ }
+}
