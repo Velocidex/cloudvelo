@@ -2,12 +2,14 @@ package simple
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/result_sets/simple"
 	"www.velocidex.com/golang/velociraptor/utils"
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 	"www.velocidex.com/golang/velociraptor/vql/sorter"
@@ -34,12 +36,18 @@ func (self ResultSetFactory) getFilteredReader(
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
 	// No filter required.
-	if options.FilterColumn == "" || options.FilterRegex == nil {
+	if options.FilterColumn == "" ||
+		options.FilterRegex == nil {
 		return self.getSortedReader(ctx, config_obj, file_store_factory,
 			log_path, options)
 	}
 
-	transformed_path := log_path.AddUnsafeChild(
+	transformed_path := log_path
+	if options.StartIdx != 0 || options.EndIdx != 0 {
+		transformed_path = transformed_path.AddUnsafeChild(
+			fmt.Sprintf("Range %d-%d", options.StartIdx, options.EndIdx))
+	}
+	transformed_path = transformed_path.AddUnsafeChild(
 		"filter", options.FilterRegex.String())
 
 	transformed_result_set_record := NewSimpleResultSetRecord(
@@ -71,6 +79,11 @@ func (self ResultSetFactory) getFilteredReader(
 	}
 	defer reader.Close()
 
+	reader, err = simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create the new writer
 	writer, err := self.NewResultSetWriter(
 		file_store_factory, transformed_path, nil, utils.SyncCompleter,
@@ -79,20 +92,13 @@ func (self ResultSetFactory) getFilteredReader(
 		return nil, err
 	}
 
-	// Default is 10 min to filter the file.
-	default_notebook_expiry := int64(10)
-	if config_obj.Defaults != nil &&
-		config_obj.Defaults.NotebookCellTimeoutMin > 0 {
-		default_notebook_expiry = config_obj.Defaults.NotebookCellTimeoutMin
-	}
-
-	sub_ctx, sub_cancel := context.WithTimeout(ctx,
-		time.Duration(default_notebook_expiry)*time.Minute)
+	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	// Filter the table with the regex
-	row_chan := reader.Rows(ctx)
+	row_chan := reader.Rows(sub_ctx)
 outer:
+
 	for {
 		select {
 		case <-sub_ctx.Done():
@@ -115,6 +121,11 @@ outer:
 	// Flush all the writes back
 	writer.Close()
 
+	// We already took care of the subrange options so clear them
+	// in case the querry is also sorted.
+	options.StartIdx = 0
+	options.EndIdx = 0
+
 	return self.getSortedReader(ctx, config_obj, file_store_factory,
 		transformed_path, options)
 }
@@ -128,15 +139,24 @@ func (self ResultSetFactory) getSortedReader(
 
 	// No sorting required.
 	if options.SortColumn == "" {
-		return self.NewResultSetReader(file_store_factory, log_path)
+		reader, err := self.NewResultSetReader(file_store_factory, log_path)
+		if err != nil {
+			return nil, err
+		}
+		return simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
 	}
 
-	var transformed_path api.FSPathSpec
+	transformed_path := log_path
+	if options.StartIdx != 0 || options.EndIdx != 0 {
+		transformed_path = transformed_path.AddUnsafeChild(
+			fmt.Sprintf("Range %d-%d", options.StartIdx, options.EndIdx))
+	}
+
 	if options.SortAsc {
-		transformed_path = log_path.AddUnsafeChild(
+		transformed_path = transformed_path.AddUnsafeChild(
 			"sorted", options.SortColumn, "asc")
 	} else {
-		transformed_path = log_path.AddUnsafeChild(
+		transformed_path = transformed_path.AddUnsafeChild(
 			"sorted", options.SortColumn, "desc")
 	}
 
@@ -168,6 +188,11 @@ func (self ResultSetFactory) getSortedReader(
 	}
 	defer reader.Close()
 
+	reader, err = simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create the new writer
 	writer, err := self.NewResultSetWriter(
 		file_store_factory, transformed_path, nil, utils.SyncCompleter,
@@ -181,15 +206,7 @@ func (self ResultSetFactory) getSortedReader(
 		ctx, scope, sorter_input_chan,
 		options.SortColumn, options.SortAsc)
 
-	// Default is 10 min to sort the file.
-	default_notebook_expiry := int64(10)
-	if config_obj.Defaults != nil &&
-		config_obj.Defaults.NotebookCellTimeoutMin > 0 {
-		default_notebook_expiry = config_obj.Defaults.NotebookCellTimeoutMin
-	}
-
-	sub_ctx, sub_cancel := context.WithTimeout(ctx,
-		time.Duration(default_notebook_expiry)*time.Minute)
+	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	// Now write into the sorter and read the sorted results.
@@ -197,7 +214,6 @@ func (self ResultSetFactory) getSortedReader(
 		defer close(sorter_input_chan)
 
 		row_chan := reader.Rows(ctx)
-
 		for {
 			select {
 			case <-sub_ctx.Done():
@@ -223,4 +239,15 @@ func (self ResultSetFactory) getSortedReader(
 	writer.Close()
 
 	return self.NewResultSetReader(file_store_factory, transformed_path)
+}
+
+func getExpiry(config_obj *config_proto.Config) time.Duration {
+	// Default is 10 min to filter the file.
+	if config_obj.Defaults != nil &&
+		config_obj.Defaults.NotebookCellTimeoutMin > 0 {
+		return time.Duration(
+			config_obj.Defaults.NotebookCellTimeoutMin) * time.Minute
+	}
+
+	return 10 * time.Minute
 }

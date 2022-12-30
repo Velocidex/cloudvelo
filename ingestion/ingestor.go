@@ -38,7 +38,7 @@ type Ingestor struct {
 
 // Log messages to a file - used to generate test data.
 func (self Ingestor) LogMessage(message *crypto_proto.VeloMessage) {
-	filename := fmt.Sprintf("Msg_%v.json", idx)
+	filename := fmt.Sprintf("Msg_%02d.json", idx)
 	idx++
 
 	fd, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
@@ -50,7 +50,7 @@ func (self Ingestor) LogMessage(message *crypto_proto.VeloMessage) {
 
 func (self Ingestor) Process(
 	ctx context.Context, message *crypto_proto.VeloMessage) error {
-	// self.LogMessage(message)
+	//self.LogMessage(message)
 
 	org_manager, err := services.GetOrgManager()
 	if err != nil {

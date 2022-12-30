@@ -3,10 +3,11 @@ package ingestion
 import (
 	"context"
 	"io/fs"
+	"path"
 	"sort"
-	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/sebdah/goldie"
@@ -27,10 +28,11 @@ import (
 
 const (
 	getAllItemsQuery = `
-{"query": {"match_all" : {}}}
+{"query": {"match_all" : {}}, "size": 1000}
 `
 	getCollectionQuery = `
 {
+  "size": 1000,
   "sort": [
   {
     "timestamp": {"order": "asc"}
@@ -60,7 +62,7 @@ type IngestionTestSuite struct {
 
 func (self *IngestionTestSuite) ingestGoldenMessages(
 	ctx context.Context, ingestor *Ingestor, prefix string) {
-	files, err := testdata.FS.ReadDir(".")
+	files, err := testdata.FS.ReadDir(prefix)
 	assert.NoError(self.T(), err)
 
 	sort.Slice(files, func(i, j int) bool {
@@ -68,19 +70,17 @@ func (self *IngestionTestSuite) ingestGoldenMessages(
 	})
 
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), prefix) {
-			data, err := fs.ReadFile(testdata.FS, file.Name())
-			assert.NoError(self.T(), err)
+		data, err := fs.ReadFile(testdata.FS, path.Join(prefix, file.Name()))
+		assert.NoError(self.T(), err)
 
-			message := &crypto_proto.VeloMessage{}
-			err = json.Unmarshal(data, message)
-			assert.NoError(self.T(), err)
+		message := &crypto_proto.VeloMessage{}
+		err = json.Unmarshal(data, message)
+		assert.NoError(self.T(), err)
 
-			message.OrgId = "test"
+		message.OrgId = "test"
 
-			err = ingestor.Process(ctx, message)
-			assert.NoError(self.T(), err)
-		}
+		err = ingestor.Process(ctx, message)
+		assert.NoError(self.T(), err)
 	}
 
 	err = cvelo_services.FlushBulkIndexer()
@@ -118,6 +118,10 @@ func (self *IngestionTestSuite) TestEnrollment() {
 }
 
 func (self *IngestionTestSuite) TestListDirectory() {
+	// To keep things stable we mock the clock to be constant.
+	cvelo_utils.Clock = &utils.MockClock{
+		MockNow: time.Unix(1661391000, 0),
+	}
 
 	client_id := "C.1352adc54e292a23"
 	flow_id := "F.CCMS0OJQ7LI36"
@@ -260,16 +264,6 @@ func (self *IngestionTestSuite) SetupTest() {
 
 	self.ingestor, err = NewIngestor(self.ConfigObj, crypto_manager)
 	assert.NoError(self.T(), err)
-
-	/*
-		self.testEnrollment(ctx, ingestor)
-		self.testListDirectory(ctx, ingestor)
-		self.testErrorLogs(ctx, ingestor)
-			self.testVFSDownload(ctx, ingestor)
-		self.testClientEventMonitoring(ctx, ingestor)
-
-		goldie.Assert(self.T(), "TestIngestor", json.MustMarshalIndent(self.golden))
-	*/
 }
 
 func (self *IngestionTestSuite) TearDownTest() {
@@ -282,7 +276,7 @@ func (self *IngestionTestSuite) TearDownTest() {
 func TestIngestor(t *testing.T) {
 	suite.Run(t, &IngestionTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients", "client_keys", "results", "collections"},
+			Indexes: []string{"clients", "client_keys", "results", "vfs", "collections"},
 		},
 	})
 }

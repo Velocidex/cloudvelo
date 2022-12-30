@@ -1,0 +1,16 @@
+{
+ "session_id": "F.CEMSQDBR1Q74U",
+ "query_id": 2,
+ "request_id": 1,
+ "urgent": true,
+ "response_id": 1672334655244183974,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "status": {
+  "duration": 4653292,
+  "Artifact": "System.VFS.ListDirectory",
+  "log_rows": 2,
+  "query_id": 3,
+  "total_queries": 3
+ }
+}

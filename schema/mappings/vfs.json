@@ -4,6 +4,7 @@
         "properties": {
             "client_id":    { "type": "keyword" },
             "vfs_path":     { "type": "keyword" },
+            "components":   { "type": "keyword" },
             "downloads":    { "type": "binary" },
             "data":         { "type": "binary" }
         }

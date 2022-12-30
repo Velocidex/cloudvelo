@@ -2,5 +2,5 @@ package testdata
 
 import "embed"
 
-//go:embed *.json
+//go:embed *
 var FS embed.FS

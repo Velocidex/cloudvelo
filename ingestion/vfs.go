@@ -7,24 +7,15 @@ import (
 
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
+	cvelo_vfs_service "www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
-	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/services/vfs_service"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
-
-// This is what the System.VFS.ListDirectory artifact returns. We use
-// it to store the VFS data so the GUI can show it.
-type VFSRow struct {
-	Components []string `json:"Components"`
-	Accessor   string   `json:"_Accessor"`
-	Count      uint64   `json:"Count"`
-	JSON       string   `json:"_JSON"`
-}
 
 func (self Ingestor) HandleSystemVfsListDirectory(
 	ctx context.Context,
@@ -42,10 +33,10 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 
 	for scanner.Scan() {
 		serialized := scanner.Text()
-		row := &VFSRow{}
+		row := &vfs_service.VFSListRow{}
 		err := json.Unmarshal([]byte(serialized), row)
-		if err != nil {
-			return err
+		if err != nil || row.Stats == nil {
+			continue
 		}
 
 		accessor := row.Accessor
@@ -55,20 +46,19 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 
 		components := append([]string{message.Source, accessor}, row.Components...)
 		id := services.MakeId(utils.JoinComponents(components, "/"))
-		vfs_response := &api_proto.VFSListResponse{
-			Response: row.JSON,
-			Columns: []string{"_FullPath", "_Accessor", "_Data", "Name",
-				"Size", "Mode", "mtime", "atime", "ctime", "btime"},
-			TotalRows: row.Count,
-			ClientId:  message.Source,
-			FlowId:    message.SessionId,
-		}
 
-		record := &vfs_service.VFSRecord{
+		stats := row.Stats
+		stats.Timestamp = uint64(cvelo_utils.Clock.Now().Unix())
+		stats.ClientId = message.Source
+		stats.FlowId = message.SessionId
+		stats.TotalRows = stats.EndIdx - stats.StartIdx
+		stats.Artifact = "System.VFS.ListDirectory/Listing"
+
+		record := &cvelo_vfs_service.VFSRecord{
 			ClientId:   message.Source,
 			Components: components,
 			Downloads:  []string{},
-			JSONData:   json.MustMarshalString(vfs_response),
+			JSONData:   json.MustMarshalString(stats),
 		}
 
 		// Write these asynchronously because there are many records.
@@ -114,7 +104,7 @@ func (self Ingestor) HandleSystemVfsUpload(
 
 	for scanner.Scan() {
 		serialized := scanner.Text()
-		row := &vfs_service.DownloadRow{}
+		row := &cvelo_vfs_service.DownloadRow{}
 		err := json.Unmarshal([]byte(serialized), row)
 		if err != nil {
 			return err

@@ -170,6 +170,59 @@ func (self *SimpleResultSetReader) Rows(
 	return output_chan
 }
 
+func (self *SimpleResultSetReader) JSON(
+	ctx context.Context) (<-chan []byte, error) {
+	output_chan := make(chan []byte)
+
+	last_row := int64(-1)
+
+	go func() {
+		defer close(output_chan)
+
+		for {
+			// No progress has been made something is wrong.
+			if last_row == self.row {
+				break
+			}
+
+			packet, err := self.getPacket(self.row)
+			if err != nil {
+				return
+			}
+			last_row = self.row
+
+			start_row := packet.StartRow
+			reader := bufio.NewReader(strings.NewReader(packet.JSONData))
+			for {
+				row_data, err := reader.ReadBytes('\n')
+				if err != nil && len(row_data) == 0 {
+					// Packet is exhausted, go get the next packet
+					break
+				}
+
+				// Consume the first few rows until we get to the one
+				// we need.
+				if start_row < self.row {
+					start_row++
+					continue
+				}
+				self.row++
+				start_row++
+
+				select {
+				case <-ctx.Done():
+					return
+
+				case output_chan <- row_data:
+				}
+			}
+		}
+
+	}()
+
+	return output_chan, nil
+}
+
 func (self *SimpleResultSetReader) Close() {}
 
 // Figure out how many rows are in this collection in total.

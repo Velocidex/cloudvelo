@@ -139,6 +139,6 @@ func makeDefaultConfigLoader() *config.Loader {
 	return new(config.Loader).
 		WithVerbose(*verbose_flag).
 		WithTempdir(*tempdir_flag).
-		WithCustomValidator(initDebugServer).
+		WithCustomValidator("debug", initDebugServer).
 		WithLogFile(*logging_flag)
 }

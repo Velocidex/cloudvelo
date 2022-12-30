@@ -24,6 +24,8 @@ import (
 
 // A Service container that creates different org services on demand.
 type LazyServiceContainer struct {
+	mu sync.Mutex
+
 	ctx        context.Context
 	wg         *sync.WaitGroup
 	config_obj *config_proto.Config
@@ -31,6 +33,11 @@ type LazyServiceContainer struct {
 	// Elastic is too slow to serve the repository manager directly so
 	// we cache it here.
 	repository services.RepositoryManager
+
+	// The broadcast service is used on the client to connect event
+	// consumers and producers so it needs to keep state. This is used
+	// by the generate() VQL function.
+	broadcast services.BroadcastService
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -93,7 +100,14 @@ func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {
 }
 
 func (self *LazyServiceContainer) BroadcastService() (services.BroadcastService, error) {
-	return broadcast.NewBroadcastService(self.config_obj), nil
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.broadcast == nil {
+		self.broadcast = broadcast.NewBroadcastService(self.config_obj)
+	}
+
+	return self.broadcast, nil
 }
 
 func (self *LazyServiceContainer) ACLManager() (services.ACLManager, error) {

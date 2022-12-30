@@ -1,0 +1,16 @@
+{
+ "session_id": "F.CEMSQDBR1Q74U",
+ "query_id": 2,
+ "request_id": 980,
+ "urgent": true,
+ "response_id": 1672334655244527236,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "LogMessage": {
+  "id": 6,
+  "message": "Query Stats: {\"RowsScanned\":1,\"PluginsCalled\":1,\"FunctionsCalled\":1,\"ProtocolSearch\":0,\"ScopeCopy\":4}\n",
+  "timestamp": 1672334655244525,
+  "artifact": "System.VFS.ListDirectory",
+  "level": "DEBUG"
+ }
+}
