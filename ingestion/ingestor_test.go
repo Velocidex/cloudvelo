@@ -28,10 +28,11 @@ import (
 
 const (
 	getAllItemsQuery = `
-{"query": {"match_all" : {}}}
+{"query": {"match_all" : {}}, "size": 1000}
 `
 	getCollectionQuery = `
 {
+  "size": 1000,
   "sort": [
   {
     "timestamp": {"order": "asc"}
