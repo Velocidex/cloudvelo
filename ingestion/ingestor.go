@@ -50,7 +50,7 @@ func (self Ingestor) LogMessage(message *crypto_proto.VeloMessage) {
 
 func (self Ingestor) Process(
 	ctx context.Context, message *crypto_proto.VeloMessage) error {
-	// self.LogMessage(message)
+	//self.LogMessage(message)
 
 	org_manager, err := services.GetOrgManager()
 	if err != nil {

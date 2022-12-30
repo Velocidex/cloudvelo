@@ -6,6 +6,7 @@
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "LogMessage": {
+  "id": 1,
   "message": "Starting query execution.\n",
   "timestamp": 1672334655238758,
   "artifact": "System.VFS.ListDirectory/Listing",
