@@ -6,9 +6,10 @@
  "source": "C.1352adc54e292a23",
  "auth_state": 1,
  "LogMessage": {
-  "id": 1,
-  "message": "Something went wrong!",
-  "level": "ERROR",
+  "id": 0,
+  "jsonl": "{\"client_time\":1672738879,\"level\":\"ERROR\",\"message\":\"Something went wrong!!!\"}\n",
+  "number_of_rows": 1,
+  "error_message": "Something went wrong!!!",
   "timestamp": 1663943042262593,
   "artifact": "System.VFS.ListDirectory"
  }

@@ -1,17 +1,17 @@
 {
- "session_id": "F.CCM9S0N2QR4H8",
+ "session_id": "F.CEPVVUP6EBHEC",
  "request_id": 1,
- "response_id": 1663868421953359554,
- "source": "C.1352adc54e292a23",
+ "response_id": 1672740866160851004,
+ "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "status": {
-  "duration": 399915666,
+  "duration": 1224590787,
   "names_with_response": [
    "",
    "System.VFS.DownloadFile"
   ],
   "Artifact": "System.VFS.DownloadFile",
-  "log_rows": 2,
+  "log_rows": 1,
   "result_rows": 1,
   "query_id": 1,
   "total_queries": 1

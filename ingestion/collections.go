@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
-	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -15,75 +12,10 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
-
-func (self Ingestor) HandleLogs(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	message *crypto_proto.VeloMessage) error {
-
-	row := message.LogMessage
-	log_path_manager := paths.NewFlowPathManager(
-		message.Source, message.SessionId).Log()
-
-	file_store_factory := file_store.GetFileStore(config_obj)
-	rs_writer, err := result_sets.NewResultSetWriter(
-		file_store_factory, log_path_manager, json.NoEncOpts,
-		utils.BackgroundWriter, result_sets.AppendMode)
-	if err != nil {
-		return err
-	}
-	defer rs_writer.Close()
-
-	elastic_writer, ok := rs_writer.(*simple.ElasticSimpleResultSetWriter)
-	if ok {
-		elastic_writer.SetStartRow(row.Id)
-	}
-
-	rs_writer.Write(ordereddict.NewDict().
-		Set("client_time", int64(row.Timestamp)/1000000).
-		Set("level", row.Level).
-		Set("message", row.Message))
-
-	// Update the last active time for this collection.
-	err = cvelo_services.SetElasticIndexAsync(
-		config_obj.OrgId, "collections",
-		message.SessionId+"_last_active",
-		cvelo_api.ArtifactCollectorContext{
-			ClientId:   message.Source,
-			SessionId:  message.SessionId,
-			Timestamp:  cvelo_utils.Clock.Now().UnixNano(),
-			LastActive: uint64(cvelo_utils.Clock.Now().UnixNano()),
-		})
-
-	// If the log is of type error, update the collection status to
-	// fail it.
-	if row.Level == logging.ERROR {
-		// Create a fake error status and append it to the collection
-		// record. This will show the collection as failed and include
-		// the log message as the reason in the GUI.
-		return cvelo_services.SetElasticIndexAsync(
-			config_obj.OrgId, "collections",
-			message.SessionId+"_status_"+cvelo_utils.GetId(),
-			cvelo_api.ArtifactCollectorContext{
-				ClientId:  message.Source,
-				SessionId: message.SessionId,
-				Timestamp: cvelo_utils.Clock.Now().UnixNano(),
-				QueryStats: []string{
-					json.MustMarshalString(&crypto_proto.VeloStatus{
-						Status:       crypto_proto.VeloStatus_GENERIC_ERROR,
-						ErrorMessage: row.Message,
-					}),
-				},
-			})
-	}
-
-	return nil
-}
 
 func (self Ingestor) HandleResponses(
 	ctx context.Context,

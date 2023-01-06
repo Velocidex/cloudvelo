@@ -1,0 +1,26 @@
+{
+ "session_id": "F.CEPVVUP6EBHEC",
+ "request_id": 1,
+ "response_id": 1672740866160801769,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "VQLResponse": {
+  "JSONLResponse": "{\"Path\":\"/hello.txt\",\"Accessor\":\"auto\",\"Size\":6,\"StoredSize\":6,\"Sha256\":\"5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03\",\"Md5\":\"b1946ac92492d2347c6235b4d2611184\",\"_Components\":[\"hello.txt\"]}\n",
+  "Columns": [
+   "Path",
+   "Accessor",
+   "Size",
+   "StoredSize",
+   "Sha256",
+   "Md5",
+   "_Components"
+  ],
+  "query_id": 5,
+  "Query": {
+   "Name": "System.VFS.DownloadFile",
+   "VQL": "SELECT * FROM System_VFS_DownloadFile_0_2"
+  },
+  "timestamp": 1672740866160689,
+  "total_rows": 1
+ }
+}

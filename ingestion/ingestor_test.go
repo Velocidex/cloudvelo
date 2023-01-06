@@ -18,6 +18,7 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
+	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -123,7 +124,7 @@ func (self *IngestionTestSuite) TestListDirectory() {
 		MockNow: time.Unix(1661391000, 0),
 	}
 
-	client_id := "C.1352adc54e292a23"
+	client_id := "C.77ad4285690698d9"
 	flow_id := "F.CCMS0OJQ7LI36"
 
 	// Test VFS.ListDirectory special handling.
@@ -196,30 +197,56 @@ func (self *IngestionTestSuite) TestErrorLogs() {
 }
 
 func (self *IngestionTestSuite) TestVFSDownload() {
-	// Test VFS.DownloadFile special handling.
+
+	// Replay the ListDirectory artifact messages to the ingestor.
+	client_id := "C.77ad4285690698d9"
+	list_flow_id := "F.CEPVGFT8LTAHI"
+
+	// Add a VFS.DownloadFile collection and replay messages.
 	err := cvelo_services.SetElasticIndex(self.ctx, "test",
-		"collections", "F.CCM9S0N2QR4H8", &api.ArtifactCollectorContext{
-			ClientId:   "C.1352adc54e292a23",
-			SessionId:  "F.CCM9S0N2QR4H8",
+		"collections", list_flow_id, &api.ArtifactCollectorContext{
+			ClientId:   client_id,
+			SessionId:  list_flow_id,
 			QueryStats: []string{},
 		})
 
-	self.ingestGoldenMessages(self.ctx, self.ingestor, "System.VFS.DownloadFile")
-	record, err := cvelo_services.GetElasticRecord(self.ctx,
-		"test", "collections", "F.CCM9S0N2QR4H8")
-	assert.NoError(self.T(), err)
-	self.golden.Set("System.VFS.DownloadFile", record)
+	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.ListDirectory")
 
-	// Check the VFS entry for the top directory now - it should
-	// incorporate both the directory list AND the downloads now.
-	records, err := cvelo_services.QueryElasticRaw(self.ctx,
-		"test", "vfs", getAllItemsQuery)
-	assert.NoError(self.T(), err)
-	sort_records(records)
-	self.golden.Set("System.VFS.DownloadFile vfs", records)
+	// Now replay a download flow to fetch the file data. This should
+	// add download records to the VFS index so the directory listing
+	// below will include the data.
+	download_flow_id := "F.CEPVVUP6EBHEC"
 
-	goldie.Assert(self.T(), "TestVFSDownload",
-		json.MustMarshalIndent(self.golden))
+	// Test VFS.ListDirectory special handling.
+	err = cvelo_services.SetElasticIndex(self.ctx,
+		"test", "collections", download_flow_id, &api.ArtifactCollectorContext{
+			ClientId:   client_id,
+			SessionId:  download_flow_id,
+			QueryStats: []string{},
+		})
+
+	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.DownloadFile")
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	config_obj := self.ConfigObj.VeloConf()
+
+	vfs_service, err := services.GetVFSService(config_obj)
+	assert.NoError(self.T(), err)
+
+	table, err := vfs_service.ListDirectoryFiles(self.Ctx,
+		config_obj,
+		&api_proto.GetTableRequest{
+			ClientId:      client_id,
+			FlowId:        list_flow_id,
+			VfsComponents: []string{"auto"},
+			Rows:          1000,
+			StartRow:      0,
+		})
+	assert.NoError(self.T(), err)
+
+	goldie.Assert(self.T(), "TestVFSDownload", json.MustMarshalIndent(table))
 }
 
 func (self *IngestionTestSuite) TestClientEventMonitoring() {

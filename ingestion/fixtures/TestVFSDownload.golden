@@ -1,17 +1,35 @@
 {
- "System.VFS.DownloadFile": {
-  "client_id": "C.1352adc54e292a23",
-  "session_id": "F.CCM9S0N2QR4H8",
-  "context": "",
-  "create_time": 0,
-  "start_time": 0,
-  "last_active_time": 0,
-  "uploaded_files": 1,
-  "uploaded_bytes": 784,
-  "query_stats": [],
-  "tasks": "",
-  "errored": 0,
-  "timestamp": 0
- },
- "System.VFS.DownloadFile vfs": null
+ "columns": [
+  "Download",
+  "_FullPath",
+  "_Components",
+  "_Accessor",
+  "_Data",
+  "Name",
+  "Size",
+  "Mode",
+  "mtime",
+  "atime",
+  "ctime",
+  "btime"
+ ],
+ "rows": [
+  {
+   "cell": [
+    "{\"size\":6,\"mtime\":1661391022,\"MD5\":\"b1946ac92492d2347c6235b4d2611184\",\"SHA256\":\"5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03\",\"components\":[\"clients\",\"C.77ad4285690698d9\",\"collections\",\"F.CEPVVUP6EBHEC\",\"uploads\",\"auto\",\"734cad14909bedfafb5b273b6b0eb01fbfa639587d217f78ce9639bba41f4415\"]}",
+    "/hello.txt",
+    "[\n \"hello.txt\"\n]",
+    "auto",
+    "{\n \"DevMajor\": 253,\n \"DevMinor\": 0\n}",
+    "hello.txt",
+    "6",
+    "-rw-r--r--",
+    "2022-09-28T16:08:31Z",
+    "2023-01-03T07:25:44Z",
+    "2022-09-28T16:08:31Z",
+    "0001-01-01T00:00:00Z"
+   ]
+  }
+ ],
+ "total_rows": 1
 }

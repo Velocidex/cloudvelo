@@ -1,13 +1,13 @@
 {
- "session_id": "F.CCM9S0N2QR4H8",
+ "session_id": "F.CEPVVUP6EBHEC",
  "request_id": 1,
- "response_id": 1663868421556168477,
- "source": "C.1352adc54e292a23",
+ "response_id": 1672740864939480790,
+ "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "VQLResponse": {
   "Query": {
    "VQL": "\nLET Components \u003c= if(\n    condition=format(format=\"%T\", args=Components) = \"string\",\n    then=parse_json_array(data=Components),\n    else=Components)\n"
   },
-  "timestamp": 1663868421556150
+  "timestamp": 1672740864939473
  }
 }
