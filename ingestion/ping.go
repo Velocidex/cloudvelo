@@ -24,6 +24,7 @@ func (self Ingestor) HandlePing(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
+
 	err := services.SetElasticIndexAsync(
 		config_obj.OrgId, "clients", message.Source+"_ping",
 		json.Format(setPingRecord, message.Source,

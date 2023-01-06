@@ -1,16 +1,31 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
- "query_id": 1,
- "request_id": 980,
+ "session_id": "F.CEPVGFT8LTAHI",
+ "request_id": 1,
  "urgent": true,
- "response_id": 1672334655764914103,
+ "response_id": 1672738880453506107,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "LogMessage": {
-  "id": 11,
-  "message": "Time 0: System.VFS.ListDirectory/Stats: Sending response part 0 59 B (1 rows).",
-  "timestamp": 1672334655764911,
-  "artifact": "System.VFS.ListDirectory/Stats",
-  "level": "DEFAULT"
+ "VQLResponse": {
+  "JSONLResponse": "{\"_FullPath\":\"/hello.txt\",\"_Components\":[\"hello.txt\"],\"_Accessor\":\"auto\",\"_Data\":{\"DevMajor\":253,\"DevMinor\":0},\"Name\":\"hello.txt\",\"Size\":6,\"Mode\":\"-rw-r--r--\",\"mtime\":\"2022-09-28T16:08:31Z\",\"atime\":\"2023-01-03T07:25:44Z\",\"ctime\":\"2022-09-28T16:08:31Z\",\"btime\":\"0001-01-01T00:00:00Z\"}\n",
+  "Columns": [
+   "_FullPath",
+   "_Components",
+   "_Accessor",
+   "_Data",
+   "Name",
+   "Size",
+   "Mode",
+   "mtime",
+   "atime",
+   "ctime",
+   "btime"
+  ],
+  "query_id": 5,
+  "Query": {
+   "Name": "System.VFS.ListDirectory/Listing",
+   "VQL": "SELECT * FROM if(then=System_VFS_ListDirectory_Listing_0_0, condition=precondition_System_VFS_ListDirectory_Listing_0, else={SELECT * FROM scope() WHERE log(message='Query skipped due to precondition') AND FALSE})"
+  },
+  "timestamp": 1672738880453413,
+  "total_rows": 1
  }
 }

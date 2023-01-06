@@ -1,16 +1,15 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
+ "session_id": "F.CEPVGFT8LTAHI",
  "query_id": 1,
- "request_id": 980,
+ "request_id": 1,
  "urgent": true,
- "response_id": 1672334655764515806,
+ "response_id": 1672738879930589550,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "LogMessage": {
-  "id": 8,
-  "message": "generate: Removing generator vfs\n",
-  "timestamp": 1672334655764500,
-  "artifact": "System.VFS.ListDirectory/Stats",
-  "level": "DEFAULT"
+ "VQLResponse": {
+  "Query": {
+   "VQL": "\nLET Components \u003c= if(\n    condition=format(format=\"%T\", args=Components) = \"string\",\n    then=parse_json_array(data=Components),\n    else=Components)\n"
+  },
+  "timestamp": 1672738879930581
  }
 }

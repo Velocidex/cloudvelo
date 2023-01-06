@@ -1,15 +1,15 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
- "query_id": 1,
+ "session_id": "F.CEPVGFT8LTAHI",
+ "query_id": 2,
  "request_id": 1,
  "urgent": true,
- "response_id": 1672334655247079580,
+ "response_id": 1672738879920675029,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "VQLResponse": {
-  "Query": {
-   "VQL": "\nLET Components \u003c= if(\n    condition=format(format=\"%T\", args=Components) = \"string\",\n    then=parse_json_array(data=Components),\n    else=Components)\n"
-  },
-  "timestamp": 1672334655247073
+ "status": {
+  "duration": 11407514,
+  "Artifact": "System.VFS.ListDirectory",
+  "query_id": 3,
+  "total_queries": 3
  }
 }

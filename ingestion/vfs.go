@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"www.velocidex.com/golang/cloudvelo/filestore"
-	"www.velocidex.com/golang/cloudvelo/services"
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_vfs_service "www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/services/vfs_service"
+	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -33,7 +33,7 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 
 	for scanner.Scan() {
 		serialized := scanner.Text()
-		row := &vfs_service.VFSListRow{}
+		row := &services.VFSListRow{}
 		err := json.Unmarshal([]byte(serialized), row)
 		if err != nil || row.Stats == nil {
 			continue
@@ -41,11 +41,11 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 
 		accessor := row.Accessor
 		if accessor == "" {
-			accessor = "file"
+			accessor = "auto"
 		}
 
 		components := append([]string{message.Source, accessor}, row.Components...)
-		id := services.MakeId(utils.JoinComponents(components, "/"))
+		id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
 		stats := row.Stats
 		stats.Timestamp = uint64(cvelo_utils.Clock.Now().Unix())
@@ -55,6 +55,7 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 		stats.Artifact = "System.VFS.ListDirectory/Listing"
 
 		record := &cvelo_vfs_service.VFSRecord{
+			Id:         id,
 			ClientId:   message.Source,
 			Components: components,
 			Downloads:  []string{},
@@ -62,7 +63,7 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 		}
 
 		// Write these asynchronously because there are many records.
-		err = services.SetElasticIndexAsync(
+		err = cvelo_services.SetElasticIndexAsync(
 			config_obj.OrgId, "vfs", id, record)
 		if err != nil {
 			return err
@@ -71,20 +72,6 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 
 	return nil
 }
-
-const (
-	updateDownloadQuery = `
-{
-    "script" : {
-        "source": "ctx._source.downloads.addAll(params.download);",
-        "lang": "painless",
-        "params": {
-          "download": %q
-       }
-    }
-}
-`
-)
 
 func (self Ingestor) HandleSystemVfsUpload(
 	ctx context.Context,
@@ -99,8 +86,6 @@ func (self Ingestor) HandleSystemVfsUpload(
 	scanner := bufio.NewScanner(reader)
 	buf := make([]byte, len(message.VQLResponse.JSONLResponse))
 	scanner.Buffer(buf, len(message.VQLResponse.JSONLResponse))
-
-	downloads := make(map[string][]string)
 
 	for scanner.Scan() {
 		serialized := scanner.Text()
@@ -133,18 +118,15 @@ func (self Ingestor) HandleSystemVfsUpload(
 			dir_components := append([]string{message.Source, accessor},
 				row.Components[:len(row.Components)-1]...)
 			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
-			id := services.MakeId(utils.JoinComponents(dir_components, "/"))
-			dir_downloads, _ := downloads[id]
-			dir_downloads = append(dir_downloads, json.MustMarshalString(row))
-			downloads[id] = dir_downloads
-		}
-	}
+			id := cvelo_services.MakeId(utils.JoinComponents(dir_components, "/"))
 
-	// Update the downloads in all the VFS records we need to
-	for id, downloads := range downloads {
-		return services.UpdateIndex(ctx,
-			config_obj.OrgId, "vfs", id,
-			json.Format(updateDownloadQuery, downloads))
+			stats := &cvelo_vfs_service.VFSRecord{
+				Id:        id,
+				Downloads: []string{json.MustMarshalString(row)},
+			}
+
+			cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "vfs", "", stats)
+		}
 	}
 	return nil
 }

@@ -1,0 +1,12 @@
+{
+ "session_id": "F.CEPVVUP6EBHEC",
+ "request_id": 980,
+ "response_id": 1672740865936932908,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "LogMessage": {
+  "number_of_rows": 1,
+  "jsonl": "{\"client_time\":1672740864,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\"}\n",
+  "artifact": "System.VFS.DownloadFile"
+ }
+}

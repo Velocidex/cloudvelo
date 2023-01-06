@@ -2,6 +2,7 @@
     "mappings": {
         "dynamic": false,
         "properties": {
+            "id":           { "type": "keyword"},
             "client_id":    { "type": "keyword" },
             "vfs_path":     { "type": "keyword" },
             "components":   { "type": "keyword" },

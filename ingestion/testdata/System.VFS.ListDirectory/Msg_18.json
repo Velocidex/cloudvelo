@@ -1,21 +1,14 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
- "query_id": 1,
- "request_id": 1,
+ "session_id": "F.CEPVGFT8LTAHI",
+ "request_id": 980,
  "urgent": true,
- "response_id": 1672334655764921582,
+ "response_id": 1672738880454261430,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "status": {
-  "duration": 525336686,
-  "names_with_response": [
-   "",
-   "System.VFS.ListDirectory/Stats"
-  ],
-  "Artifact": "System.VFS.ListDirectory/Stats",
-  "log_rows": 4,
-  "result_rows": 1,
-  "query_id": 2,
-  "total_queries": 3
+ "LogMessage": {
+  "id": 6,
+  "number_of_rows": 8,
+  "jsonl": "{\"client_time\":1672738879,\"level\":\"DEFAULT\",\"message\":\"generate: registered new query for vfs\\n\"}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"generate: Removing generator vfs\\n\"}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Stats: Sending response part 0 59 B (1 rows).\"}\n{\"client_time\":1672738880,\"level\":\"INFO\",\"message\":\"Collection is done after 540.781202ms\\n\"}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Listing: Sending response part 0 7.6 kB (1 rows).\"}\n{\"client_time\":1672738880,\"level\":\"INFO\",\"message\":\"Collection is done after 543.637892ms\\n\"}\n{\"client_time\":1672738880,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":61,\\\"PluginsCalled\\\":4,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":158}\\n\"}\n{\"client_time\":1672738880,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":59,\\\"PluginsCalled\\\":3,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":154}\\n\"}\n",
+  "artifact": "System.VFS.ListDirectory/Listing"
  }
 }
