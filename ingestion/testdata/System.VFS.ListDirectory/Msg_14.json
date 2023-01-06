@@ -1,20 +1,24 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
+ "session_id": "F.CEPVGFT8LTAHI",
+ "query_id": 1,
  "request_id": 1,
  "urgent": true,
- "response_id": 1672334655764760152,
+ "response_id": 1672738880453003663,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "status": {
-  "duration": 526337728,
-  "names_with_response": [
-   "",
-   "System.VFS.ListDirectory/Listing"
+ "VQLResponse": {
+  "JSONLResponse": "{\"Components\":[],\"Accessor\":\"auto\",\"Stats\":{\"end_idx\":1}}\n",
+  "Columns": [
+   "Components",
+   "Accessor",
+   "Stats"
   ],
-  "Artifact": "System.VFS.ListDirectory/Listing",
-  "log_rows": 2,
-  "result_rows": 28,
-  "query_id": 1,
-  "total_queries": 3
+  "query_id": 5,
+  "Query": {
+   "Name": "System.VFS.ListDirectory/Stats",
+   "VQL": "SELECT * FROM if(then=System_VFS_ListDirectory_Stats_0_0, condition=precondition_System_VFS_ListDirectory_Stats_0, else={SELECT * FROM scope() WHERE log(message='Query skipped due to precondition') AND FALSE})"
+  },
+  "timestamp": 1672738880452852,
+  "total_rows": 1
  }
 }

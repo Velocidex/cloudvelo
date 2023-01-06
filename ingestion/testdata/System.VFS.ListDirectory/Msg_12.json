@@ -1,15 +1,14 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
- "request_id": 980,
+ "session_id": "F.CEPVGFT8LTAHI",
+ "request_id": 1,
  "urgent": true,
- "response_id": 1672334655764749599,
+ "response_id": 1672738879931218646,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "LogMessage": {
-  "id": 9,
-  "message": "Time 0: System.VFS.ListDirectory/Listing: Sending response part 0 7.6 kB (28 rows).",
-  "timestamp": 1672334655764744,
-  "artifact": "System.VFS.ListDirectory/Listing",
-  "level": "DEFAULT"
+ "VQLResponse": {
+  "Query": {
+   "VQL": "\nLET Components \u003c= if(\n    condition=format(format=\"%T\", args=Components) = \"string\",\n    then=parse_json_array(data=Components),\n    else=Components)\n"
+  },
+  "timestamp": 1672738879931212
  }
 }

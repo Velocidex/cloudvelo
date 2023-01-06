@@ -1,24 +1,19 @@
 {
- "session_id": "F.CEMSQDBR1Q74U",
- "query_id": 1,
+ "session_id": "F.CEPVGFT8LTAHI",
  "request_id": 1,
  "urgent": true,
- "response_id": 1672334655764916050,
+ "response_id": 1672738880453518270,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "VQLResponse": {
-  "JSONLResponse": "{\"Components\":[],\"Accessor\":\"auto\",\"Stats\":{\"end_idx\":1}}\n",
-  "Columns": [
-   "Components",
-   "Accessor",
-   "Stats"
+ "status": {
+  "duration": 544978669,
+  "names_with_response": [
+   "",
+   "System.VFS.ListDirectory/Listing"
   ],
-  "query_id": 5,
-  "Query": {
-   "Name": "System.VFS.ListDirectory/Stats",
-   "VQL": "SELECT * FROM if(then=System_VFS_ListDirectory_Stats_0_0, condition=precondition_System_VFS_ListDirectory_Stats_0, else={SELECT * FROM scope() WHERE log(message='Query skipped due to precondition') AND FALSE})"
-  },
-  "timestamp": 1672334655764899,
-  "total_rows": 1
+  "Artifact": "System.VFS.ListDirectory/Listing",
+  "result_rows": 1,
+  "query_id": 1,
+  "total_queries": 3
  }
 }
