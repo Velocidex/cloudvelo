@@ -263,7 +263,7 @@ func (self *Indexer) searchWithTerms(
 	// Show clients that pinged more recently than 10 min ago
 	if filter == api_proto.SearchClientsRequest_ONLINE {
 		terms = append(terms, json.Format(recentClientsQuery,
-			time.Now().Unix()-600))
+			time.Now().UnixNano()-600000000000))
 	}
 
 	query := json.Format(
