@@ -4,7 +4,6 @@ package indexing
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -105,6 +104,17 @@ const (
  %s
 }
 `
+	getSortedClientsQuery = `
+{%s
+ "query": {"bool": {"must": [%s]}}
+ %s
+}
+`
+	sortQueryPart = `
+"sort": [{
+    %q: {"order": %q}
+ }],
+`
 	limitQueryPart = `,
  "from": %q, "size": %q
 `
@@ -160,7 +170,14 @@ func (self *Indexer) searchClientsByHost(
 	if hostname == "*" {
 		terms = []string{allClientsQuery}
 	}
-	return self.searchWithTerms(ctx, in.Filter, terms, in.Offset, in.Limit)
+
+	dir := "asc"
+	if in.Sort == api_proto.SearchClientsRequest_SORT_DOWN {
+		dir = "desc"
+	}
+
+	sorter := json.Format(sortQueryPart, "hostname", dir)
+	return self.searchWithSortTerms(ctx, sorter, in.Filter, terms, in.Offset, in.Limit)
 }
 
 func (self *Indexer) searchClientsByMac(
@@ -263,8 +280,17 @@ func (self *Indexer) searchWithTerms(
 	terms []string,
 	offset, limit uint64) (
 	*api_proto.SearchClientsResponse, error) {
+	sorter := json.Format(sortQueryPart, "client_id", "asc")
+	return self.searchWithSortTerms(ctx, sorter, filter, terms, offset, limit)
+}
 
-	fmt.Printf("Search terms: %v\n\n", terms)
+func (self *Indexer) searchWithSortTerms(
+	ctx context.Context,
+	sorter string,
+	filter api_proto.SearchClientsRequest_Filters,
+	terms []string,
+	offset, limit uint64) (
+	*api_proto.SearchClientsResponse, error) {
 
 	// Show clients that pinged more recently than 10 min ago
 	if filter == api_proto.SearchClientsRequest_ONLINE {
@@ -273,10 +299,10 @@ func (self *Indexer) searchWithTerms(
 	}
 
 	query := json.Format(
-		getAllClientsQuery, strings.Join(terms, ","),
+		getSortedClientsQuery,
+		sorter,
+		strings.Join(terms, ","),
 		json.Format(limitQueryPart, offset, limit+1))
-
-	fmt.Printf("Query: %v\n\n", query)
 
 	hits, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId, "clients", query)
