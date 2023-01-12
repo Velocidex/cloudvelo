@@ -1,0 +1,41 @@
+{
+ "session_id": "F.CEV6I8LHAT83O",
+ "query_id": 1,
+ "request_id": 981,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "flow_stats": {
+  "total_collected_rows": 2,
+  "total_logs": 14,
+  "timestamp": 1673423174265325,
+  "query_status": [
+   {
+    "duration": 6370402,
+    "Artifact": "System.VFS.ListDirectory",
+    "query_id": 3,
+    "total_queries": 3
+   },
+   {
+    "duration": 519121078,
+    "names_with_response": [
+     "System.VFS.ListDirectory/Listing"
+    ],
+    "Artifact": "System.VFS.ListDirectory/Listing",
+    "result_rows": 1,
+    "query_id": 1,
+    "total_queries": 3
+   },
+   {
+    "duration": 518759663,
+    "names_with_response": [
+     "System.VFS.ListDirectory/Stats"
+    ],
+    "Artifact": "System.VFS.ListDirectory/Stats",
+    "result_rows": 1,
+    "query_id": 2,
+    "total_queries": 3
+   }
+  ],
+  "flow_complete": true
+ }
+}

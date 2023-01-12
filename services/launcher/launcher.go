@@ -143,10 +143,11 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		TotalUploadedFiles:   0,
 		TotalUploadedBytes:   0,
 		ArtifactsWithResults: []string{},
+		TotalRequests:        int64(len(tasks)),
 		OutstandingRequests:  int64(len(tasks)),
 	}
 
-	record := api.ArtifactCollectorContextFromProto(collection_context)
+	record := api.ArtifactCollectorRecordFromProto(collection_context)
 	record.Tasks = json.MustMarshalString(tasks)
 
 	// Store the collection_context first, then queue all the tasks.
@@ -172,7 +173,8 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		return "", err
 	}
 
-	client_info_manager.QueueMessagesForClient(ctx, client_id, tasks, true /* notify */)
+	client_info_manager.QueueMessagesForClient(
+		ctx, client_id, tasks, true /* notify */)
 
 	return collection_context.SessionId, nil
 }
@@ -188,7 +190,7 @@ func (self *Launcher) GetFlowRequests(
 		return nil, err
 	}
 
-	record := &api.ArtifactCollectorContext{}
+	record := &api.ArtifactCollectorRecord{}
 	err = json.Unmarshal(raw, record)
 	if err != nil {
 		return nil, err

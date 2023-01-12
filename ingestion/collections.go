@@ -43,11 +43,18 @@ func (self Ingestor) HandleResponses(
 	// We do not verify that this is a real artifact in order to avoid
 	// having to maintain a full artifact repository and lookups. We
 	// just blindly write it in the client's space.
+
+	// Urgent operations are UI driven so need to hit the db quickly.
+	write_mode := utils.BackgroundWriter
+	if message.Urgent {
+		write_mode = utils.SyncCompleter
+	}
+
 	pathspec := getFSPathSpec(message, message.VQLResponse.Query.Name)
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
 		file_store_factory, pathspec, json.NoEncOpts,
-		utils.BackgroundWriter, result_sets.AppendMode)
+		write_mode, result_sets.AppendMode)
 	if err != nil {
 		return err
 	}

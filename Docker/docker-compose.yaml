@@ -1,8 +1,18 @@
+# There are two profiles
+
+# * The "all" profile brings up opensearch, localstack and all
+#   velociraptor components.
+
+# * The "base" profile brings up only opensearch and localstack so you
+#   can start various Velociraptor services manually (See Makefile in
+#   top level).
+
 version: '2'
 services:
   opensearch:
     image: opensearchproject/opensearch:1.1.0
     profiles:
+      - base
       - all
     container_name: opensearch
     environment:
@@ -28,6 +38,7 @@ services:
   localstack:
     profiles:
       - all
+      - base
     image: localstack/localstack:latest
     container_name: localstack
     ports:

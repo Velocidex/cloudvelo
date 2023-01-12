@@ -4,6 +4,12 @@ up:
 	docker-compose build
 	docker-compose --profile all up -d
 
+base:
+	mkdir -p .localstack/data
+	cp .localstack/template/* .localstack/data
+	docker-compose build
+	docker-compose --profile base up -d
+
 down:
 	docker kill localstack opensearch velociraptor-client velociraptor-frontend velociraptor-gui velociraptor-foreman || true
 

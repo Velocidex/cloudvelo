@@ -1,11 +1,12 @@
 {
- "session_id": "F.CEPVVUP6EBHEC",
+ "session_id": "F.CEV7IE8TURDBS",
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "FileBuffer": {
   "pathspec": {
-   "path": "/hello.txt",
+   "path": "/test/hello.txt",
    "components": [
+    "test",
     "hello.txt"
    ],
    "accessor": "auto"
@@ -13,6 +14,6 @@
   "size": 6,
   "stored_size": 6,
   "eof": true,
-  "mtime": 1664381311
+  "mtime": 1673423095
  }
 }

@@ -98,6 +98,7 @@ func initializeEventTable(
 	wg *sync.WaitGroup,
 	config_obj *config_proto.Config,
 	exe executor.Executor) error {
+
 	launcher, err := services.GetLauncher(config_obj)
 	if err != nil {
 		return err
@@ -135,6 +136,7 @@ func initializeEventTable(
 			case <-ctx.Done():
 				logger.Info("Exiting Client Info Updating Loop")
 				return
+
 			case <-time.After(30 * time.Second):
 			}
 

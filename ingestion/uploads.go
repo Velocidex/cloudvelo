@@ -6,7 +6,6 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -16,26 +15,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
-)
-
-const (
-	updateUploadStatsScript = `
-ctx._source.uploaded_files += params.uploaded_files;
-ctx._source.uploaded_bytes = ctx._source.uploaded_bytes + params.uploaded_bytes
-`
-
-	updateUploadStats = `
-{
-   "script": {
-     "source": %q,
-     "lang": "painless",
-     "params": {
-       "uploaded_files": %q,
-       "uploaded_bytes": %q
-     }
-   }
-}
-`
 )
 
 // Uploads are being sent separately to the server handler by the
@@ -92,15 +71,5 @@ func (self Ingestor) HandleUploads(
 			Set("file_size", response.Size).
 			Set("uploaded_size", response.StoredSize))
 
-	uploaded_files := 0
-	if response.Offset == 0 {
-		uploaded_files = 1
-	}
-
-	return cvelo_services.UpdateIndex(ctx, config_obj.OrgId, "collections",
-		message.SessionId,
-		json.Format(
-			updateUploadStats, updateUploadStatsScript,
-			uploaded_files, response.Size))
-
+	return nil
 }

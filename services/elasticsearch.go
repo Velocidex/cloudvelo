@@ -732,6 +732,7 @@ func StartElasticSearchService(config_obj *config.Config) error {
 			RootCAs:            CA_Pool,
 			InsecureSkipVerify: config_obj.Cloud.DisableSSLSecurity,
 		},
+		//DisableCompression: true,
 	}
 
 	if config_obj.Cloud.Username != "" && config_obj.Cloud.Password != "" {
@@ -880,7 +881,7 @@ func StartBulkIndexService(
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
 			Client:        elastic_client,
-			FlushInterval: time.Second * 10,
+			FlushInterval: time.Second * 2,
 			OnFlushStart: func(ctx context.Context) context.Context {
 				logger := logging.GetLogger(
 					config_obj.VeloConf(), &logging.FrontendComponent)
