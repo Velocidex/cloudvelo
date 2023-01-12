@@ -17,7 +17,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     }
    ],
    "version": 1661391000000000000
@@ -41,7 +42,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     },
     {
      "query_id": 1,
@@ -57,7 +59,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     }
    ],
    "version": 1661391000000000000
@@ -81,7 +84,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     },
     {
      "query_id": 1,
@@ -97,7 +101,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     }
    ],
    "version": 1661391000000000000
@@ -121,7 +126,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     },
     {
      "query_id": 1,
@@ -137,7 +143,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     },
     {
      "query_id": 1,
@@ -153,7 +160,8 @@
      ],
      "max_row": 1000,
      "max_wait": 120,
-     "timeout": 99999999
+     "timeout": 99999999,
+     "log_batch_time": 1
     }
    ],
    "version": 1661391000000000000

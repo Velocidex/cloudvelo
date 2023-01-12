@@ -62,9 +62,9 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 			JSONData:   json.MustMarshalString(stats),
 		}
 
-		// Write these asynchronously because there are many records.
 		err = cvelo_services.SetElasticIndexAsync(
 			config_obj.OrgId, "vfs", id, record)
+
 		if err != nil {
 			return err
 		}

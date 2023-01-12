@@ -36,7 +36,7 @@ const (
   "size": 1000,
   "sort": [
   {
-    "timestamp": {"order": "asc"}
+    "type": {"order": "asc"}
   }],
   "query": {
      "bool": {
@@ -125,21 +125,16 @@ func (self *IngestionTestSuite) TestListDirectory() {
 	}
 
 	client_id := "C.77ad4285690698d9"
-	flow_id := "F.CCMS0OJQ7LI36"
+	flow_id := "F.CEV6I8LHAT83O"
 
 	// Test VFS.ListDirectory special handling.
 	err := cvelo_services.SetElasticIndex(self.ctx,
-		"test", "collections", flow_id, &api.ArtifactCollectorContext{
-			ClientId:  client_id,
-			SessionId: flow_id,
-			Raw: json.MustMarshalString(&flows_proto.ArtifactCollectorContext{
-				ClientId:  client_id,
-				SessionId: flow_id,
-			}),
-			CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
-			Timestamp:  cvelo_utils.Clock.Now().UnixNano(),
-			QueryStats: []string{},
-		})
+		"test", "collections", flow_id, api.ArtifactCollectorRecordFromProto(
+			&flows_proto.ArtifactCollectorContext{
+				ClientId:   client_id,
+				SessionId:  flow_id,
+				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
+			}))
 
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "System.VFS.ListDirectory")
 	records, err := cvelo_services.QueryElasticRaw(self.ctx,
@@ -180,50 +175,37 @@ func (self *IngestionTestSuite) TestListDirectory() {
 		json.MustMarshalIndent(self.golden))
 }
 
-func (self *IngestionTestSuite) TestErrorLogs() {
-	client_id := "C.1352adc54e292a23"
-
-	// Test that an errored log fails the collection.
-	self.ingestGoldenMessages(self.ctx, self.ingestor, "ErroredLog")
-
-	records, err := cvelo_services.QueryElasticRaw(self.ctx,
-		"test", "collections",
-		json.Format(getCollectionQuery, client_id, "F.CCMS0OJQ7LI36"))
-
-	assert.NoError(self.T(), err)
-	self.golden.Set("System.VFS.ListDirectory after Error Log", records)
-
-	goldie.Assert(self.T(), "TestErrorLogs", json.MustMarshalIndent(self.golden))
-}
-
 func (self *IngestionTestSuite) TestVFSDownload() {
 
 	// Replay the ListDirectory artifact messages to the ingestor.
 	client_id := "C.77ad4285690698d9"
-	list_flow_id := "F.CEPVGFT8LTAHI"
+	list_flow_id := "F.CEV6I8LHAT83O"
 
 	// Add a VFS.DownloadFile collection and replay messages.
 	err := cvelo_services.SetElasticIndex(self.ctx, "test",
-		"collections", list_flow_id, &api.ArtifactCollectorContext{
-			ClientId:   client_id,
-			SessionId:  list_flow_id,
-			QueryStats: []string{},
-		})
+		"collections", list_flow_id, api.ArtifactCollectorRecordFromProto(
+			&flows_proto.ArtifactCollectorContext{
+				ClientId:   client_id,
+				SessionId:  list_flow_id,
+				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
+			}))
 
 	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.ListDirectory")
 
 	// Now replay a download flow to fetch the file data. This should
 	// add download records to the VFS index so the directory listing
 	// below will include the data.
-	download_flow_id := "F.CEPVVUP6EBHEC"
+	download_flow_id := "F.CEV7IE8TURDBS"
 
 	// Test VFS.ListDirectory special handling.
 	err = cvelo_services.SetElasticIndex(self.ctx,
-		"test", "collections", download_flow_id, &api.ArtifactCollectorContext{
-			ClientId:   client_id,
-			SessionId:  download_flow_id,
-			QueryStats: []string{},
-		})
+		"test", "collections", download_flow_id,
+		api.ArtifactCollectorRecordFromProto(
+			&flows_proto.ArtifactCollectorContext{
+				ClientId:   client_id,
+				SessionId:  download_flow_id,
+				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
+			}))
 
 	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.DownloadFile")
 
@@ -240,7 +222,7 @@ func (self *IngestionTestSuite) TestVFSDownload() {
 		&api_proto.GetTableRequest{
 			ClientId:      client_id,
 			FlowId:        list_flow_id,
-			VfsComponents: []string{"auto"},
+			VfsComponents: []string{"auto", "test"},
 			Rows:          1000,
 			StartRow:      0,
 		})

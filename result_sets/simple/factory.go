@@ -8,6 +8,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type ResultSetFactory struct{}
@@ -40,6 +41,7 @@ func (self ResultSetFactory) NewResultSetWriter(
 		log_path: log_path,
 		opts:     opts,
 		ctx:      context.Background(),
+		sync:     utils.CompareFuncs(completion, utils.SyncCompleter),
 	}, nil
 }
 

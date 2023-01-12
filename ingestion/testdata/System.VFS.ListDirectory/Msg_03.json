@@ -1,12 +1,9 @@
 {
- "session_id": "F.CEPVGFT8LTAHI",
- "request_id": 1,
- "urgent": true,
- "response_id": 1672738880453506107,
+ "session_id": "F.CEV6I8LHAT83O",
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
  "VQLResponse": {
-  "JSONLResponse": "{\"_FullPath\":\"/hello.txt\",\"_Components\":[\"hello.txt\"],\"_Accessor\":\"auto\",\"_Data\":{\"DevMajor\":253,\"DevMinor\":0},\"Name\":\"hello.txt\",\"Size\":6,\"Mode\":\"-rw-r--r--\",\"mtime\":\"2022-09-28T16:08:31Z\",\"atime\":\"2023-01-03T07:25:44Z\",\"ctime\":\"2022-09-28T16:08:31Z\",\"btime\":\"0001-01-01T00:00:00Z\"}\n",
+  "JSONLResponse": "{\"_FullPath\":\"/test/hello.txt\",\"_Components\":[\"test\",\"hello.txt\"],\"_Accessor\":\"auto\",\"_Data\":{\"DevMajor\":253,\"DevMinor\":0},\"Name\":\"hello.txt\",\"Size\":6,\"Mode\":\"-rw-r--r--\",\"mtime\":\"2023-01-11T07:44:55Z\",\"atime\":\"2023-01-11T07:44:55Z\",\"ctime\":\"2023-01-11T07:44:55Z\",\"btime\":\"0001-01-01T00:00:00Z\"}\n",
   "Columns": [
    "_FullPath",
    "_Components",
@@ -25,7 +22,7 @@
    "Name": "System.VFS.ListDirectory/Listing",
    "VQL": "SELECT * FROM if(then=System_VFS_ListDirectory_Listing_0_0, condition=precondition_System_VFS_ListDirectory_Listing_0, else={SELECT * FROM scope() WHERE log(message='Query skipped due to precondition') AND FALSE})"
   },
-  "timestamp": 1672738880453413,
+  "timestamp": 1673423174784896,
   "total_rows": 1
  }
 }

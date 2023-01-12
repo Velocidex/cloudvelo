@@ -96,8 +96,8 @@ func (self Ingestor) Process(
 		return self.HandleResponses(ctx, config_obj, message)
 	}
 
-	if message.Status != nil {
-		return self.HandleStatus(ctx, config_obj, message)
+	if message.FlowStats != nil {
+		return self.HandleFlowStats(ctx, config_obj, message)
 	}
 
 	if message.ForemanCheckin != nil {

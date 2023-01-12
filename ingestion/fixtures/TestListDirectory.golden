@@ -2,17 +2,17 @@
  "System.VFS.ListDirectory": [
   {
    "client_id": "C.77ad4285690698d9",
-   "session_id": "F.CCMS0OJQ7LI36",
-   "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CCMS0OJQ7LI36\"}",
-   "create_time": 1661391000000000000,
-   "start_time": 0,
-   "last_active_time": 0,
-   "uploaded_files": 0,
-   "uploaded_bytes": 0,
-   "query_stats": [],
+   "session_id": "F.CEV6I8LHAT83O",
+   "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CEV6I8LHAT83O\",\"create_time\":1661391000000000000}",
    "tasks": "",
-   "errored": 0,
-   "timestamp": 1661391000000000000
+   "type": ""
+  },
+  {
+   "client_id": "C.77ad4285690698d9",
+   "session_id": "F.CEV6I8LHAT83O",
+   "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CEV6I8LHAT83O\",\"active_time\":1673423174265325,\"total_collected_rows\":2,\"total_logs\":14,\"query_stats\":[{\"duration\":6370402,\"Artifact\":\"System.VFS.ListDirectory\",\"query_id\":3,\"total_queries\":3},{\"duration\":519121078,\"names_with_response\":[\"System.VFS.ListDirectory/Listing\"],\"Artifact\":\"System.VFS.ListDirectory/Listing\",\"result_rows\":1,\"query_id\":1,\"total_queries\":3},{\"duration\":518759663,\"names_with_response\":[\"System.VFS.ListDirectory/Stats\"],\"Artifact\":\"System.VFS.ListDirectory/Stats\",\"result_rows\":1,\"query_id\":2,\"total_queries\":3}]}",
+   "tasks": "",
+   "type": "stats"
   }
  ],
  "System.VFS.ListDirectory Results": [
@@ -23,8 +23,8 @@
    "type": "",
    "start_row": 0,
    "end_row": 1,
-   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEPVGFT8LTAHI/Listing.json",
-   "data": "{\"_FullPath\":\"/hello.txt\",\"_Components\":[\"hello.txt\"],\"_Accessor\":\"auto\",\"_Data\":{\"DevMajor\":253,\"DevMinor\":0},\"Name\":\"hello.txt\",\"Size\":6,\"Mode\":\"-rw-r--r--\",\"mtime\":\"2022-09-28T16:08:31Z\",\"atime\":\"2023-01-03T07:25:44Z\",\"ctime\":\"2022-09-28T16:08:31Z\",\"btime\":\"0001-01-01T00:00:00Z\"}\n",
+   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEV6I8LHAT83O/Listing.json",
+   "data": "{\"_FullPath\":\"/test/hello.txt\",\"_Components\":[\"test\",\"hello.txt\"],\"_Accessor\":\"auto\",\"_Data\":{\"DevMajor\":253,\"DevMinor\":0},\"Name\":\"hello.txt\",\"Size\":6,\"Mode\":\"-rw-r--r--\",\"mtime\":\"2023-01-11T07:44:55Z\",\"atime\":\"2023-01-11T07:44:55Z\",\"ctime\":\"2023-01-11T07:44:55Z\",\"btime\":\"0001-01-01T00:00:00Z\"}\n",
    "total_rows": 1,
    "timestamp": 1661391000
   },
@@ -35,8 +35,8 @@
    "type": "",
    "start_row": 0,
    "end_row": 1,
-   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEPVGFT8LTAHI/Stats.json",
-   "data": "{\"Components\":[],\"Accessor\":\"auto\",\"Stats\":{\"end_idx\":1}}\n",
+   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEV6I8LHAT83O/Stats.json",
+   "data": "{\"Components\":[\"test\"],\"Accessor\":\"auto\",\"Stats\":{\"end_idx\":1}}\n",
    "total_rows": 1,
    "timestamp": 1661391000
   },
@@ -46,10 +46,10 @@
    "artifact": "",
    "type": "",
    "start_row": 0,
-   "end_row": 6,
-   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEPVGFT8LTAHI/logs.json",
-   "data": "{\"client_time\":1672738879,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738879,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738879,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738879,\"level\":\"DEFAULT\",\"message\":\"Skipping query due to preconditions\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738879,\"level\":\"INFO\",\"message\":\"Collection is done after 10.505853ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738879,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":1,\\\"PluginsCalled\\\":1,\\\"FunctionsCalled\\\":1,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":4}\\n\",\"_ts\":1661391000}\n",
-   "total_rows": 6,
+   "end_row": 5,
+   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
+   "data": "{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"Skipping query due to preconditions\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Collection is done after 5.283543ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":1,\\\"PluginsCalled\\\":1,\\\"FunctionsCalled\\\":1,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":4}\\n\",\"_ts\":1661391000}\n",
+   "total_rows": 5,
    "timestamp": 1661391000
   },
   {
@@ -57,31 +57,70 @@
    "flow_id": "",
    "artifact": "",
    "type": "",
-   "start_row": 6,
+   "start_row": 5,
    "end_row": 14,
-   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEPVGFT8LTAHI/logs.json",
-   "data": "{\"client_time\":1672738879,\"level\":\"DEFAULT\",\"message\":\"generate: registered new query for vfs\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"generate: Removing generator vfs\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Stats: Sending response part 0 59 B (1 rows).\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"INFO\",\"message\":\"Collection is done after 540.781202ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Listing: Sending response part 0 7.6 kB (1 rows).\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"INFO\",\"message\":\"Collection is done after 543.637892ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":61,\\\"PluginsCalled\\\":4,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":158}\\n\",\"_ts\":1661391000}\n{\"client_time\":1672738880,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":59,\\\"PluginsCalled\\\":3,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":154}\\n\",\"_ts\":1661391000}\n",
+   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
+   "data": "{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"generate: registered new query for vfs\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"generate: Removing generator vfs\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Stats: Sending response part 0 64 B (1 rows).\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.ListDirectory/Listing: Sending response part 0 296 B (1 rows).\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Collection is done after 518.654953ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Collection is done after 512.470235ms\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":7,\\\"PluginsCalled\\\":4,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":23}\\n\",\"_ts\":1661391000}\n{\"client_time\":1673423174,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":5,\\\"PluginsCalled\\\":3,\\\"FunctionsCalled\\\":7,\\\"ProtocolSearch\\\":10,\\\"ScopeCopy\\\":19}\\n\",\"_ts\":1661391000}\n",
    "total_rows": 14,
    "timestamp": 1661391000
   }
  ],
  "System.VFS.ListDirectory vfs": [
   {
-   "id": "ea7112f8ef7d23c6811cd13dc2ac164fc6ddd44f",
+   "id": "1cbcacc4b30a75913df3a051a73742ca2bca1963",
    "client_id": "C.77ad4285690698d9",
    "components": [
     "C.77ad4285690698d9",
-    "auto"
+    "auto",
+    "test"
    ],
    "downloads": [],
-   "data": "{\"timestamp\":1661391000,\"total_rows\":1,\"client_id\":\"C.77ad4285690698d9\",\"flow_id\":\"F.CEPVGFT8LTAHI\",\"artifact\":\"System.VFS.ListDirectory/Listing\",\"end_idx\":1}"
+   "data": "{\"timestamp\":1661391000,\"total_rows\":1,\"client_id\":\"C.77ad4285690698d9\",\"flow_id\":\"F.CEV6I8LHAT83O\",\"artifact\":\"System.VFS.ListDirectory/Listing\",\"end_idx\":1}"
   }
  ],
  "System.VFS.ListDirectory FlowDetail": {
   "context": {
    "client_id": "C.77ad4285690698d9",
-   "session_id": "F.CCMS0OJQ7LI36",
-   "create_time": 1661391000000000000
+   "session_id": "F.CEV6I8LHAT83O",
+   "create_time": 1661391000000000000,
+   "active_time": 1673423174265325,
+   "total_collected_rows": 2,
+   "total_logs": 14,
+   "outstanding_requests": -3,
+   "execution_duration": 1044251143,
+   "state": 2,
+   "artifacts_with_results": [
+    "System.VFS.ListDirectory/Listing",
+    "System.VFS.ListDirectory/Stats"
+   ],
+   "query_stats": [
+    {
+     "duration": 6370402,
+     "Artifact": "System.VFS.ListDirectory",
+     "query_id": 3,
+     "total_queries": 3
+    },
+    {
+     "duration": 519121078,
+     "names_with_response": [
+      "System.VFS.ListDirectory/Listing"
+     ],
+     "Artifact": "System.VFS.ListDirectory/Listing",
+     "result_rows": 1,
+     "query_id": 1,
+     "total_queries": 3
+    },
+    {
+     "duration": 518759663,
+     "names_with_response": [
+      "System.VFS.ListDirectory/Stats"
+     ],
+     "Artifact": "System.VFS.ListDirectory/Stats",
+     "result_rows": 1,
+     "query_id": 2,
+     "total_queries": 3
+    }
+   ]
   }
  }
 }

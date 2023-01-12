@@ -12,17 +12,20 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/reporting"
+	"www.velocidex.com/golang/velociraptor/services/launcher"
 )
 
 var (
 	NotFoundError = errors.New("Not found")
 )
 
-// Get all the flows for this client. TODO: implement paging
+// Get all the flows for this client. Sort by type to guarantee that
+// the static part of the proto (type = "") will come before the
+// "stats" part of the proto.
 const getFlowsQuery = `
 {
   "sort": [{
-    "create_time": {"order": "desc"}
+    "type": {"order": "asc"}
   }],
   "query": {
      "match": {"client_id" : %q}
@@ -49,28 +52,38 @@ func (self Launcher) GetFlows(
 		return nil, err
 	}
 
-	lookup := make(map[string]*cvelo_schema_api.ArtifactCollectorContext)
+	// The ArtifactCollectorContext object is made up of two parts:
+	// 1. The first part is the created context the GUI has created.
+	// 2. The second part is the statistics written by the client's
+	//    flow tracker.
+	//
+	// We need to merge them together and return a combined protobuf.
+	lookup := make(map[string]*flows_proto.ArtifactCollectorContext)
 
 	for _, hit := range hits {
-		item := &cvelo_schema_api.ArtifactCollectorContext{}
+		item := &cvelo_schema_api.ArtifactCollectorRecord{}
 		err = json.Unmarshal(hit, &item)
-		if err == nil {
-			record, pres := lookup[item.SessionId]
-			if !pres {
-				record = &cvelo_schema_api.ArtifactCollectorContext{}
-			}
-			mergeRecords(record, item)
-			lookup[item.SessionId] = record
+		if err != nil {
+			continue
 		}
+
+		stats_context, err := item.ToProto()
+		if err != nil {
+			continue
+		}
+
+		collection_context, pres := lookup[item.SessionId]
+		if !pres {
+			lookup[item.SessionId] = stats_context
+			continue
+		}
+		lookup[item.SessionId] = mergeRecords(collection_context, stats_context)
 	}
 
 	result := &api_proto.ApiFlowResponse{}
 	for _, record := range lookup {
-		flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(record)
-		if err == nil {
-			cleanUpContext(flow)
-			result.Items = append(result.Items, flow)
-		}
+		launcher.UpdateFlowStats(record)
+		result.Items = append(result.Items, record)
 	}
 
 	// Show newer sessions before older sessions.
@@ -83,7 +96,7 @@ func (self Launcher) GetFlows(
 
 const getFlowDetailsQuery = `
 {
-  "sort": [{"timestamp": {"order": "asc"}}],
+  "sort": [{"type": {"order": "asc"}}],
   "query": {
      "bool": {
        "must": [
@@ -112,52 +125,72 @@ func (self *Launcher) GetFlowDetails(
 		return nil, NotFoundError
 	}
 
-	result := &cvelo_schema_api.ArtifactCollectorContext{}
+	var collection_context *flows_proto.ArtifactCollectorContext
 
 	for _, hit := range hits {
-		item := &cvelo_schema_api.ArtifactCollectorContext{}
+		item := &cvelo_schema_api.ArtifactCollectorRecord{}
 		err = json.Unmarshal(hit, item)
 		if err != nil {
 			return nil, err
 		}
 
-		mergeRecords(result, item)
-	}
+		stats_context, err := item.ToProto()
+		if err != nil {
+			continue
+		}
 
-	flow, err := cvelo_schema_api.ArtifactCollectorContextToProto(result)
-	if err != nil {
-		return nil, err
+		if collection_context == nil {
+			collection_context = stats_context
+			continue
+		}
+
+		collection_context = mergeRecords(collection_context, stats_context)
 	}
-	cleanUpContext(flow)
 
 	availableDownloads, _ := availableDownloadFiles(config_obj, client_id, flow_id)
+
+	launcher.UpdateFlowStats(collection_context)
+
 	return &api_proto.FlowDetails{
-		Context:            flow,
+		Context:            collection_context,
 		AvailableDownloads: availableDownloads,
 	}, nil
 }
 
-func mergeRecords(output, input *cvelo_schema_api.ArtifactCollectorContext) {
-	if len(input.QueryStats) > 0 {
-		output.QueryStats = append(output.QueryStats, input.QueryStats...)
+func mergeRecords(
+	collection_context *flows_proto.ArtifactCollectorContext,
+	stats_context *flows_proto.ArtifactCollectorContext) *flows_proto.ArtifactCollectorContext {
+
+	// Copy relevant fields into the main context
+	if stats_context.TotalUploadedFiles > 0 {
+		collection_context.TotalUploadedFiles = stats_context.TotalUploadedFiles
 	}
 
-	if input.Raw != "" {
-		output.Raw = input.Raw
+	if stats_context.TotalExpectedUploadedBytes > 0 {
+		collection_context.TotalExpectedUploadedBytes = stats_context.TotalExpectedUploadedBytes
 	}
 
-	if input.SessionId != "" {
-		output.SessionId = input.SessionId
-		output.ClientId = input.ClientId
+	if stats_context.TotalUploadedBytes > 0 {
+		collection_context.TotalUploadedBytes = stats_context.TotalUploadedBytes
 	}
 
-	if input.CreateTime > 0 {
-		output.CreateTime = input.CreateTime
+	if stats_context.TotalCollectedRows > 0 {
+		collection_context.TotalCollectedRows = stats_context.TotalCollectedRows
 	}
 
-	if input.LastActive > 0 {
-		output.LastActive = input.LastActive
+	if stats_context.TotalLogs > 0 {
+		collection_context.TotalLogs = stats_context.TotalLogs
 	}
+
+	if stats_context.ActiveTime > 0 {
+		collection_context.ActiveTime = stats_context.ActiveTime
+	}
+
+	if len(stats_context.QueryStats) > 0 {
+		collection_context.QueryStats = stats_context.QueryStats
+	}
+
+	return collection_context
 }
 
 // availableDownloads returns the prepared zip downloads available to

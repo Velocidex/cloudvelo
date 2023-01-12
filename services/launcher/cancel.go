@@ -45,7 +45,7 @@ func (self *Launcher) CancelFlow(
 	collection_context.Backtrace = ""
 
 	collection_context_record := cvelo_schema_api.
-		ArtifactCollectorContextFromProto(collection_context)
+		ArtifactCollectorRecordFromProto(collection_context)
 	err = cvelo_services.SetElasticIndex(ctx,
 		config_obj.OrgId, "collections",
 		collection_context.SessionId, collection_context_record)

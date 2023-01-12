@@ -1,0 +1,10 @@
+{
+ "session_id": "F.CEV7IE8TURDBS",
+ "request_id": 980,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "LogMessage": {
+  "number_of_rows": 4,
+  "jsonl": "{\"client_time\":1673427258,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\"}\n{\"client_time\":1673427258,\"level\":\"DEFAULT\",\"message\":\"Time 0: System.VFS.DownloadFile: Sending response part 0 221 B (1 rows).\"}\n{\"client_time\":1673427258,\"level\":\"INFO\",\"message\":\"Collection is done after 210.786649ms\\n\"}\n{\"client_time\":1673427258,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":4,\\\"PluginsCalled\\\":2,\\\"FunctionsCalled\\\":6,\\\"ProtocolSearch\\\":225,\\\"ScopeCopy\\\":11}\\n\"}\n"
+ }
+}

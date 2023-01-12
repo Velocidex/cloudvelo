@@ -1,0 +1,24 @@
+{
+ "session_id": "F.CEV7IE8TURDBS",
+ "request_id": 981,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "flow_stats": {
+  "total_collected_rows": 1,
+  "total_logs": 4,
+  "timestamp": 1673427258104354,
+  "query_status": [
+   {
+    "duration": 211492581,
+    "names_with_response": [
+     "System.VFS.DownloadFile"
+    ],
+    "Artifact": "System.VFS.DownloadFile",
+    "result_rows": 1,
+    "query_id": 1,
+    "total_queries": 1
+   }
+  ],
+  "flow_complete": true
+ }
+}
