@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -25,6 +26,7 @@ type Labeler struct {
 
 // Get the last time any labeling operation modified the
 // client's labels.
+// TODO
 func (self Labeler) LastLabelTimestamp(
 	ctx context.Context,
 	config_obj *config_proto.Config,
@@ -91,11 +93,26 @@ func (self Labeler) SetClientLabel(
 		return errors.New("Invalid Label should use only A-Z and 0-9")
 	}
 
-	return cvelo_services.UpdateIndex(ctx,
+	err := cvelo_services.UpdateIndex(ctx,
 		self.config_obj.OrgId,
-		"clients", client_id,
+		"clients", client_id+"_labels",
 		json.Format(label_update_query, all_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))
+	if err == nil {
+		return nil
+	}
+
+	if !strings.Contains(err.Error(), "document_missing_exception") {
+		return err
+	}
+
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId, "clients", client_id+"_labels",
+		api.ClientInfo{
+			ClientId:    client_id,
+			Labels:      []string{label},
+			LowerLabels: []string{strings.ToLower(label)},
+		})
 }
 
 const (
@@ -119,7 +136,7 @@ func (self Labeler) RemoveClientLabel(
 	label = strings.TrimSpace(label)
 
 	return cvelo_services.UpdateIndex(ctx, self.config_obj.OrgId,
-		"clients", client_id,
+		"clients", client_id+"_labels",
 		json.Format(label_update_query, remove_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))
 }

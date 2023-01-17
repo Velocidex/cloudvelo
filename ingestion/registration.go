@@ -86,7 +86,6 @@ func (self Ingestor) HandleClientInfoUpdates(
 				Fqdn:                  row.Hostname,
 				System:                row.OS,
 				Architecture:          row.Architecture,
-				Ping:                  uint64(utils.Clock.Now().UnixNano()),
 				MacAddresses:          row.MACAddresses,
 				FirstSeenAt:           first_seen_at,
 				Labels:                old_client_info.Labels,

@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -18,8 +18,9 @@ func (self Ingestor) HandlePing(
 
 	err := services.SetElasticIndex(ctx,
 		config_obj.OrgId, "clients", message.Source+"_ping",
-		&client_info.ClientInfo{
+		&api.ClientInfo{
 			ClientId: message.Source,
+			Type:     "ping",
 			Ping:     uint64(utils.Clock.Now().UnixNano()),
 		})
 	if err == nil ||

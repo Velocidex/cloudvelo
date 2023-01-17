@@ -323,9 +323,11 @@ type _ElasticResponse struct {
 	Aggregations _ElasticAgg  `json:"aggregations"`
 }
 
+// Gets a single elastic record by id.
 func GetElasticRecord(
 	ctx context.Context, org_id, index, id string) (json.RawMessage, error) {
 	defer Debug("GetElasticRecord %v %v", index, id)()
+
 	client, err := GetElasticClient()
 	if err != nil {
 		return nil, err
@@ -350,6 +352,77 @@ func GetElasticRecord(
 		hit := &_ElasticHit{}
 		err := json.Unmarshal(data, hit)
 		return hit.Source, err
+	}
+
+	response := ordereddict.NewDict()
+	err = response.UnmarshalJSON(data)
+	if err != nil {
+		return nil, makeElasticError(data)
+	}
+
+	found_any, pres := response.Get("found")
+	if pres {
+		found, ok := found_any.(bool)
+		if ok && !found {
+			return nil, os.ErrNotExist
+		}
+	}
+
+	return nil, makeElasticError(data)
+}
+
+type doc_id struct {
+	Id     string          `json:"_id"`
+	Source json.RawMessage `json:"_source"`
+}
+
+type docs struct {
+	Docs []doc_id `json:"docs"`
+}
+
+// Gets a single elastic record by id.
+func GetMultipleElasticRecords(
+	ctx context.Context, org_id, index string, ids []string) ([]json.RawMessage, error) {
+	defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
+
+	client, err := GetElasticClient()
+	if err != nil {
+		return nil, err
+	}
+
+	d := &docs{}
+	for _, id := range ids {
+		d.Docs = append(d.Docs, doc_id{Id: id})
+	}
+
+	res, err := opensearchapi.MgetRequest{
+		Index: GetIndex(org_id, index),
+		Body:  strings.NewReader(json.MustMarshalString(d)),
+	}.Do(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// All is well we dont need to parse the results
+	if !res.IsError() {
+		hit := &docs{}
+		err := json.Unmarshal(data, hit)
+		if err != nil {
+			return nil, err
+		}
+
+		result := make([]json.RawMessage, 0, len(hit.Docs))
+		for _, h := range hit.Docs {
+			result = append(result, h.Source)
+		}
+
+		return result, nil
 	}
 
 	response := ordereddict.NewDict()
@@ -592,6 +665,8 @@ func QueryElasticRaw(
 }
 
 // Return only Ids of matching documents.
+// You probably want to add the following to the query:
+// "_source": false
 func QueryElasticIds(
 	ctx context.Context,
 	org_id, index, query string) ([]string, error) {
