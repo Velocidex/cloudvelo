@@ -8,9 +8,8 @@
   "hostname": "devbox",
   "system": "linux",
   "first_seen_at": 1661391002000000000,
-  "ping": 1661391003000000000,
-  "labels": [],
-  "lower_labels": [],
+  "ping": 0,
+  "labels": null,
   "mac_addresses": [
    "00:0c:29:e3:53:83",
    "02:42:69:c1:eb:25",
@@ -22,7 +21,9 @@
   ],
   "last_hunt_timestamp": 0,
   "last_event_table_version": 0,
+  "type": "main",
   "labels_timestamp": 0,
-  "assigned_hunts": []
+  "assigned_hunts": null,
+  "lower_labels": null
  }
 }

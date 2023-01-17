@@ -10,8 +10,8 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
 	"github.com/stretchr/testify/suite"
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 
 	"www.velocidex.com/golang/velociraptor/logging"
@@ -35,7 +35,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 		MockNow: time.Unix(1661391000, 0),
 	}
 
-	clients := []client_info.ClientInfo{
+	clients := []api.ClientInfo{
 		// This client is currently connected
 		{
 			ClientId:      "C.ConnectedClient",
@@ -111,12 +111,12 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 	// TODO - verify that this client is removed from other indexes
 }
 
-func (self *DeleteTestSuite) getClientRecord(client_id string) *client_info.ClientInfo {
+func (self *DeleteTestSuite) getClientRecord(client_id string) *api.ClientInfo {
 	serialized, err := cvelo_services.GetElasticRecord(
 		self.Ctx, self.ConfigObj.OrgId, "clients", client_id)
 	assert.NoError(self.T(), err)
 
-	result := &client_info.ClientInfo{}
+	result := &api.ClientInfo{}
 	err = json.Unmarshal(serialized, &result)
 	assert.NoError(self.T(), err)
 
