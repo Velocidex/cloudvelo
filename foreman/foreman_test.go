@@ -779,7 +779,9 @@ func (self *ForemanTestSuite) checkAssignedHunts(clientId string, expectedHunts 
 	assert.NoError(self.T(), err)
 
 	client := self.getClientRecord(clientId)
-	assert.True(self.T(), len(client.AssignedHunts) == len(expectedHunts))
+	sort.Strings(client.AssignedHunts)
+	sort.Strings(expectedHunts)
+	assert.Equal(self.T(), client.AssignedHunts, expectedHunts)
 
 	for _, hunt := range expectedHunts {
 		assert.Contains(self.T(), client.AssignedHunts, hunt)
