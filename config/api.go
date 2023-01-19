@@ -32,6 +32,7 @@ type ElasticConfiguration struct {
 	Endpoint          string `json:"endpoint"`
 	NoVerifyCert      bool   `json:"no_verify_cert"`
 	Bucket            string `json:"bucket"`
+	S3PartSize        uint64 `json:"s3_part_size"`
 
 	ForemanIntervalSeconds int `json:"foreman_interval_seconds"`
 }

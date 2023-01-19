@@ -29,6 +29,8 @@ type S3Writer struct {
 	upload_id   string
 	part_number int64
 
+	part_size uint64
+
 	ctx       context.Context
 	path_spec api.FSPathSpec
 }
@@ -73,7 +75,7 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 	}
 
 	self.buf = append(self.buf, data...)
-	if len(self.buf) > 1000000 {
+	if uint64(len(self.buf)) > self.part_size {
 		_, err := self.writeBuf()
 		if err != nil {
 			return 0, err
