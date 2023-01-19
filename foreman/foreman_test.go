@@ -1,11 +1,14 @@
 package foreman
 
 import (
+	"sort"
+	"testing"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
 	"github.com/sebdah/goldie"
+	"github.com/stretchr/testify/suite"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
@@ -37,27 +40,17 @@ sources:
 `}
 )
 
+type testCase struct {
+	Record api.ClientRecord
+	Id     string
+}
+
 type ForemanTestSuite struct {
 	*testsuite.CloudTestSuite
 }
 
-func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientInfo {
-	serialized, err := cvelo_services.GetElasticRecord(
-		self.Ctx, self.ConfigObj.OrgId, "clients", client_id)
-	assert.NoError(self.T(), err)
-
-	result := &api.ClientInfo{}
-	err = json.Unmarshal(serialized, &result)
-	assert.NoError(self.T(), err)
-
-	return result
-}
-
-func (self *ForemanTestSuite) TestClientMonitoring() {
-	Clock = &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
-	client_monitoring.Clock = Clock
+func (self *ForemanTestSuite) SetupTest() {
+	self.CloudTestSuite.SetupTest()
 
 	config_obj := self.ConfigObj.VeloConf()
 
@@ -65,14 +58,38 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	repository_manager, err := services.GetRepositoryManager(config_obj)
 	assert.NoError(self.T(), err)
 
-	client_monitoring_service, err := services.ClientEventManager(config_obj)
-	assert.NoError(self.T(), err)
-
 	for _, definition := range artifact_definitions {
 		_, err = repository_manager.SetArtifactFile(config_obj, "admin",
 			definition, "")
 		assert.NoError(self.T(), err)
 	}
+}
+
+func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientRecord {
+	err := cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	config_obj := self.ConfigObj.VeloConf()
+	result, err := api.GetMultipleClients(self.Ctx, config_obj, []string{client_id})
+	if err != nil || len(result) == 0 {
+		return nil
+	}
+
+	return result[0]
+}
+
+func (self *ForemanTestSuite) TestClientMonitoring() {
+	cancel := utils.MockTime(&utils.MockClock{
+		MockNow: time.Unix(1661391000, 0),
+	})
+	defer cancel()
+
+	client_monitoring.Clock = utils.GetTime()
+
+	config_obj := self.ConfigObj.VeloConf()
+
+	client_monitoring_service, err := services.ClientEventManager(config_obj)
+	assert.NoError(self.T(), err)
 
 	// Create some monitoring rules
 	err = client_monitoring_service.SetClientMonitoringState(
@@ -95,60 +112,89 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	assert.NoError(self.T(), err)
 
 	// Make some clients
-	clients := []api.ClientInfo{
+	clients := []testCase{
 		// This client is currently connected
 		{
-			ClientId:      "C.ConnectedClient",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.ConnectedClient",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.ConnectedClient_ping",
 		},
 
 		{
-			ClientId:      "C.WithLabel1",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{"Label1"},
-			LowerLabels:   []string{"label1"},
+			Record: api.ClientRecord{
+				ClientId: "C.WithLabel1",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.WithLabel1_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId:    "C.WithLabel1",
+				Labels:      []string{"Label1"},
+				LowerLabels: []string{"label1"},
+			},
+			Id: "C.WithLabel1_labels",
 		},
 
 		{
-			ClientId:      "C.WithLabel2",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			Labels:        []string{"Label2"},
-			LowerLabels:   []string{"label2"},
-			AssignedHunts: []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.WithLabel2",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.WithLabel2_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId:    "C.WithLabel2",
+				Labels:      []string{"Label2"},
+				LowerLabels: []string{"label2"},
+			},
+			Id: "C.WithLabel2_labels",
 		},
 
 		{
-			ClientId:      "C.WithLabel1And2",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			Labels:        []string{"Label1", "Label2"},
-			LowerLabels:   []string{"label1", "label2"},
-			AssignedHunts: []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.WithLabel1And2",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.WithLabel1And2_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId:    "C.WithLabel1And2",
+				Labels:      []string{"Label1", "Label2"},
+				LowerLabels: []string{"label1", "label2"},
+			},
+			Id: "C.WithLabel1And2_labels",
 		},
 
 		// This client has not been seen in a while
 		{
-			ClientId:      "C.OfflineClient",
-			Ping:          uint64(Clock.Now().Add(-72 * time.Hour).UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.OfflineClient",
+				Ping:     uint64(utils.GetTime().Now().Add(-72 * time.Hour).UnixNano()),
+			},
+			Id: "C.OfflineClient_ping",
 		},
 	}
 
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
 	// Now plan to update the clients
-	plan := NewPlan()
-	err = Foreman{}.CalculateEventTable(self.Ctx, config_obj, plan)
+	plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service := NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
+	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, plan)
 	assert.NoError(self.T(), err)
 
 	// There should be 4 distinct event tables: all, all+label1,
@@ -179,17 +225,34 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	err = plan.ExecuteClientMonitoringUpdate(self.Ctx, config_obj)
 	assert.NoError(self.T(), err)
 
+	err = plan.closePlan(self.Ctx, config_obj)
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
 	client := self.getClientRecord("C.WithLabel2")
 	assert.Equal(self.T(), client.LastEventTableVersion,
-		uint64(Clock.Now().UnixNano()))
+		uint64(utils.GetTime().Now().UnixNano()))
 
 	// Plan a second update - no changes are needed now.
-	new_plan := NewPlan()
-	err = Foreman{}.CalculateEventTable(self.Ctx, config_obj, new_plan)
+	new_plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service = NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
+	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, new_plan)
 	assert.NoError(self.T(), err)
 
 	// No updates required.
 	assert.Equal(self.T(), 0, len(new_plan.MonitoringTablesToClients))
+
+	// Some time has passed....
+	cancel = utils.MockTime(&utils.MockClock{
+		MockNow: time.Unix(1661391005, 0),
+	})
+	defer cancel()
 
 	// Label a client - this should force an update.
 	labeler := services.GetLabeler(config_obj)
@@ -197,8 +260,16 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 		"C.ConnectedClient", "Label1")
 	assert.NoError(self.T(), err)
 
-	new_plan = NewPlan()
-	err = Foreman{}.CalculateEventTable(self.Ctx, config_obj, new_plan)
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	new_plan, err = NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service = NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
+	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, new_plan)
 	assert.NoError(self.T(), err)
 
 	// Only one client will be updated
@@ -219,19 +290,19 @@ func (self *ForemanTestSuite) setupAllHunts() {
 		{
 			HuntId:       "H.AllClients",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			// Expire in 24 hours. Expires is set in uS
-			Expires: uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 		},
 
 		// This hunt runs only on Label Foo
 		{
 			HuntId:       "H.OnlyLabelFoo",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				UnionField: &api_proto.HuntCondition_Labels{
 					Labels: &api_proto.HuntLabelCondition{
@@ -245,9 +316,9 @@ func (self *ForemanTestSuite) setupAllHunts() {
 		{
 			HuntId:       "H.EmptyLabels",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				UnionField: &api_proto.HuntCondition_Labels{
 					Labels: &api_proto.HuntLabelCondition{},
@@ -259,9 +330,9 @@ func (self *ForemanTestSuite) setupAllHunts() {
 		{
 			HuntId:       "H.ExceptLabelFoo",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				ExcludedLabels: &api_proto.HuntLabelCondition{
 					Label: []string{"Foo"},
@@ -282,65 +353,89 @@ func (self *ForemanTestSuite) setupAllHunts() {
 }
 
 func (self *ForemanTestSuite) TestHuntsAllClients() {
-	Clock = &utils.MockClock{
+	cancel := utils.MockTime(&utils.MockClock{
 		MockNow: time.Unix(1661391000, 0),
-	}
+	})
+	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
 
 	self.setupAllHunts()
 
-	clients := []api.ClientInfo{
+	clients := []testCase{
 		// This client is currently connected
 		{
-			ClientId:      "C.ConnectedClient",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.ConnectedClient",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.ConnectedClient_ping",
 		},
 
 		// This client already ran on hunt H.1234 it will not be
 		// chosen again.
 		{
-			ClientId:      "C.AlreadyRanAllClients",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{"H.AllClients"},
-			Labels:        []string{},
-			LowerLabels:   []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.AlreadyRanAllClients",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.AlreadyRanAllClients_ping",
 		},
-
 		{
-			ClientId:      "C.WithLabelFoo",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			Labels:        []string{"Foo"},
-			LowerLabels:   []string{"foo"},
-			AssignedHunts: []string{},
+			Record: api.ClientRecord{
+				ClientId:      "C.AlreadyRanAllClients",
+				AssignedHunts: []string{"H.AllClients"},
+			},
+			Id: "C.AlreadyRanAllClients_hunts",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId: "C.WithLabelFoo",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.WithLabelFoo_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId:    "C.WithLabelFoo",
+				Labels:      []string{"Foo"},
+				LowerLabels: []string{"foo"},
+			},
+			Id: "C.WithLabelFoo_labels",
 		},
 
 		// This client has not been seen in a while
 		{
-			ClientId:      "C.OfflineClient",
-			Ping:          uint64(Clock.Now().Add(-72 * time.Hour).UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
+			Record: api.ClientRecord{
+				ClientId: "C.OfflineClient",
+				Ping:     uint64(utils.GetTime().Now().Add(-72 * time.Hour).UnixNano()),
+			},
+			Id: "C.OfflineClient_ping",
 		},
 	}
 
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
+	// The foreman ran 10 min ago
+	foreman_service := NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
 	// See the hunt update plan.
-	plan := NewPlan()
-	err := Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
+	plan, err := NewPlan(config_obj)
 	assert.NoError(self.T(), err)
 
-	// The connected client should run the all client hunt.
+	err = foreman_service.UpdatePlan(self.Ctx, config_obj, plan)
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	// The connected client should run the all client hunts.
 	assert.True(self.T(),
 		huntPresent("H.AllClients", plan.ClientIdToHunts["C.ConnectedClient"]))
 
@@ -384,10 +479,6 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	assert.True(self.T(),
 		!huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.OfflineClient"]))
 
-	// Close the plan to finish updating the clients
-	err = plan.Close(self.Ctx, config_obj)
-	assert.NoError(self.T(), err)
-
 	// Check the client records
 	client := self.getClientRecord("C.ConnectedClient")
 
@@ -395,16 +486,16 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	assert.Contains(self.T(), client.AssignedHunts, "H.AllClients")
 	assert.Contains(self.T(), client.AssignedHunts, "H.ExceptLabelFoo")
 
-	// Make sure the timestamp is updated
-	assert.Equal(self.T(), client.LastHuntTimestamp, uint64(Clock.Now().UnixNano()))
-
 	// This client did not get scheduled for anything
 	client = self.getClientRecord("C.OfflineClient")
-	assert.Equal(self.T(), client.AssignedHunts, []string{})
+	assert.Equal(self.T(), 0, len(client.AssignedHunts))
 
 	// Calculating the plan again should produce nothing to do.
-	new_plan := NewPlan()
-	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
+	new_plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service.last_run_time = utils.GetTime().Now()
+	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// The plan should be empty as there is nothing to do!
@@ -415,10 +506,23 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	err = labeler.SetClientLabel(self.Ctx, config_obj, "C.ConnectedClient", "Foo")
 	assert.NoError(self.T(), err)
 
+	// Update the ping time - the client will only be scheduled once
+	// it is online.
+	err = cvelo_services.SetElasticIndex(self.Ctx,
+		config_obj.OrgId, "clients", "C.ConnectedClient_ping",
+		&api.ClientRecord{
+			ClientId: "C.ConnectedClient",
+			Type:     "ping",
+			Ping:     uint64(utils.GetTime().Now().Add(time.Second).UnixNano()),
+		})
+	assert.NoError(self.T(), err)
+
 	// Get the plan again - this hunt should now be scheduled on the
 	// client.
-	new_plan = NewPlan()
-	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
+	new_plan, err = NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// Only one client will be scheduled now.
@@ -433,16 +537,17 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 
 func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 	// Test that the hunt expires - move time forward by 25 hours.
-	Clock = &utils.MockClock{
+	cancel := utils.MockTime(&utils.MockClock{
 		MockNow: time.Unix(1661391000+25*60*60, 0),
-	}
+	})
+	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
 
 	// Add a new client
-	c := &api.ClientInfo{
+	c := &api.ClientRecord{
 		ClientId:      "C.NewClient",
-		Ping:          uint64(Clock.Now().UnixNano()),
+		Ping:          uint64(utils.GetTime().Now().UnixNano()),
 		AssignedHunts: []string{},
 		Labels:        []string{},
 		LowerLabels:   []string{},
@@ -451,8 +556,10 @@ func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 		self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
 	assert.NoError(self.T(), err)
 
-	plan := NewPlan()
-	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
+	plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	err = Foreman{}.UpdatePlan(self.Ctx, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	// No hunts scheduled
@@ -484,19 +591,19 @@ func (self *ForemanTestSuite) setupOSHunts() {
 		{
 			HuntId:       "H.AllOSes",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			// Expire in 24 hours. Expires is set in uS
-			Expires: uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 		},
 
 		// This hunt runs only on Windows machines
 		{
 			HuntId:       "H.WindowsOnly",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				UnionField: &api_proto.HuntCondition_Os{
 					Os: &api_proto.HuntOsCondition{
@@ -510,9 +617,9 @@ func (self *ForemanTestSuite) setupOSHunts() {
 		{
 			HuntId:       "H.LinuxOnly",
 			StartRequest: start_request,
-			CreateTime:   uint64(Clock.Now().UnixNano() / 1000),
+			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			Expires:      uint64(Clock.Now().Add(24*time.Hour).UnixNano() / 1000),
+			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
 				UnionField: &api_proto.HuntCondition_Os{
 					Os: &api_proto.HuntOsCondition{
@@ -535,59 +642,90 @@ func (self *ForemanTestSuite) setupOSHunts() {
 }
 
 func (self *ForemanTestSuite) TestHuntsByOS() {
-	Clock = &utils.MockClock{
+	cancel := utils.MockTime(&utils.MockClock{
 		MockNow: time.Unix(1661391000, 0),
-	}
+	})
+	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
 
 	self.setupOSHunts()
 
-	clients := []api.ClientInfo{
+	clients := []testCase{
 		{
-			ClientId:      "C.Windows1",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
-			System:        "windows",
+			Record: api.ClientRecord{
+				ClientId: "C.Windows1",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.Windows1_ping",
 		},
 		{
-			ClientId:      "C.Windows2",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
-			System:        "windows",
+			Record: api.ClientRecord{
+				ClientId: "C.Windows1",
+				System:   "windows",
+			},
+			Id: "C.Windows1",
+		},
+
+		{
+			Record: api.ClientRecord{
+				ClientId: "C.Windows2",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.Windows2_ping",
 		},
 		{
-			ClientId:      "C.Linux1",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
-			System:        "linux",
+			Record: api.ClientRecord{
+				ClientId: "C.Windows2",
+				System:   "windows",
+			},
+			Id: "C.Windows2",
 		},
 		{
-			ClientId:      "C.Linux2",
-			Ping:          uint64(Clock.Now().UnixNano()),
-			AssignedHunts: []string{},
-			Labels:        []string{},
-			LowerLabels:   []string{},
-			System:        "linux",
+			Record: api.ClientRecord{
+				ClientId: "C.Linux1",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.Linux1_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId: "C.Linux1",
+				System:   "linux",
+			},
+			Id: "C.Linux1",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId: "C.Linux2",
+				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			},
+			Id: "C.Linux2_ping",
+		},
+		{
+			Record: api.ClientRecord{
+				ClientId: "C.Linux2",
+				System:   "linux",
+			},
+			Id: "C.Linux2",
 		},
 	}
 
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
 	// See the hunt update plan.
-	plan := NewPlan()
-	err := Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, plan)
+	plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service := NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
+	err = foreman_service.UpdatePlan(self.Ctx, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	windowsExpected := []string{"H.AllOSes", "H.WindowsOnly"}
@@ -597,43 +735,53 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 	self.checkPlannedHunts(plan, "C.Linux1", linuxExpected)
 	self.checkPlannedHunts(plan, "C.Linux2", linuxExpected)
 
-	// Close the plan to finish updating the clients
-	err = plan.Close(self.Ctx, config_obj)
-	assert.NoError(self.T(), err)
-
 	self.checkAssignedHunts("C.Windows1", windowsExpected)
 	self.checkAssignedHunts("C.Windows2", windowsExpected)
 	self.checkAssignedHunts("C.Linux1", linuxExpected)
 	self.checkAssignedHunts("C.Linux2", linuxExpected)
 
 	// Calculating the plan again should produce nothing to do.
-	new_plan := NewPlan()
-	err = Foreman{}.UpdateHuntMembership(self.Ctx, config_obj, new_plan)
+	new_plan, err := NewPlan(config_obj)
+	assert.NoError(self.T(), err)
+
+	foreman_service = NewForeman()
+	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
+
+	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// The plan should be empty as there is nothing to do!
 	assert.True(self.T(), len(new_plan.ClientIdToHunts) == 0)
 }
 
-func (self *ForemanTestSuite) checkPlannedHunts(plan *Plan, clientId string, expectedHunts []string) {
+func (self *ForemanTestSuite) checkPlannedHunts(plan *Plan, clientId string, expectedHuntIds []string) {
 	plannedHunts := plan.ClientIdToHunts[clientId]
-	assert.True(self.T(), len(plannedHunts) == len(expectedHunts))
+	plannedHuntIds := []string{}
+	for _, h := range plannedHunts {
+		plannedHuntIds = append(plannedHuntIds, h.HuntId)
+	}
+	sort.Strings(plannedHuntIds)
+	sort.Strings(expectedHuntIds)
+	assert.Equal(self.T(), plannedHuntIds, expectedHuntIds, clientId)
 
-	for _, hunt := range expectedHunts {
+	for _, hunt := range expectedHuntIds {
 		assert.True(self.T(), huntPresent(hunt, plannedHunts))
 	}
 }
 
 func (self *ForemanTestSuite) checkAssignedHunts(clientId string, expectedHunts []string) {
+	err := cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
 	client := self.getClientRecord(clientId)
-	assert.True(self.T(), len(client.AssignedHunts) == len(expectedHunts))
+	sort.Strings(client.AssignedHunts)
+	sort.Strings(expectedHunts)
+	assert.Equal(self.T(), client.AssignedHunts, expectedHunts)
 
 	for _, hunt := range expectedHunts {
 		assert.Contains(self.T(), client.AssignedHunts, hunt)
 	}
 }
-
-/* TODO: Foreman is currently broken due to the multiple client records split.
 
 func TestForeman(t *testing.T) {
 	suite.Run(t, &ForemanTestSuite{
@@ -642,7 +790,6 @@ func TestForeman(t *testing.T) {
 		},
 	})
 }
-*/
 
 func huntPresent(hunt_id string, hunts []*api_proto.Hunt) bool {
 	for _, h := range hunts {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
@@ -125,52 +125,43 @@ func (self Indexer) FastGetApiClient(
 	config_obj *config_proto.Config,
 	client_id string) (*api_proto.ApiClient, error) {
 
-	client_info_manager, err := services.GetClientInfoManager(config_obj)
+	records, err := cvelo_api.GetMultipleClients(
+		ctx, config_obj, []string{client_id})
 	if err != nil {
 		return nil, err
 	}
 
-	client_info, err := client_info_manager.Get(ctx, client_id)
-	if err != nil {
-		return nil, err
+	if len(records) == 0 {
+		return nil, services.NotFoundError
 	}
 
-	if client_info == nil {
-		return nil, errors.New("Invalid client_info")
-	}
-
-	return _makeApiClient(&client_info.ClientInfo), nil
+	return _makeApiClient(records[0]), nil
 }
 
-func _makeApiClient(client_info *actions_proto.ClientInfo) *api_proto.ApiClient {
-	fqdn := client_info.Fqdn
-	if fqdn == "" {
-		fqdn = client_info.Hostname
-	}
-
+func _makeApiClient(client_info *cvelo_api.ClientRecord) *api_proto.ApiClient {
+	fqdn := client_info.Hostname
 	return &api_proto.ApiClient{
-		ClientId: client_info.ClientId,
-		Labels:   client_info.Labels,
+		ClientId:         client_info.ClientId,
+		Labels:           client_info.Labels,
 		AgentInformation: &api_proto.AgentInformation{
-			Version: client_info.ClientVersion,
-			Name:    client_info.ClientName,
+			//Version: client_info.ClientVersion,
+			//Name:    client_info.ClientName,
 		},
 		OsInfo: &api_proto.Uname{
-			System:       client_info.System,
-			Hostname:     client_info.Hostname,
-			Release:      client_info.Release,
-			Machine:      client_info.Architecture,
+			System:   client_info.System,
+			Hostname: client_info.Hostname,
+			//Release:      client_info.Release,
+			//Machine:      client_info.Architecture,
 			Fqdn:         fqdn,
 			MacAddresses: client_info.MacAddresses,
 		},
-		FirstSeenAt:                 client_info.FirstSeenAt,
-		LastSeenAt:                  client_info.Ping,
-		LastIp:                      client_info.IpAddress,
-		LastInterrogateFlowId:       client_info.LastInterrogateFlowId,
-		LastInterrogateArtifactName: client_info.LastInterrogateArtifactName,
-		LastHuntTimestamp:           client_info.LastHuntTimestamp,
-		LastEventTableVersion:       client_info.LastEventTableVersion,
-		LastLabelTimestamp:          client_info.LabelsTimestamp,
+		FirstSeenAt: client_info.FirstSeenAt / 1000,
+		LastSeenAt:  client_info.Ping / 1000,
+		//LastIp:                      client_info.IpAddress,
+		//LastInterrogateFlowId:       client_info.LastInterrogateFlowId,
+		//		LastInterrogateArtifactName: client_info.LastInterrogateArtifactName,
+		LastHuntTimestamp:     client_info.LastHuntTimestamp,
+		LastEventTableVersion: client_info.LastEventTableVersion,
 	}
 }
 

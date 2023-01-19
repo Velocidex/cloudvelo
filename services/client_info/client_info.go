@@ -33,7 +33,7 @@ func (self *ClientInfoBase) Set(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"clients", client_info.ClientId, &api.ClientInfo{
+		"clients", client_info.ClientId, &api.ClientRecord{
 			ClientId:              client_info.ClientId,
 			Hostname:              client_info.Hostname,
 			System:                client_info.System,
@@ -66,7 +66,7 @@ func (self ClientInfoBase) Get(
 		return nil, errors.New("Client ID not found")
 	}
 
-	return hits[0], nil
+	return api.ToClientInfo(hits[0]), nil
 }
 
 func (self ClientInfoBase) GetStats(

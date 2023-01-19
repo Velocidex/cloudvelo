@@ -92,8 +92,10 @@ func (self *IngestionTestSuite) TestEnrollment() {
 
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "Enrollment")
 
+	client_id := "C.1352adc54e292a23"
+
 	record, err := cvelo_services.GetElasticRecord(self.ctx,
-		"test", "client_keys", "C.1352adc54e292a23-test")
+		"test", "client_keys", client_id+"-test")
 	assert.NoError(self.T(), err)
 	self.golden.Set("Enrollment", record)
 
@@ -102,16 +104,15 @@ func (self *IngestionTestSuite) TestEnrollment() {
 	// interrogation flow but happens automatically now).
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "Client.Info.Updates")
 
-	record, err = cvelo_services.GetElasticRecord(self.ctx,
-		"test", "clients", "C.1352adc54e292a23")
+	config_obj := self.ConfigObj.VeloConf()
+	result, err := api.GetMultipleClients(self.ctx, config_obj, []string{client_id})
 	assert.NoError(self.T(), err)
-	self.golden.Set("ClientRecord", record)
+	self.golden.Set("ClientRecord", result[0])
 
 	// We do not record any results though.
 	records, err := cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
-	sort_records(records)
 	assert.Equal(self.T(), 0, len(records))
 
 	goldie.Assert(self.T(), "TestEnrollment",

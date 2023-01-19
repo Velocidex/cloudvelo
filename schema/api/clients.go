@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"regexp"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
@@ -13,36 +14,61 @@ import (
 // This is the record stored in the index. It is similar to
 // actions_proto.ClientInfo but contains a couple of extra fields we
 // use for better searching.
-type ClientInfo struct {
-	ClientId              string   `json:"client_id"`
-	Hostname              string   `json:"hostname"`
-	System                string   `json:"system"`
-	FirstSeenAt           uint64   `json:"first_seen_at"`
-	Ping                  uint64   `json:"ping"`
-	Labels                []string `json:"labels"`
-	MacAddresses          []string `json:"mac_addresses"`
+type ClientRecord struct {
+	// Stored in '<client id>'
+	ClientId    string `json:"client_id"`
+	Hostname    string `json:"hostname"`
+	System      string `json:"system"`
+	FirstSeenAt uint64 `json:"first_seen_at"`
+
+	// Stored in '<client id>_ping'
+	Ping uint64 `json:"ping"`
+
+	MacAddresses []string `json:"mac_addresses"`
+
+	// Stored in '<client id>_hunts'
+	AssignedHunts         []string `json:"assigned_hunts"`
 	LastHuntTimestamp     uint64   `json:"last_hunt_timestamp"`
 	LastEventTableVersion uint64   `json:"last_event_table_version"`
 
 	// Additional fields in the index we use for search
 
 	// "primary" for primary key, "ping" for ping, "label" for label.
-	Type               string   `json:"type"`
+	Type string `json:"type"`
+
+	// Stored in '<client id>_labels'
 	LastLabelTimestamp uint64   `json:"labels_timestamp"`
-	AssignedHunts      []string `json:"assigned_hunts"`
+	Labels             []string `json:"labels"`
 	LowerLabels        []string `json:"lower_labels"`
+}
+
+func ToClientInfo(record *ClientRecord) *services.ClientInfo {
+	return &services.ClientInfo{
+		actions_proto.ClientInfo{
+			ClientId:              record.ClientId,
+			Hostname:              record.Hostname,
+			System:                record.System,
+			FirstSeenAt:           record.FirstSeenAt,
+			Ping:                  record.Ping,
+			Labels:                record.Labels,
+			MacAddresses:          record.MacAddresses,
+			LastHuntTimestamp:     record.LastHuntTimestamp,
+			LastEventTableVersion: record.LastEventTableVersion,
+		},
+	}
 }
 
 func GetMultipleClients(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	client_ids []string) ([]*services.ClientInfo, error) {
+	client_ids []string) ([]*ClientRecord, error) {
 
 	terms := make([]string, 0, 2*len(client_ids))
 	for _, i := range client_ids {
 		terms = append(terms, i)
 		terms = append(terms, i+"_ping")
 		terms = append(terms, i+"_labels")
+		terms = append(terms, i+"_hunts")
 	}
 
 	hits, err := cvelo_services.GetMultipleElasticRecords(
@@ -51,28 +77,24 @@ func GetMultipleClients(
 		return nil, err
 	}
 
-	lookup := make(map[string]*services.ClientInfo)
+	lookup := make(map[string]*ClientRecord)
 	for _, hit := range hits {
-		record := actions_proto.ClientInfo{}
-		err = json.Unmarshal(hit, &record)
+		record := &ClientRecord{}
+		err = json.Unmarshal(hit, record)
 		if err != nil || record.ClientId == "" {
 			continue
 		}
 
-		// Ping times in Velociraptor are in microseconds
-		record.Ping /= 1000
-		record.FirstSeenAt /= 1000
-
 		first, pres := lookup[record.ClientId]
 		if !pres {
-			lookup[record.ClientId] = &services.ClientInfo{record}
+			lookup[record.ClientId] = record
 			continue
 		}
 
-		mergeClientRecords(first, &record)
+		mergeClientRecords(first, record)
 	}
 
-	result := make([]*services.ClientInfo, 0, len(client_ids))
+	result := make([]*ClientRecord, 0, len(client_ids))
 	for _, v := range lookup {
 		result = append(result, v)
 	}
@@ -80,9 +102,7 @@ func GetMultipleClients(
 	return result, nil
 }
 
-func mergeClientRecords(
-	first *services.ClientInfo,
-	second *actions_proto.ClientInfo) {
+func mergeClientRecords(first *ClientRecord, second *ClientRecord) {
 
 	if second.Hostname != "" {
 		first.Hostname = second.Hostname
@@ -102,6 +122,7 @@ func mergeClientRecords(
 
 	if len(second.Labels) > 0 {
 		first.Labels = append(first.Labels, second.Labels...)
+		first.LowerLabels = append(first.LowerLabels, second.LowerLabels...)
 	}
 
 	if len(second.MacAddresses) > 0 {
@@ -110,6 +131,27 @@ func mergeClientRecords(
 
 	if second.LastHuntTimestamp > 0 {
 		first.LastHuntTimestamp = second.LastHuntTimestamp
+	}
+
+	if second.LastEventTableVersion > 0 {
 		first.LastEventTableVersion = second.LastEventTableVersion
 	}
+
+	if len(second.AssignedHunts) > 0 {
+		first.AssignedHunts = append(first.AssignedHunts, second.AssignedHunts...)
+	}
+
+	if second.LastLabelTimestamp > 0 {
+		first.LastLabelTimestamp = second.LastLabelTimestamp
+	}
+}
+
+var doc_id_regex = regexp.MustCompile("(.+)_(labels|ping)")
+
+func GetClientIdFromDocId(doc_id string) string {
+	m := doc_id_regex.FindStringSubmatch(doc_id)
+	if len(m) > 1 {
+		return m[1]
+	}
+	return doc_id
 }

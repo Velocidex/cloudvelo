@@ -9,7 +9,6 @@
   "system": "linux",
   "first_seen_at": 1661391002000000000,
   "ping": 0,
-  "labels": null,
   "mac_addresses": [
    "00:0c:29:e3:53:83",
    "02:42:69:c1:eb:25",
@@ -19,11 +18,12 @@
    "26:1d:10:c6:51:06",
    "8e:7d:7d:50:5a:00"
   ],
+  "assigned_hunts": null,
   "last_hunt_timestamp": 0,
   "last_event_table_version": 0,
   "type": "main",
   "labels_timestamp": 0,
-  "assigned_hunts": null,
+  "labels": null,
   "lower_labels": null
  }
 }

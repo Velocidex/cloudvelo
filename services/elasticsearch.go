@@ -958,9 +958,9 @@ func StartBulkIndexService(
 			Client:        elastic_client,
 			FlushInterval: time.Second * 2,
 			OnFlushStart: func(ctx context.Context) context.Context {
-				logger := logging.GetLogger(
-					config_obj.VeloConf(), &logging.FrontendComponent)
-				logger.Debug("Flushing bulk indexer.")
+				//logger := logging.GetLogger(
+				// config_obj.VeloConf(), &logging.FrontendComponent)
+				//logger.Debug("Flushing bulk indexer.")
 				return ctx
 			},
 			OnError: func(ctx context.Context, err error) {

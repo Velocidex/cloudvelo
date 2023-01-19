@@ -6,25 +6,25 @@ package foreman
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"www.velocidex.com/golang/cloudvelo/config"
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
+	cvelo_indexing "www.velocidex.com/golang/cloudvelo/services/indexing"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 var (
-	Clock utils.Clock = &utils.RealClock{}
-
 	huntCountGauge = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "foreman_hunt_gauge",
@@ -48,43 +48,9 @@ var (
 	)
 )
 
-const (
-	// Get all recent clients that have not had the hunt applied to
-	// them.
-	clientsLaterThanHuntQuery = `
-  "query": {"bool": {
-    "must_not": [
-      %s
-      {"terms": {"assigned_hunts": [%q]}}
-    ],
-    "filter": [
-      %s
-      {"range": {"last_hunt_timestamp": {"lte": %q}}},
-      {"range": {"ping": {"gte": %q}}}
-    ]}
-  }
-`
-
-	updateAllClientHuntId = `
-{
- "query": {
-   "terms": {
-    "_id": %q
- }},
- "script": {
-   "source": "ctx._source.last_hunt_timestamp = params.last_hunt_timestamp; ctx._source.assigned_hunts.add(params.hunt_id);",
-   "lang": "painless",
-   "params": {
-     "hunt_id": %q,
-     "last_hunt_timestamp": %q
-   }
-  }
- }
+type Foreman struct {
+	last_run_time time.Time
 }
-`
-)
-
-type Foreman struct{}
 
 func (self Foreman) stopHunt(
 	ctx context.Context,
@@ -102,89 +68,129 @@ func (self Foreman) stopHunt(
 		ctx, org_config_obj.OrgId, "hunts", hunt.HuntId, stopHuntQuery)
 }
 
-func (self Foreman) getClientQueryForHunt(hunt *api_proto.Hunt) string {
-	extra_conditions := ""
-	must_not_condition := ""
-	if hunt.Condition != nil {
-		labels := hunt.Condition.GetLabels()
-		if labels != nil && len(labels.Label) > 0 {
-			extra_conditions += json.Format(
-				`{"terms": {"labels": %q}},`, labels.Label)
-		}
+func (self Foreman) planMonitoringForClient(
+	ctx context.Context,
+	org_config_obj *config_proto.Config,
+	client_info *api.ClientRecord, plan *Plan) {
 
-		if hunt.Condition.ExcludedLabels != nil &&
-			len(hunt.Condition.ExcludedLabels.Label) > 0 {
-			must_not_condition += json.Format(
-				`{"terms": {"labels": %q}},`,
-				hunt.Condition.ExcludedLabels.Label)
-		}
+	// When do we need to update the client's monitoring table:
+	// 1. The client was recently seen
+	// 2. Any of its labels were changed after the last update or
+	// 3. The event table is newer than the last update time.
+	if !(client_info.LastLabelTimestamp >= uint64(self.last_run_time.UnixNano()) ||
+		client_info.LastEventTableVersion < plan.current_monitoring_state.Version) {
+		return
+	}
 
-		os_condition := hunt.Condition.GetOs()
-		if os_condition != nil &&
-			os_condition.Os != api_proto.HuntOsCondition_ALL {
-			os_name := ""
-			switch os_condition.Os {
-			case api_proto.HuntOsCondition_WINDOWS:
-				os_name = "windows"
-			case api_proto.HuntOsCondition_LINUX:
-				os_name = "linux"
-			case api_proto.HuntOsCondition_OSX:
-				os_name = "darwin"
-			}
+	key := labelsKey(client_info.Labels, plan.current_monitoring_state)
+	_, pres := plan.MonitoringTables[key]
+	if !pres {
+		message := GetClientUpdateEventTableMessage(ctx, org_config_obj,
+			plan.current_monitoring_state, client_info.Labels)
+		plan.MonitoringTables[key] = message
+	}
 
-			if os_name != "" {
-				extra_conditions += json.Format(
-					`{"term": {"system": %q}},`, os_name)
-			}
+	clients, _ := plan.MonitoringTablesToClients[key]
+	if !utils.InString(clients, client_info.ClientId) {
+		plan.MonitoringTablesToClients[key] = append(
+			[]string{client_info.ClientId}, clients...)
+	}
+
+	client_info.LastEventTableVersion = plan.current_monitoring_state.Version
+	plan.ClientIdToClientRecords[client_info.ClientId] = client_info
+}
+
+func (self Foreman) planHuntForClient(
+	ctx context.Context,
+	org_config_obj *config_proto.Config,
+	client_info *api.ClientRecord,
+	hunt *api_proto.Hunt,
+	plan *Plan) {
+
+	// Hunt is already assigned, skip it
+	if utils.InString(client_info.AssignedHunts, hunt.HuntId) {
+		return
+	}
+
+	// Hunt is unconditional, assign it.
+	if hunt.Condition == nil {
+		plan.assignClientToHunt(client_info, hunt)
+		return
+	}
+
+	// Hunt specifies labels does the client have these labels?
+	labels := hunt.Condition.GetLabels()
+	if labels != nil && len(labels.Label) > 0 {
+
+		// Client has none of the specified labels.
+		if !clientHasLabels(client_info, labels.Label) {
+			return
 		}
 	}
 
-	hunt_create_time_ns := hunt.CreateTime * 1000
+	if hunt.Condition.ExcludedLabels != nil &&
+		len(hunt.Condition.ExcludedLabels.Label) > 0 {
+		// Client has an exclude label ignore it.
+		if clientHasLabels(client_info, hunt.Condition.ExcludedLabels.Label) {
+			return
+		}
+	}
 
-	// Get all clients that were active in the last hour that need
-	// to get the hunt.
-	return json.Format(clientsLaterThanHuntQuery,
-		must_not_condition, hunt.HuntId,
-		extra_conditions,
-		hunt_create_time_ns,
-		Clock.Now().Add(-time.Hour).UnixNano())
+	// Handle OS target
+	os_condition := hunt.Condition.GetOs()
+	if os_condition != nil &&
+		os_condition.Os != api_proto.HuntOsCondition_ALL {
+		os_name := ""
+		switch os_condition.Os {
+		case api_proto.HuntOsCondition_WINDOWS:
+			os_name = "windows"
+		case api_proto.HuntOsCondition_LINUX:
+			os_name = "linux"
+		case api_proto.HuntOsCondition_OSX:
+			os_name = "darwin"
+		}
+
+		if os_name != "" && client_info.System != os_name {
+			return
+		}
+	}
+
+	// If we get here we assign the hunt to the client
+	plan.assignClientToHunt(client_info, hunt)
 }
 
-// Query the backend for the list of all clients which have not
-// received this hunt.
-func (self Foreman) CalculateHuntUpdate(
+func (self Foreman) planForClient(
+	ctx context.Context,
+	org_config_obj *config_proto.Config,
+	client_info *api.ClientRecord,
+	hunts []*api_proto.Hunt, plan *Plan) {
+
+	for _, h := range hunts {
+		self.planHuntForClient(ctx, org_config_obj, client_info, h, plan)
+	}
+	self.planMonitoringForClient(ctx, org_config_obj, client_info, plan)
+}
+
+func (self Foreman) CalculateUpdate(
 	ctx context.Context,
 	org_config_obj *config_proto.Config,
 	hunts []*api_proto.Hunt, plan *Plan) error {
 
-	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+	// Get all clients that pinged within the last period
+	indexer, err := services.GetIndexer(org_config_obj)
+	if err != nil {
+		return err
+	}
 
-	// Prepare a plan of all the hunts we are going to launch right
-	// now.
-	for _, hunt := range hunts {
-		query := json.Format(`{%s, "_source": {"includes": ["client_id"]}}`,
-			self.getClientQueryForHunt(hunt))
-		hits_chan, err := cvelo_services.QueryChan(ctx, org_config_obj,
-			1000, org_config_obj.OrgId, "clients",
-			query, "client_id")
-		if err != nil {
-			return err
-		}
+	clients_chan, err := indexer.(*cvelo_indexing.Indexer).SearchClientRecordsChan(
+		ctx, nil, org_config_obj,
+		fmt.Sprintf("after:%d", self.last_run_time.UnixNano()), "")
+	if err != nil {
+		return err
+	}
 
-		for hit := range hits_chan {
-			client_info := &actions_proto.ClientInfo{}
-			err := json.Unmarshal(hit, client_info)
-			if err != nil {
-				continue
-			}
-
-			planned_hunts, _ := plan.ClientIdToHunts[client_info.ClientId]
-			plan.ClientIdToHunts[client_info.ClientId] = append(planned_hunts, hunt)
-
-			if logger != nil {
-				logger.Debug("Planned Hunts: %v, %v", client_info.ClientId, planned_hunts)
-			}
-		}
+	for client_info := range clients_chan {
+		self.planForClient(ctx, org_config_obj, client_info, hunts, plan)
 	}
 
 	return nil
@@ -214,7 +220,7 @@ func (self Foreman) GetActiveHunts(
 		}
 
 		// Check if the hunt is expired and stop it if it is
-		if hunt.Expires < uint64(Clock.Now().UnixNano()/1000) {
+		if hunt.Expires < uint64(utils.GetTime().Now().UnixNano()/1000) {
 			err := self.stopHunt(ctx, org_config_obj, hunt)
 			if err != nil {
 				return nil, err
@@ -225,17 +231,13 @@ func (self Foreman) GetActiveHunts(
 		result = append(result, hunt)
 	}
 
-	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
-	if logger != nil {
-		logger.Debug("Active Hunts: %v", result)
-	}
-
 	return result, nil
 }
 
-func (self Foreman) UpdateHuntMembership(
+func (self Foreman) UpdatePlan(
 	ctx context.Context,
 	org_config_obj *config_proto.Config, plan *Plan) error {
+
 	hunts, err := self.GetActiveHunts(ctx, org_config_obj)
 	if err != nil {
 		return err
@@ -244,26 +246,23 @@ func (self Foreman) UpdateHuntMembership(
 	huntCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(hunts)))
 
 	// Get an update plan
-	err = self.CalculateHuntUpdate(ctx, org_config_obj, hunts, plan)
+	err = self.CalculateUpdate(ctx, org_config_obj, hunts, plan)
 	if err != nil {
 		return err
 	}
 
 	// Now execute the plan.
-	return plan.ExecuteHuntUpdate(ctx, org_config_obj)
-}
-
-func (self Foreman) UpdateMonitoringTable(
-	ctx context.Context,
-	org_config_obj *config_proto.Config, plan *Plan) error {
-
-	err := self.CalculateEventTable(ctx, org_config_obj, plan)
+	err = plan.ExecuteHuntUpdate(ctx, org_config_obj)
 	if err != nil {
 		return err
 	}
 
-	// Now execute the plan.
-	return plan.ExecuteClientMonitoringUpdate(ctx, org_config_obj)
+	err = plan.ExecuteClientMonitoringUpdate(ctx, org_config_obj)
+	if err != nil {
+		return err
+	}
+
+	return plan.closePlan(ctx, org_config_obj)
 }
 
 func (self Foreman) RunOnce(
@@ -285,27 +284,16 @@ func (self Foreman) RunOnce(
 		if logger != nil {
 			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
 		}
-		plan := NewPlan()
-		err := self.UpdateHuntMembership(ctx, org_config_obj, plan)
+
+		plan, err := NewPlan(org_config_obj)
 		if err != nil {
-			if logger != nil {
-				logger.Error("UpdateHuntMembership, orgId=%v: %v", org_config_obj.OrgId, err)
-			}
 			continue
 		}
 
-		err = self.UpdateMonitoringTable(ctx, org_config_obj, plan)
+		err = self.UpdatePlan(ctx, org_config_obj, plan)
 		if err != nil {
 			if logger != nil {
-				logger.Error("UpdateMonitoringTable, orgId=%v: %v", org_config_obj.OrgId, err)
-			}
-			continue
-		}
-
-		err = plan.Close(ctx, org_config_obj)
-		if err != nil {
-			if logger != nil {
-				logger.Error("Close, orgId=%v: %v", org_config_obj.OrgId, err)
+				logger.Error("UpdatePlan, orgId=%v: %v", org_config_obj.OrgId, err)
 			}
 			continue
 		}
@@ -314,10 +302,17 @@ func (self Foreman) RunOnce(
 	return nil
 }
 
-func (self Foreman) Start(
+func (self *Foreman) Start(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	config_obj *config.Config) error {
+
+	// Run once inline to trap any errors.
+	self.last_run_time = utils.GetTime().Now()
+	err := self.RunOnce(ctx, config_obj.VeloConf())
+	if err != nil {
+		return err
+	}
 
 	wg.Add(1)
 	go func() {
@@ -336,6 +331,7 @@ func (self Foreman) Start(
 				} else {
 					runCounter.Inc()
 				}
+				self.last_run_time = utils.GetTime().Now()
 			}
 		}
 	}()
@@ -346,7 +342,9 @@ func (self Foreman) Start(
 func StartForemanService(ctx context.Context,
 	wg *sync.WaitGroup,
 	config_obj *config.Config) error {
-	return Foreman{}.Start(ctx, wg, config_obj)
+	service := NewForeman()
+
+	return service.Start(ctx, wg, config_obj)
 }
 
 func slice(a []string, length int) []string {
@@ -354,4 +352,29 @@ func slice(a []string, length int) []string {
 		length = len(a)
 	}
 	return a[:length]
+}
+
+// Return true if any of the labels match
+func clientHasLabels(client_info *api.ClientRecord, labels []string) bool {
+	for _, label := range labels {
+		if utils.InString(client_info.LowerLabels, strings.ToLower(label)) {
+			return true
+		}
+	}
+	return false
+}
+
+func huntsContain(hunts []*api_proto.Hunt, hunt_id string) bool {
+	for _, h := range hunts {
+		if h.HuntId == hunt_id {
+			return true
+		}
+	}
+	return false
+}
+
+func NewForeman() *Foreman {
+	return &Foreman{
+		last_run_time: utils.GetTime().Now(),
+	}
 }
