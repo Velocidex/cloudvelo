@@ -17,7 +17,6 @@ import (
 	"errors"
 
 	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 var (
@@ -34,27 +33,8 @@ type DatastoreRecord struct {
 }
 
 func DSPathSpecToRecord(path api.DSPathSpec) (*DatastoreRecord, error) {
-	// Use the tag to figure out what type of path this is. This
-	// allows us to build the correct record.
-	switch path.Tag() {
-
-	// A VFS path represents a VFSListDirectory response.
-	case "VFS":
-		components := path.Components()
-		if len(components) < 4 {
-			return nil, InvalidPath
-		}
-
-		return &DatastoreRecord{
-			ClientId: components[1],
-			Type:     "VFS",
-			VFSPath:  utils.JoinComponents(components[3:], "/"),
-		}, nil
-
-	default:
-		return &DatastoreRecord{
-			Type:    "Generic",
-			VFSPath: path.AsClientPath(),
-		}, nil
-	}
+	return &DatastoreRecord{
+		Type:    "Generic",
+		VFSPath: path.AsClientPath(),
+	}, nil
 }

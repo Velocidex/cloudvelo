@@ -74,7 +74,7 @@ func (self Ingestor) HandleClientInfoUpdates(
 			}}
 		}
 
-		first_seen_at := old_client_info.FirstSeenAt * 1000
+		first_seen_at := old_client_info.FirstSeenAt
 		if first_seen_at == 0 {
 			first_seen_at = uint64(utils.Clock.Now().UnixNano())
 		}

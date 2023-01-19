@@ -39,12 +39,18 @@ func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error
 
 // Async write - same as WriteFileWithCompletion with BackgroundWriter
 func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, error) {
+	part_size := uint64(6000000) // Minimum size is 5mb
+	if self.config_obj.Cloud.S3PartSize > 0 {
+		part_size = self.config_obj.Cloud.S3PartSize
+	}
+
 	result := &S3Writer{
 		key:         PathspecToKey(self.config_obj, filename),
 		path_spec:   filename,
 		config_obj:  self.config_obj,
 		session:     self.session,
 		part_number: 1,
+		part_size:   part_size,
 		ctx:         self.ctx,
 	}
 
