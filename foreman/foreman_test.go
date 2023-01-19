@@ -225,6 +225,9 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	err = plan.ExecuteClientMonitoringUpdate(self.Ctx, config_obj)
 	assert.NoError(self.T(), err)
 
+	err = plan.closePlan(self.Ctx, config_obj)
+	assert.NoError(self.T(), err)
+
 	err = cvelo_services.FlushBulkIndexer()
 	assert.NoError(self.T(), err)
 
@@ -475,10 +478,6 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// Offline client doesn't receive it
 	assert.True(self.T(),
 		!huntPresent("H.EmptyLabels", plan.ClientIdToHunts["C.OfflineClient"]))
-
-	// Close the plan to finish updating the clients
-	err = plan.Close(self.Ctx, config_obj)
-	assert.NoError(self.T(), err)
 
 	// Check the client records
 	client := self.getClientRecord("C.ConnectedClient")
@@ -735,10 +734,6 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 	self.checkPlannedHunts(plan, "C.Windows2", windowsExpected)
 	self.checkPlannedHunts(plan, "C.Linux1", linuxExpected)
 	self.checkPlannedHunts(plan, "C.Linux2", linuxExpected)
-
-	// Close the plan to finish updating the clients
-	err = plan.Close(self.Ctx, config_obj)
-	assert.NoError(self.T(), err)
 
 	self.checkAssignedHunts("C.Windows1", windowsExpected)
 	self.checkAssignedHunts("C.Windows2", windowsExpected)

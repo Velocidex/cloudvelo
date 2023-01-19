@@ -257,7 +257,12 @@ func (self Foreman) UpdatePlan(
 		return err
 	}
 
-	return plan.ExecuteClientMonitoringUpdate(ctx, org_config_obj)
+	err = plan.ExecuteClientMonitoringUpdate(ctx, org_config_obj)
+	if err != nil {
+		return err
+	}
+
+	return plan.closePlan(ctx, org_config_obj)
 }
 
 func (self Foreman) RunOnce(
@@ -279,22 +284,16 @@ func (self Foreman) RunOnce(
 		if logger != nil {
 			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
 		}
+
 		plan, err := NewPlan(org_config_obj)
 		if err != nil {
 			continue
 		}
+
 		err = self.UpdatePlan(ctx, org_config_obj, plan)
 		if err != nil {
 			if logger != nil {
 				logger.Error("UpdatePlan, orgId=%v: %v", org_config_obj.OrgId, err)
-			}
-			continue
-		}
-
-		err = plan.Close(ctx, org_config_obj)
-		if err != nil {
-			if logger != nil {
-				logger.Error("Close, orgId=%v: %v", org_config_obj.OrgId, err)
 			}
 			continue
 		}

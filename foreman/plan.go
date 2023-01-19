@@ -65,6 +65,8 @@ type Plan struct {
 	// Mapping beterrn unique update key and list of clients.
 	MonitoringTablesToClients map[string][]string
 
+	clientAssignedHunts map[string]*api.ClientRecord
+
 	current_monitoring_state *flows_proto.ClientEventTable
 }
 
@@ -225,46 +227,54 @@ func (self *Plan) ExecuteHuntUpdate(
 func (self *Plan) updateAssignedHunts(
 	config_obj *config_proto.Config,
 	client_ids []string, hunt_id string) {
+
 	for _, client_id := range client_ids {
 		client_record, pres := self.ClientIdToClientRecords[client_id]
 		if !pres {
 			continue
 		}
 
-		client_record.AssignedHunts = append(client_record.AssignedHunts, hunt_id)
+		if !utils.InString(client_record.AssignedHunts, hunt_id) {
+			client_record.AssignedHunts = append(
+				client_record.AssignedHunts, hunt_id)
+		}
 
-		cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "clients",
-			client_id+"_hunts", &api.ClientRecord{
-				ClientId:              client_id,
-				AssignedHunts:         client_record.AssignedHunts,
-				LastEventTableVersion: client_record.LastEventTableVersion,
-				LastHuntTimestamp:     client_record.LastHuntTimestamp,
-			})
+		self.clientAssignedHunts[client_id] = &api.ClientRecord{
+			ClientId:              client_id,
+			AssignedHunts:         client_record.AssignedHunts,
+			LastEventTableVersion: client_record.LastEventTableVersion,
+			LastHuntTimestamp:     client_record.LastHuntTimestamp,
+		}
 	}
 }
 
 func (self *Plan) updateLastEventTimestamp(
 	config_obj *config_proto.Config, client_ids []string) {
+
 	for _, client_id := range client_ids {
 		client_record, pres := self.ClientIdToClientRecords[client_id]
 		if !pres {
 			continue
 		}
 
-		cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "clients",
-			client_id+"_hunts", &api.ClientRecord{
-				ClientId:              client_id,
-				AssignedHunts:         client_record.AssignedHunts,
-				LastEventTableVersion: client_record.LastEventTableVersion,
-				LastHuntTimestamp:     client_record.LastHuntTimestamp,
-			})
+		self.clientAssignedHunts[client_id] = &api.ClientRecord{
+			ClientId:              client_id,
+			AssignedHunts:         client_record.AssignedHunts,
+			LastEventTableVersion: client_record.LastEventTableVersion,
+			LastHuntTimestamp:     client_record.LastHuntTimestamp,
+		}
 	}
 }
 
 // Update all affected clients' timestamp to ensure next query we do
 // not select them again.
-func (self *Plan) Close(ctx context.Context,
+func (self *Plan) closePlan(ctx context.Context,
 	org_config_obj *config_proto.Config) error {
+
+	for client_id, record := range self.clientAssignedHunts {
+		cvelo_services.SetElasticIndexAsync(org_config_obj.OrgId, "clients",
+			client_id+"_hunts", record)
+	}
 	return nil
 }
 
@@ -281,6 +291,7 @@ func NewPlan(config_obj *config_proto.Config) (*Plan, error) {
 		ClientIdToClientRecords:   make(map[string]*api.ClientRecord),
 		MonitoringTables:          make(map[string]*crypto_proto.VeloMessage),
 		MonitoringTablesToClients: make(map[string][]string),
+		clientAssignedHunts:       make(map[string]*api.ClientRecord),
 		current_monitoring_state:  client_monitoring_service.GetClientMonitoringState(),
 	}, nil
 }
