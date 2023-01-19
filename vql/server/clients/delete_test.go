@@ -2,7 +2,6 @@ package clients
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 		MockNow: time.Unix(1661391000, 0),
 	}
 
-	clients := []api.ClientInfo{
+	clients := []api.ClientRecord{
 		// This client is currently connected
 		{
 			ClientId:      "C.ConnectedClient",
@@ -111,16 +110,14 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 	// TODO - verify that this client is removed from other indexes
 }
 
-func (self *DeleteTestSuite) getClientRecord(client_id string) *api.ClientInfo {
-	serialized, err := cvelo_services.GetElasticRecord(
-		self.Ctx, self.ConfigObj.OrgId, "clients", client_id)
-	assert.NoError(self.T(), err)
+func (self *DeleteTestSuite) getClientRecord(client_id string) *api.ClientRecord {
+	config_obj := self.ConfigObj.VeloConf()
+	result, err := api.GetMultipleClients(self.Ctx, config_obj, []string{client_id})
+	if err != nil || len(result) == 0 {
+		return nil
+	}
 
-	result := &api.ClientInfo{}
-	err = json.Unmarshal(serialized, &result)
-	assert.NoError(self.T(), err)
-
-	return result
+	return result[0]
 }
 
 func TestDeletePlugin(t *testing.T) {

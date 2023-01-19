@@ -3,19 +3,15 @@ package foreman
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/protobuf/proto"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/constants"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
-	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -115,55 +111,4 @@ func labelsKey(labels []string, state *flows_proto.ClientEventTable) string {
 	}
 
 	return strings.Join(result, "|")
-}
-
-func (self Foreman) CalculateEventTable(
-	ctx context.Context,
-	org_config_obj *config_proto.Config, plan *Plan) error {
-
-	client_monitoring_service, err := services.ClientEventManager(org_config_obj)
-	if err != nil {
-		return err
-	}
-
-	state := client_monitoring_service.GetClientMonitoringState()
-
-	eventsCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(state.Artifacts.Specs)))
-	eventsByLabelCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(state.LabelEvents)))
-
-	// When do we need to update the client's monitoring table:
-	// 1. The client was recently seen
-	// 2. Any of its labels were changed since the last update
-	// 3. The event table is newer than the last update time.
-	query := json.Format(clientsNeedingMonitoringTableUpdate,
-		state.Version, Clock.Now().Add(-time.Hour).UnixNano())
-
-	hits_chan, err := cvelo_services.QueryChan(ctx, org_config_obj,
-		1000, org_config_obj.OrgId, "clients",
-		query, "client_id")
-	if err != nil {
-		return err
-	}
-
-	for hit := range hits_chan {
-		client_info := &actions_proto.ClientInfo{}
-		err := json.Unmarshal(hit, client_info)
-		if err != nil {
-			continue
-		}
-
-		key := labelsKey(client_info.Labels, state)
-		_, pres := plan.MonitoringTables[key]
-		if !pres {
-			message := GetClientUpdateEventTableMessage(ctx, org_config_obj,
-				state, client_info.Labels)
-			plan.MonitoringTables[key] = message
-		}
-
-		clients, _ := plan.MonitoringTablesToClients[key]
-		plan.MonitoringTablesToClients[key] = append(clients,
-			client_info.ClientId)
-	}
-
-	return nil
 }

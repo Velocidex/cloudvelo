@@ -18,7 +18,7 @@ func (self Ingestor) HandlePing(
 
 	err := services.SetElasticIndex(ctx,
 		config_obj.OrgId, "clients", message.Source+"_ping",
-		&api.ClientInfo{
+		&api.ClientRecord{
 			ClientId: message.Source,
 			Type:     "ping",
 			Ping:     uint64(utils.Clock.Now().UnixNano()),

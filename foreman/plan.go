@@ -5,14 +5,15 @@ import (
 	"errors"
 
 	"google.golang.org/protobuf/proto"
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
-	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
@@ -37,9 +38,18 @@ const (
 )
 
 type Plan struct {
-	HuntsToClients  map[string][]string
-	HuntsByHuntId   map[string]*api_proto.Hunt
+	// Mapping between hunt id and the list of clients that will be
+	// scheduled in this run.
+	HuntsToClients map[string][]string
+
+	// Lookup of hunt objects for each hunt id
+	HuntsByHuntId map[string]*api_proto.Hunt
+
+	// A mapping between each client id and the list of all hunts to
+	// be scheduled on this client.
 	ClientIdToHunts map[string][]*api_proto.Hunt
+
+	ClientIdToClientRecords map[string]*api.ClientRecord
 
 	// The below is used to manage updating the client monitoring
 	// tables. Client Monitoring applies to label groups. Depending on
@@ -54,6 +64,18 @@ type Plan struct {
 
 	// Mapping beterrn unique update key and list of clients.
 	MonitoringTablesToClients map[string][]string
+
+	current_monitoring_state *flows_proto.ClientEventTable
+}
+
+func (self *Plan) assignClientToHunt(
+	client_info *api.ClientRecord, hunt *api_proto.Hunt) {
+	client_id := client_info.ClientId
+	planned_hunts, _ := self.ClientIdToHunts[client_id]
+	if !huntsContain(planned_hunts, hunt.HuntId) {
+		self.ClientIdToHunts[client_id] = append(planned_hunts, hunt)
+	}
+	self.ClientIdToClientRecords[client_id] = client_info
 }
 
 func (self *Plan) scheduleRequestOnClients(
@@ -136,16 +158,9 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 
 		// Update all the client records to the latest event table
 		// version
-		query := json.Format(updateAllClientEventVersion, clients,
-			Clock.Now().UnixNano())
+		self.updateLastEventTimestamp(org_config_obj, clients)
 
-		err := cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
-			"clients", query)
-		if err != nil {
-			return err
-		}
-
-		err = self.sendMessageToClients(ctx, org_config_obj, message, clients)
+		err := self.sendMessageToClients(ctx, org_config_obj, message, clients)
 		if err != nil {
 			return err
 		}
@@ -161,10 +176,16 @@ func (self *Plan) ExecuteHuntUpdate(
 
 	// Create an inverse mapping from hunts to clients to run on each
 	// hunt: key->hunt id, value->list of client ids
+	self.HuntsToClients = make(map[string][]string)
+
 	for client_id, hunts := range self.ClientIdToHunts {
 		for _, h := range hunts {
 			clients, _ := self.HuntsToClients[h.HuntId]
-			self.HuntsToClients[h.HuntId] = append(clients, client_id)
+
+			// Make a copy
+			if !utils.InString(clients, client_id) {
+				self.HuntsToClients[h.HuntId] = append([]string{client_id}, clients...)
+			}
 			self.HuntsByHuntId[h.HuntId] = h
 		}
 	}
@@ -189,24 +210,55 @@ func (self *Plan) ExecuteHuntUpdate(
 		logger.Info("Scheduling hunt %v on %v clients: %v", hunt.HuntId,
 			len(clients), slice(clients, 10))
 
-		query := json.Format(updateAllClientHuntId, clients, hunt_id,
-			Clock.Now().UnixNano())
+		self.updateAssignedHunts(org_config_obj, clients, hunt.HuntId)
 
-		// Update all the client records to the latest hunt timestamp
-		// and mark them as having executed this hunt.
-		err := cvelo_services.UpdateByQuery(ctx, org_config_obj.OrgId,
-			"clients", query)
-		if err != nil {
-			return err
-		}
-
-		err = self.scheduleRequestOnClients(ctx, org_config_obj, hunt.StartRequest, clients)
+		err := self.scheduleRequestOnClients(
+			ctx, org_config_obj, hunt.StartRequest, clients)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (self *Plan) updateAssignedHunts(
+	config_obj *config_proto.Config,
+	client_ids []string, hunt_id string) {
+	for _, client_id := range client_ids {
+		client_record, pres := self.ClientIdToClientRecords[client_id]
+		if !pres {
+			continue
+		}
+
+		client_record.AssignedHunts = append(client_record.AssignedHunts, hunt_id)
+
+		cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "clients",
+			client_id+"_hunts", &api.ClientRecord{
+				ClientId:              client_id,
+				AssignedHunts:         client_record.AssignedHunts,
+				LastEventTableVersion: client_record.LastEventTableVersion,
+				LastHuntTimestamp:     client_record.LastHuntTimestamp,
+			})
+	}
+}
+
+func (self *Plan) updateLastEventTimestamp(
+	config_obj *config_proto.Config, client_ids []string) {
+	for _, client_id := range client_ids {
+		client_record, pres := self.ClientIdToClientRecords[client_id]
+		if !pres {
+			continue
+		}
+
+		cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "clients",
+			client_id+"_hunts", &api.ClientRecord{
+				ClientId:              client_id,
+				AssignedHunts:         client_record.AssignedHunts,
+				LastEventTableVersion: client_record.LastEventTableVersion,
+				LastHuntTimestamp:     client_record.LastHuntTimestamp,
+			})
+	}
 }
 
 // Update all affected clients' timestamp to ensure next query we do
@@ -216,12 +268,19 @@ func (self *Plan) Close(ctx context.Context,
 	return nil
 }
 
-func NewPlan() *Plan {
+func NewPlan(config_obj *config_proto.Config) (*Plan, error) {
+	client_monitoring_service, err := services.ClientEventManager(config_obj)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Plan{
 		HuntsToClients:            make(map[string][]string),
 		HuntsByHuntId:             make(map[string]*api_proto.Hunt),
 		ClientIdToHunts:           make(map[string][]*api_proto.Hunt),
+		ClientIdToClientRecords:   make(map[string]*api.ClientRecord),
 		MonitoringTables:          make(map[string]*crypto_proto.VeloMessage),
 		MonitoringTablesToClients: make(map[string][]string),
-	}
+		current_monitoring_state:  client_monitoring_service.GetClientMonitoringState(),
+	}, nil
 }
