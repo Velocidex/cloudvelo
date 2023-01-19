@@ -66,6 +66,9 @@ func (self *ForemanTestSuite) SetupTest() {
 }
 
 func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientRecord {
+	err := cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
 	config_obj := self.ConfigObj.VeloConf()
 	result, err := api.GetMultipleClients(self.Ctx, config_obj, []string{client_id})
 	if err != nil || len(result) == 0 {
