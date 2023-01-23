@@ -99,13 +99,13 @@ sources:
 
 	// Ensure the session id is passed to the query itself - this is
 	// required for the upload to work.
-	assert.True(self.T(), len(requests.Items) > 0)
-	assert.NotNil(self.T(), requests.Items[0].VQLClientAction)
-	assert.True(self.T(), len(requests.Items[0].VQLClientAction.Env) > 0)
+	assert.Equal(self.T(), 1, len(requests.Items))
+	assert.NotNil(self.T(), requests.Items[0].FlowRequest)
+	assert.True(self.T(), len(requests.Items[0].FlowRequest.VQLClientActions) > 0)
 	assert.Equal(self.T(), "_SessionId",
-		requests.Items[0].VQLClientAction.Env[0].Key)
+		requests.Items[0].FlowRequest.VQLClientActions[0].Env[0].Key)
 	assert.Equal(self.T(), flow_id,
-		requests.Items[0].VQLClientAction.Env[0].Value)
+		requests.Items[0].FlowRequest.VQLClientActions[0].Env[0].Value)
 
 	// Make sure tasks are scheduled
 	tasks, err := PeekClientTasks(self.Ctx, config_obj, client_id)
