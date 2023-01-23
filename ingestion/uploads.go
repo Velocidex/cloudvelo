@@ -49,7 +49,7 @@ func (self Ingestor) HandleUploads(
 	path_manager := paths.NewFlowPathManager(message.Source, message.SessionId)
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
-		file_store_factory, path_manager.UploadMetadata(), json.NoEncOpts,
+		file_store_factory, path_manager.UploadMetadata(), json.DefaultEncOpts(),
 		utils.BackgroundWriter, result_sets.AppendMode)
 	if err != nil {
 		return err

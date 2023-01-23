@@ -25,22 +25,29 @@ func (self Ingestor) HandleFlowStats(
 
 	msg := message.FlowStats
 
-	stats := api.ArtifactCollectorRecordFromProto(
-		&flows_proto.ArtifactCollectorContext{
-			ClientId:                   message.Source,
-			SessionId:                  message.SessionId,
-			TotalUploadedFiles:         msg.TotalUploadedFiles,
-			TotalExpectedUploadedBytes: msg.TotalExpectedUploadedBytes,
-			TotalUploadedBytes:         msg.TotalUploadedBytes,
-			TotalCollectedRows:         msg.TotalCollectedRows,
-			TotalLogs:                  msg.TotalLogs,
-			ActiveTime:                 msg.Timestamp,
-			QueryStats:                 msg.QueryStatus,
-		})
+	collector_context := &flows_proto.ArtifactCollectorContext{
+		ClientId:                   message.Source,
+		SessionId:                  message.SessionId,
+		TotalUploadedFiles:         msg.TotalUploadedFiles,
+		TotalExpectedUploadedBytes: msg.TotalExpectedUploadedBytes,
+		TotalUploadedBytes:         msg.TotalUploadedBytes,
+		TotalCollectedRows:         msg.TotalCollectedRows,
+		TotalLogs:                  msg.TotalLogs,
+		ActiveTime:                 msg.Timestamp,
+		QueryStats:                 msg.QueryStatus,
+	}
+	stats := api.ArtifactCollectorRecordFromProto(collector_context)
 	stats.Type = "stats"
 
-	// Urgent requests are UI driven so need to hit the DB quickly.
-	return services.SetElasticIndex(ctx,
+	// The status needs to hit the DB quickly, so the GUI can show
+	// progress as the collection is received. The bulk data is still
+	// stored asyncronously.
+	err := services.SetElasticIndex(ctx,
 		config_obj.OrgId, "collections",
 		message.SessionId+"_stats", stats)
+	if err != nil {
+		return err
+	}
+
+	return self.maybeHandleHuntFlowStats(ctx, config_obj, collector_context)
 }

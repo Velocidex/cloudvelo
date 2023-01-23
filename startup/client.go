@@ -33,10 +33,10 @@ func StartClientServices(
 		config_obj.Frontend = &config_proto.FrontendConfig{}
 	}
 
-	if config_obj.Frontend.ServerServices == nil {
-		config_obj.Frontend.ServerServices = services.ClientServicesSpec()
-		config_obj.Frontend.ServerServices.Launcher = true
-		config_obj.Frontend.ServerServices.RepositoryManager = true
+	if config_obj.Services == nil {
+		config_obj.Services = services.ClientServicesSpec()
+		config_obj.Services.Launcher = true
+		config_obj.Services.RepositoryManager = true
 	}
 
 	// Make sure the config crypto is ok.

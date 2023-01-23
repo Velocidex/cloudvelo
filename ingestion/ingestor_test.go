@@ -286,7 +286,8 @@ func (self *IngestionTestSuite) TearDownTest() {
 func TestIngestor(t *testing.T) {
 	suite.Run(t, &IngestionTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients", "client_keys", "results", "vfs", "collections"},
+			Indexes: []string{"clients", "client_keys",
+				"results", "vfs", "collections", "hunt_flows"},
 		},
 	})
 }

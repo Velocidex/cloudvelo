@@ -7,50 +7,33 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
-	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 
 	"www.velocidex.com/golang/velociraptor/services/server_artifacts"
 )
 
-type ServerArtifactsService struct {
-	ctx context.Context
-	wg  *sync.WaitGroup
+type ServerArtifactsRunner struct {
+	*server_artifacts.ServerArtifactsRunner
+
+	ctx        context.Context
+	wg         *sync.WaitGroup
+	config_obj *config_proto.Config
 }
 
-func (self ServerArtifactsService) LaunchServerArtifact(
+// Run the specified server collection in the background
+func (self *ServerArtifactsRunner) LaunchServerArtifact(
 	config_obj *config_proto.Config,
-	collection_context *flows_proto.ArtifactCollectorContext,
-	tasks []*crypto_proto.VeloMessage) error {
+	session_id string,
+	req *crypto_proto.FlowRequest) error {
 
-	if len(tasks) == 0 {
+	if len(req.VQLClientActions) == 0 {
 		return nil
 	}
-
-	runner := server_artifacts.NewServerArtifactRunner(config_obj)
 
 	self.wg.Add(1)
 	go func() {
 		defer self.wg.Done()
 
-		collection_context_manager, err := NewCollectionContextManager(
-			self.ctx, config_obj, collection_context)
-		if err != nil {
-			return
-		}
-
-		logger, err := server_artifacts.NewServerLogger(self.ctx,
-			collection_context_manager, config_obj, collection_context.SessionId)
-		if err != nil {
-			return
-		}
-
-		for _, task := range tasks {
-			runner.ProcessTask(
-				self.ctx, config_obj, task, collection_context_manager, logger)
-		}
-
-		collection_context_manager.Close()
-		logger.Close()
+		self.ProcessTask(self.ctx, config_obj, session_id, req)
 	}()
 
 	return nil
@@ -58,10 +41,15 @@ func (self ServerArtifactsService) LaunchServerArtifact(
 
 func NewServerArtifactService(
 	ctx context.Context,
+	config_obj *config_proto.Config,
 	wg *sync.WaitGroup) services.ServerArtifactsService {
 
-	return &ServerArtifactsService{
-		ctx: ctx,
-		wg:  wg,
+	// Start a server_artifacts runner without checking the tasks
+	// queues.
+	return &ServerArtifactsRunner{
+		ServerArtifactsRunner: server_artifacts.NewServerArtifactRunner(config_obj),
+		config_obj:            config_obj,
+		ctx:                   ctx,
+		wg:                    wg,
 	}
 }

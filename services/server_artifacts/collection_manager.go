@@ -10,16 +10,17 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
+	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/paths"
-	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/server_artifacts"
 )
 
 type contextManager struct {
-	context      *flows_proto.ArtifactCollectorContext
 	mu           sync.Mutex
 	config_obj   *config_proto.Config
 	path_manager *paths.FlowPathManager
+	session_id   string
+	context      *flows_proto.ArtifactCollectorContext
 	cancel       func()
 
 	ctx context.Context
@@ -28,15 +29,18 @@ type contextManager struct {
 func NewCollectionContextManager(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	collection_context *flows_proto.ArtifactCollectorContext) (
+	session_id string) (
 	server_artifacts.CollectionContextManager, error) {
 
 	sub_ctx, cancel := context.WithCancel(ctx)
 	self := &contextManager{
 		config_obj: config_obj,
 		cancel:     cancel,
-		context:    collection_context,
-		ctx:        sub_ctx,
+		context: &flows_proto.ArtifactCollectorContext{
+			ClientId:  "server",
+			SessionId: session_id,
+		},
+		ctx: sub_ctx,
 	}
 
 	// Write collection context periodically to disk so the
@@ -47,7 +51,12 @@ func NewCollectionContextManager(
 }
 
 func (self *contextManager) Close() {
-	self.Save()
+	err := self.Save()
+	if err != nil {
+		logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+		logger.Error("ServerArtifactsRunner: %v", err)
+	}
+
 	self.cancel()
 }
 
@@ -72,7 +81,11 @@ func (self *contextManager) StartRefresh(ctx context.Context) {
 				if self.context.State != 1 {
 					return
 				}
-				self.Save()
+				err := self.Save()
+				if err != nil {
+					logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+					logger.Error("ServerArtifactsRunner: %v", err)
+				}
 			}
 		}
 	}()
@@ -87,21 +100,6 @@ func (self *contextManager) Modify(cb func(context *flows_proto.ArtifactCollecto
 }
 
 func (self *contextManager) Load(context *flows_proto.ArtifactCollectorContext) error {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	launcher, err := services.GetLauncher(self.config_obj)
-	if err != nil {
-		return err
-	}
-
-	details, err := launcher.GetFlowDetails(
-		self.config_obj, context.ClientId, context.SessionId)
-	if err != nil {
-		return err
-	}
-
-	self.context = details.Context
 	return nil
 }
 
@@ -110,22 +108,9 @@ func (self *contextManager) Save() error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	// Ignore collections which are not running.
-	launcher, err := services.GetLauncher(self.config_obj)
-	if err != nil {
-		return err
-	}
-
-	details, err := launcher.GetFlowDetails(
-		self.config_obj, self.context.ClientId,
-		self.context.SessionId)
-	if err == nil && details.Context.Request != nil &&
-		details.Context.State != flows_proto.ArtifactCollectorContext_RUNNING {
-		return nil
-	}
-
 	// Store the collection_context first, then queue all the tasks.
 	return cvelo_services.SetElasticIndex(self.ctx,
-		self.config_obj.OrgId, "collections", self.context.SessionId,
+		self.config_obj.OrgId, "collections",
+		self.context.SessionId+"_stats",
 		api.ArtifactCollectorRecordFromProto(self.context))
 }

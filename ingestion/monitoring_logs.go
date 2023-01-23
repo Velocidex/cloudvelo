@@ -40,7 +40,7 @@ func (self Ingestor) HandleMonitoringLogs(
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(
-		file_store_factory, log_path_manager, json.NoEncOpts,
+		file_store_factory, log_path_manager, json.DefaultEncOpts(),
 		utils.BackgroundWriter)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (self Ingestor) HandleMonitoringResponses(
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(
-		file_store_factory, path_manager, json.NoEncOpts,
+		file_store_factory, path_manager, json.DefaultEncOpts(),
 		utils.BackgroundWriter)
 	if err != nil {
 		return err
