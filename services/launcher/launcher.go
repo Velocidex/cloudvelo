@@ -19,6 +19,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
+	"www.velocidex.com/golang/velociraptor/utils"
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 )
 
@@ -104,8 +105,13 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 
 	// Compile all the requests into specific tasks to be sent to the
 	// client.
-	tasks := []*crypto_proto.VeloMessage{}
-	for id, arg := range vql_collector_args {
+	task := &crypto_proto.VeloMessage{
+		SessionId:   session_id,
+		RequestId:   constants.ProcessVQLResponses,
+		FlowRequest: &crypto_proto.FlowRequest{},
+	}
+
+	for _, arg := range vql_collector_args {
 		// If sending to the server record who actually launched this.
 		if client_id == "server" {
 			arg.Principal = collector_request.Creator
@@ -117,20 +123,13 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 			Value: session_id,
 		})
 
-		// The task we will schedule for the client.
-		task := &crypto_proto.VeloMessage{
-			QueryId:         uint64(id),
-			SessionId:       session_id,
-			RequestId:       constants.ProcessVQLResponses,
-			VQLClientAction: arg,
-		}
-
 		// Send an urgent request to the client.
 		if collector_request.Urgent {
 			task.Urgent = true
 		}
 
-		tasks = append(tasks, task)
+		task.FlowRequest.VQLClientActions = append(
+			task.FlowRequest.VQLClientActions, arg)
 	}
 
 	// Generate a new collection context for this flow.
@@ -143,14 +142,16 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		TotalUploadedFiles:   0,
 		TotalUploadedBytes:   0,
 		ArtifactsWithResults: []string{},
-		TotalRequests:        int64(len(tasks)),
-		OutstandingRequests:  int64(len(tasks)),
+		TotalRequests:        int64(len(vql_collector_args)),
+		OutstandingRequests:  int64(len(vql_collector_args)),
 	}
 
 	record := api.ArtifactCollectorRecordFromProto(collection_context)
-	record.Tasks = json.MustMarshalString(tasks)
+	record.Tasks = json.MustMarshalString([]*crypto_proto.VeloMessage{task})
 
 	// Store the collection_context first, then queue all the tasks.
+	// This must be set synchronously because the server artifact
+	// collector will read it back out below.
 	err := cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId, "collections", session_id, record)
 	if err != nil {
@@ -163,7 +164,7 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 			return "", err
 		}
 		err = server_artifacts_service.LaunchServerArtifact(
-			config_obj, collection_context, tasks)
+			config_obj, session_id, task.FlowRequest)
 		return collection_context.SessionId, err
 	}
 
@@ -173,8 +174,9 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		return "", err
 	}
 
-	client_info_manager.QueueMessagesForClient(
-		ctx, client_id, tasks, true /* notify */)
+	client_info_manager.QueueMessageForClient(
+		ctx, client_id, task,
+		services.NOTIFY_CLIENT, utils.BackgroundWriter)
 
 	return collection_context.SessionId, nil
 }

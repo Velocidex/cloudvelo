@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -30,7 +29,7 @@ func (self Ingestor) HandleLogs(
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
-		file_store_factory, log_path_manager, json.NoEncOpts,
+		file_store_factory, log_path_manager, json.DefaultEncOpts(),
 		utils.BackgroundWriter, result_sets.AppendMode)
 	if err != nil {
 		return err
@@ -48,9 +47,7 @@ func (self Ingestor) HandleLogs(
 		}
 	}
 
-	payload := string(json.AppendJsonlItem([]byte(msg.Jsonl), "_ts",
-		cvelo_utils.Clock.Now().UTC().Unix()))
-
+	payload := msg.Jsonl
 	rs_writer.WriteJSONL([]byte(payload), uint64(msg.NumberOfRows))
 
 	return nil

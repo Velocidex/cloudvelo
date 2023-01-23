@@ -53,7 +53,7 @@ func (self Ingestor) HandleResponses(
 	pathspec := getFSPathSpec(message, message.VQLResponse.Query.Name)
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(
-		file_store_factory, pathspec, json.NoEncOpts,
+		file_store_factory, pathspec, json.DefaultEncOpts(),
 		write_mode, result_sets.AppendMode)
 	if err != nil {
 		return err

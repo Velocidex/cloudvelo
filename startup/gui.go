@@ -27,8 +27,8 @@ func StartGUIServices(
 	if config_obj.Frontend == nil {
 		config_obj.Frontend = &config_proto.FrontendConfig{}
 	}
-	if config_obj.Frontend.ServerServices == nil {
-		config_obj.Frontend.ServerServices = &config_proto.ServerServicesConfig{
+	if config_obj.Services == nil {
+		config_obj.Services = &config_proto.ServerServicesConfig{
 			GuiServer:           true,
 			ClientInfo:          true,
 			JournalService:      true,
@@ -54,7 +54,8 @@ func StartGUIServices(
 	}
 
 	cvelo_services.RegisterServerArtifactsService(
-		server_artifacts.NewServerArtifactService(sm.Ctx, sm.Wg))
+		server_artifacts.NewServerArtifactService(
+			sm.Ctx, config_obj.VeloConf(), sm.Wg))
 
 	// Start the listening server
 	server_builder, err := api.NewServerBuilder(

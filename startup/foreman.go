@@ -20,8 +20,8 @@ func StartForeman(
 	if config_obj.Frontend == nil {
 		config_obj.Frontend = &config_proto.FrontendConfig{}
 	}
-	if config_obj.Frontend.ServerServices == nil {
-		config_obj.Frontend.ServerServices = &config_proto.ServerServicesConfig{
+	if config_obj.Services == nil {
+		config_obj.Services = &config_proto.ServerServicesConfig{
 			ClientInfo:        true,
 			RepositoryManager: true,
 			Launcher:          true,
