@@ -32,7 +32,7 @@ Client:
   writeback_linux: /tmp/velociraptor.writeback.yaml
   writeback_windows: $ProgramFiles\Velociraptor\velociraptor.writeback.yaml
   min_poll: 2
-  max_poll: 60
+  max_poll: 10
   windows_installer:
     service_name: Velociraptor
     install_path: $ProgramFiles\Velociraptor\Velociraptor.exe
