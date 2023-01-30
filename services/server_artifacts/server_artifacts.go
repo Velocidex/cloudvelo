@@ -29,11 +29,21 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 		return nil
 	}
 
+	sub_ctx, cancel := context.WithCancel(self.ctx)
+	collection_context, err := server_artifacts.NewCollectionContextManager(
+		sub_ctx, self.config_obj, "server", session_id)
+	if err != nil {
+		return err
+	}
+
 	self.wg.Add(1)
 	go func() {
 		defer self.wg.Done()
+		defer cancel()
+		defer collection_context.Save()
 
-		self.ProcessTask(self.ctx, config_obj, session_id, req)
+		self.ProcessTask(self.ctx, config_obj,
+			session_id, collection_context, req)
 	}()
 
 	return nil
@@ -47,9 +57,10 @@ func NewServerArtifactService(
 	// Start a server_artifacts runner without checking the tasks
 	// queues.
 	return &ServerArtifactsRunner{
-		ServerArtifactsRunner: server_artifacts.NewServerArtifactRunner(config_obj),
-		config_obj:            config_obj,
-		ctx:                   ctx,
-		wg:                    wg,
+		ServerArtifactsRunner: server_artifacts.NewServerArtifactRunner(
+			ctx, config_obj, wg),
+		config_obj: config_obj,
+		ctx:        ctx,
+		wg:         wg,
 	}
 }
