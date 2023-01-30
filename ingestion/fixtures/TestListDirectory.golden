@@ -83,10 +83,9 @@
    "client_id": "C.77ad4285690698d9",
    "session_id": "F.CEV6I8LHAT83O",
    "create_time": 1661391000000000000,
-   "active_time": 1673423174265325,
    "total_collected_rows": 2,
    "total_logs": 14,
-   "outstanding_requests": -3,
+   "total_requests": 3,
    "execution_duration": 1044251143,
    "state": 2,
    "artifacts_with_results": [

@@ -181,6 +181,18 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	return collection_context.SessionId, nil
 }
 
+func (self *Launcher) WriteFlow(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	flow *flows_proto.ArtifactCollectorContext) error {
+
+	// Store the collection_context first, then queue all the tasks.
+	return cvelo_services.SetElasticIndex(ctx,
+		config_obj.OrgId, "collections",
+		flow.SessionId+"_stats",
+		api.ArtifactCollectorRecordFromProto(flow))
+}
+
 func (self *Launcher) GetFlowRequests(
 	config_obj *config_proto.Config,
 	client_id string, flow_id string,
