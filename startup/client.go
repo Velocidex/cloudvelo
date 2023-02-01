@@ -150,5 +150,6 @@ func initializeEventTable(
 			}
 		}
 	}()
+
 	return nil
 }

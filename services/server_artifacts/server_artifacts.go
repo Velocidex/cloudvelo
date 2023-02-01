@@ -31,7 +31,10 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 
 	sub_ctx, cancel := context.WithCancel(self.ctx)
 	collection_context, err := server_artifacts.NewCollectionContextManager(
-		sub_ctx, self.config_obj, "server", session_id)
+		sub_ctx, self.wg, self.config_obj, &crypto_proto.VeloMessage{
+			Source:    "server",
+			SessionId: session_id,
+		})
 	if err != nil {
 		return err
 	}
@@ -42,7 +45,7 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 		defer cancel()
 		defer collection_context.Save()
 
-		self.ProcessTask(self.ctx, config_obj,
+		self.ProcessTask(config_obj,
 			session_id, collection_context, req)
 	}()
 

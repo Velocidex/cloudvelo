@@ -277,12 +277,12 @@ Cloud:
   # S3 details for uploads.
   bucket: velociraptor
   # Endpoint for s3 emulation.
-  endpoint: "https://127.0.0.1:4566/"
+  endpoint: "http://127.0.0.1:4566/"
   # Alternaive proxy endpoint for protocol inspection.
   #endpoint: "http://localhost:9999/"
   aws_region: "us-east-1"
-  credentials_key: test
-  credentials_secret: test
+  credentials_key: admin
+  credentials_secret: password
   no_verify_cert: true
   foreman_interval_seconds: 5
 `
