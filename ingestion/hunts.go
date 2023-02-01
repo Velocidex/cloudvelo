@@ -11,7 +11,6 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
-	"www.velocidex.com/golang/velociraptor/services/launcher"
 )
 
 func (self Ingestor) maybeHandleHuntResponse(
@@ -51,6 +50,29 @@ func (self Ingestor) maybeHandleHuntResponse(
 	return nil
 }
 
+func calcFlowOutcome(collection_context *flows_proto.ArtifactCollectorContext) (
+	failed, completed bool) {
+
+	for _, s := range collection_context.QueryStats {
+		switch s.Status {
+
+		// Flow is not completed as one of the queries is still
+		// running.
+		case crypto_proto.VeloStatus_PROGRESS:
+			return false, false
+
+			// Flow failed by it may still be running.
+		case crypto_proto.VeloStatus_GENERIC_ERROR:
+			failed = true
+
+			// This query is ok
+		case crypto_proto.VeloStatus_OK:
+		}
+	}
+
+	return failed, true
+}
+
 // When a collection is completed and the collection is part of the
 // hunt we need to update the hunt's collection list and stats.
 func (self Ingestor) maybeHandleHuntFlowStats(
@@ -66,15 +88,15 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 
 	hunt_id := "H." + parts[1]
 
-	// Figure out if an error occurs
-	launcher.UpdateFlowStats(collection_context)
+	failed, completed := calcFlowOutcome(collection_context)
 
-	// An error occured - change the hunt status to error.
-	if collection_context.State == flows_proto.ArtifactCollectorContext_RUNNING {
+	// Ignore messages for incompleted flows
+	if !completed {
 		return nil
 	}
 
-	if collection_context.State == flows_proto.ArtifactCollectorContext_ERROR {
+	// Increment the failed flow counter
+	if failed {
 		ingestor_services.HuntStatsManager.Update(hunt_id).IncError()
 		hunt_flow_entry := &hunt_dispatcher.HuntFlowEntry{
 			HuntId:    hunt_id,
