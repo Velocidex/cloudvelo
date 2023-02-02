@@ -180,7 +180,6 @@ require (
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
-
 //replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
