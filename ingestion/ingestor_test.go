@@ -63,6 +63,9 @@ type IngestionTestSuite struct {
 
 func (self *IngestionTestSuite) ingestGoldenMessages(
 	ctx context.Context, ingestor *Ingestor, prefix string) {
+	closer := utils.MockTime(&utils.MockClock{MockNow: time.Unix(10, 10)})
+	defer closer()
+
 	files, err := testdata.FS.ReadDir(prefix)
 	assert.NoError(self.T(), err)
 
@@ -102,18 +105,18 @@ func (self *IngestionTestSuite) TestEnrollment() {
 	// Replay the Client.Info.Updates monitoring messages these should
 	// create a new client record (This is the equivalent of the old
 	// interrogation flow but happens automatically now).
-	self.ingestGoldenMessages(self.ctx, self.ingestor, "Client.Info.Updates")
+	self.ingestGoldenMessages(self.ctx, self.ingestor, "Server.Internal.ClientInfo")
 
 	config_obj := self.ConfigObj.VeloConf()
 	result, err := api.GetMultipleClients(self.ctx, config_obj, []string{client_id})
 	assert.NoError(self.T(), err)
 	self.golden.Set("ClientRecord", result[0])
 
-	// We do not record any results though.
+	// Record results in monitoring data.
 	records, err := cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
-	assert.Equal(self.T(), 0, len(records))
+	assert.Equal(self.T(), 1, len(records))
 
 	goldie.Assert(self.T(), "TestEnrollment",
 		json.MustMarshalIndent(self.golden))

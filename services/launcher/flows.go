@@ -26,6 +26,8 @@ const getFlowsQuery = `
 {
   "sort": [{
     "type": {"order": "asc"}
+  }, {
+    "timestamp": {"order": "asc"}
   }],
   "query": {
      "match": {"client_id" : %q}
@@ -96,7 +98,10 @@ func (self Launcher) GetFlows(
 
 const getFlowDetailsQuery = `
 {
-  "sort": [{"type": {"order": "asc"}}],
+  "sort": [
+   {"type": {"order": "asc"}},
+   {"timestamp": {"order": "asc"}}
+  ],
   "query": {
      "bool": {
        "must": [

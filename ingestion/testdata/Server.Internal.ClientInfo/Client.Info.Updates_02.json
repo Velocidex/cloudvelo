@@ -1,0 +1,16 @@
+{
+ "session_id": "F.Monitoring",
+ "response_id": 1663868441242263337,
+ "source": "C.1352adc54e292a23",
+ "auth_state": 1,
+ "VQLResponse": {
+  "JSONLResponse": "{\"hostname\":\"devbox\",\"fqdn\":\"devbox\",\"system\":\"linux\",\"release\":\"ubuntu\",\"architecture\":\"amd64\",\"client_version\":\"0.6.8-dev\",\"client_name\":\"velociraptor\",\"build_time\":\"2023-02-02T12:13:03+10:00\"}\n",
+  "query_id": 2,
+  "Query": {
+   "Name": "Server.Internal.ClientInfo",
+   "VQL": "SELECT * FROM Client_Info_Updates_0_1"
+  },
+  "timestamp": 1663868441242201,
+  "total_rows": 1
+ }
+}

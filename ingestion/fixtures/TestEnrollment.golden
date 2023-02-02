@@ -6,18 +6,10 @@
  "ClientRecord": {
   "client_id": "C.1352adc54e292a23",
   "hostname": "devbox",
-  "system": "linux",
-  "first_seen_at": 1661391002000000000,
+  "system": "",
+  "first_seen_at": 1661391004000000000,
   "ping": 0,
-  "mac_addresses": [
-   "00:0c:29:e3:53:83",
-   "02:42:69:c1:eb:25",
-   "02:42:bc:9a:b8:6e",
-   "02:42:fb:7e:19:f7",
-   "f2:c2:0a:5f:03:f1",
-   "26:1d:10:c6:51:06",
-   "8e:7d:7d:50:5a:00"
-  ],
+  "mac_addresses": null,
   "assigned_hunts": null,
   "last_hunt_timestamp": 0,
   "last_event_table_version": 0,

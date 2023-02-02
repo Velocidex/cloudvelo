@@ -16,6 +16,7 @@ type ArtifactCollectorRecord struct {
 	Raw       string `json:"context"`
 	Tasks     string `json:"tasks"`
 	Type      string `json:"type"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func (self *ArtifactCollectorRecord) ToProto() (
