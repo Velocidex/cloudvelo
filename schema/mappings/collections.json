@@ -6,7 +6,8 @@
             "session_id":          { "type": "keyword" },
             "raw":                 { "type": "binary" },
             "tasks":               { "type": "binary" },
-            "type":                { "type": "keyword" }
+            "type":                { "type": "keyword" },
+            "timestamp":           { "type": "keyword" }
         }
     }
 }

@@ -20,7 +20,7 @@ restart: down
 clean:
 	rm -f .localstack/data/*
 	docker kill localstack opensearch velociraptor-client velociraptor-frontend velociraptor-gui velociraptor-foreman || true
-	docker container rm velociraptor-foreman velociraptor-frontend velociraptor-gui localstack opensearch velociraptor-client
+	docker container rm velociraptor-foreman velociraptor-frontend velociraptor-gui localstack opensearch velociraptor-client || true
 	docker volume rm docker_opensearch-data
 
 bucket:

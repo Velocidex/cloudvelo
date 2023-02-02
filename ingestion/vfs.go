@@ -10,6 +10,7 @@ import (
 	cvelo_vfs_service "www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
+	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -47,12 +48,15 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 		components := append([]string{message.Source, accessor}, row.Components...)
 		id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
-		stats := row.Stats
-		stats.Timestamp = uint64(cvelo_utils.Clock.Now().Unix())
-		stats.ClientId = message.Source
-		stats.FlowId = message.SessionId
-		stats.TotalRows = stats.EndIdx - stats.StartIdx
-		stats.Artifact = "System.VFS.ListDirectory/Listing"
+		stats := &api_proto.VFSListResponse{
+			Timestamp: uint64(cvelo_utils.Clock.Now().Unix()),
+			ClientId:  message.Source,
+			FlowId:    message.SessionId,
+			TotalRows: row.Stats.EndIdx - row.Stats.StartIdx,
+			Artifact:  "System.VFS.ListDirectory/Listing",
+			StartIdx:  row.Stats.StartIdx,
+			EndIdx:    row.Stats.EndIdx,
+		}
 
 		record := &cvelo_vfs_service.VFSRecord{
 			Id:         id,

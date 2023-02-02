@@ -72,7 +72,7 @@ func (self Ingestor) HandleMonitoringResponses(
 	switch message.VQLResponse.Query.Name {
 
 	// Automatically interrogate this client.
-	case "Client.Info.Updates":
+	case "Server.Internal.ClientInfo":
 		return self.HandleClientInfoUpdates(ctx, message)
 	}
 

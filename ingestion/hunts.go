@@ -78,7 +78,8 @@ func calcFlowOutcome(collection_context *flows_proto.ArtifactCollectorContext) (
 func (self Ingestor) maybeHandleHuntFlowStats(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	collection_context *flows_proto.ArtifactCollectorContext) error {
+	collection_context *flows_proto.ArtifactCollectorContext,
+	failed, completed bool) error {
 
 	// Hunt responses have special SessionId like "F.1234.H.1234"
 	parts := strings.Split(collection_context.SessionId, ".H.")
@@ -87,8 +88,6 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 	}
 
 	hunt_id := "H." + parts[1]
-
-	failed, completed := calcFlowOutcome(collection_context)
 
 	// Ignore messages for incompleted flows
 	if !completed {
