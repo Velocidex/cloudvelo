@@ -6,9 +6,9 @@
  "auth_state": 1,
  "LogMessage": {
   "id": 1,
-  "message": "Time 0: Client.Info.Updates: Sending response part 0 401 B (1 rows).",
+  "message": "Time 0: Server.Internal.ClientInfo: Sending response part 0 401 B (1 rows).",
   "timestamp": 1663868441242222,
-  "artifact": "Client.Info.Updates",
+  "artifact": "Server.Internal.ClientInfo",
   "level": "DEFAULT"
  }
 }
