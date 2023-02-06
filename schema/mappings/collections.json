@@ -7,7 +7,7 @@
             "raw":                 { "type": "binary" },
             "tasks":               { "type": "binary" },
             "type":                { "type": "keyword" },
-            "timestamp":           { "type": "keyword" }
+            "timestamp":           { "type": "long" }
         }
     }
 }
