@@ -59,8 +59,8 @@ func (self *ForemanTestSuite) SetupTest() {
 	assert.NoError(self.T(), err)
 
 	for _, definition := range artifact_definitions {
-		_, err = repository_manager.SetArtifactFile(config_obj, "admin",
-			definition, "")
+		_, err = repository_manager.SetArtifactFile(
+			self.Ctx, config_obj, "admin", definition, "")
 		assert.NoError(self.T(), err)
 	}
 }
