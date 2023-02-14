@@ -81,6 +81,11 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 	collection_context *flows_proto.ArtifactCollectorContext,
 	failed, completed bool) error {
 
+	// Ignore messages for incompleted flows
+	if !completed {
+		return nil
+	}
+
 	// Hunt responses have special SessionId like "F.1234.H.1234"
 	parts := strings.Split(collection_context.SessionId, ".H.")
 	if len(parts) == 1 {
@@ -89,38 +94,14 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 
 	hunt_id := "H." + parts[1]
 
-	// Ignore messages for incompleted flows
-	if !completed {
-		return nil
-	}
-
 	// Increment the failed flow counter
 	if failed {
 		ingestor_services.HuntStatsManager.Update(hunt_id).IncError()
-		hunt_flow_entry := &hunt_dispatcher.HuntFlowEntry{
-			HuntId:    hunt_id,
-			ClientId:  collection_context.ClientId,
-			FlowId:    collection_context.SessionId,
-			Timestamp: utils.Clock.Now().Unix(),
-			Status:    "error",
-		}
+	} else {
 
-		return services.SetElasticIndex(ctx,
-			config_obj.OrgId, "hunt_flows",
-			collection_context.SessionId, hunt_flow_entry)
+		// This collection is done, update the hunt status.
+		ingestor_services.HuntStatsManager.Update(hunt_id).IncCompleted()
 	}
 
-	// This collection is done, update the hunt status.
-	ingestor_services.HuntStatsManager.Update(hunt_id).IncCompleted()
-	hunt_flow_entry := &hunt_dispatcher.HuntFlowEntry{
-		HuntId:    hunt_id,
-		ClientId:  collection_context.ClientId,
-		FlowId:    collection_context.SessionId,
-		Timestamp: utils.Clock.Now().Unix(),
-		Status:    "finished",
-	}
-
-	return services.SetElasticIndex(ctx,
-		config_obj.OrgId, "hunt_flows",
-		collection_context.SessionId, hunt_flow_entry)
+	return nil
 }

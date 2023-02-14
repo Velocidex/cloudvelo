@@ -9,7 +9,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
-func (self HuntDispatcher) ModifyHuntObject(hunt_id string,
+func (self HuntDispatcher) ModifyHuntObject(ctx context.Context, hunt_id string,
 	cb func(hunt *api_proto.Hunt) services.HuntModificationAction,
 ) services.HuntModificationAction {
 
@@ -34,7 +34,7 @@ func (self *HuntDispatcher) ModifyHunt(
 	hunt_modification *api_proto.Hunt,
 	user string) error {
 
-	self.ModifyHuntObject(hunt_modification.HuntId,
+	self.ModifyHuntObject(ctx, hunt_modification.HuntId,
 		func(hunt *api_proto.Hunt) services.HuntModificationAction {
 
 			// Is the description changed?

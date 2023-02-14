@@ -45,7 +45,7 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 		defer cancel()
 		defer collection_context.Save()
 
-		self.ProcessTask(config_obj,
+		self.ProcessTask(sub_ctx, config_obj,
 			session_id, collection_context, req)
 	}()
 

@@ -20,7 +20,9 @@ func (self Dummy) Get() *artifacts_proto.ThirdParty {
 	return nil
 }
 
-func (self Dummy) ProbeToolInfo(name string) (*artifacts_proto.Tool, error) {
+func (self Dummy) ProbeToolInfo(
+	ctx context.Context, config_obj *config_proto.Config,
+	name string) (*artifacts_proto.Tool, error) {
 	return nil, notImplementedError
 }
 
@@ -29,7 +31,7 @@ func (self Dummy) GetToolInfo(ctx context.Context, config_obj *config_proto.Conf
 	return nil, notImplementedError
 }
 
-func (self Dummy) AddTool(config_obj *config_proto.Config,
+func (self Dummy) AddTool(ctx context.Context, config_obj *config_proto.Config,
 	tool *artifacts_proto.Tool, opts services.ToolOptions) error {
 	return notImplementedError
 }

@@ -47,8 +47,9 @@ const (
 )
 
 func (self *Repository) GetArtifactType(
+	ctx context.Context,
 	config_obj *config_proto.Config, artifact_name string) (string, error) {
-	artifact, pres := self.Get(config_obj, artifact_name)
+	artifact, pres := self.Get(ctx, config_obj, artifact_name)
 	if !pres {
 		return "", fmt.Errorf("Artifact %s not known", artifact_name)
 	}
@@ -57,9 +58,10 @@ func (self *Repository) GetArtifactType(
 }
 
 func (self *Repository) GetSource(
+	ctx context.Context,
 	config_obj *config_proto.Config, name string) (*artifacts_proto.ArtifactSource, bool) {
 	artifact_name, source_name := paths.SplitFullSourceName(name)
-	artifact, pres := self.Get(config_obj, artifact_name)
+	artifact, pres := self.Get(ctx, config_obj, artifact_name)
 	if !pres {
 		return nil, false
 	}
@@ -146,7 +148,7 @@ func (self *Repository) LoadYaml(data string, validate, built_in bool) (
 		return nil, err
 	}
 
-	return artifact, self.saveArtifact(artifact)
+	return artifact, self.saveArtifact(self.ctx, artifact)
 }
 
 func (self *Repository) LoadProto(
@@ -158,7 +160,7 @@ func (self *Repository) LoadProto(
 		return nil, err
 	}
 
-	return artifact, self.saveArtifact(artifact)
+	return artifact, self.saveArtifact(self.ctx, artifact)
 }
 
 func (self *Repository) Del(name string) {
@@ -168,7 +170,8 @@ func (self *Repository) Del(name string) {
 }
 
 func (self *Repository) Get(
-	config_obj *config_proto.Config, name string) (*artifacts_proto.Artifact, bool) {
+	ctx context.Context, config_obj *config_proto.Config,
+	name string) (*artifacts_proto.Artifact, bool) {
 	// Strip off any source specification
 	name, _ = paths.SplitFullSourceName(name)
 
@@ -184,7 +187,7 @@ func (self *Repository) Get(
 	// Try to get it from the parent first because the root org is
 	// usually kept in memory.
 	if self.parent != nil {
-		artifact, pres := self.parent.Get(self.parent_config_obj, name)
+		artifact, pres := self.parent.Get(ctx, self.parent_config_obj, name)
 		if pres {
 			return artifact, true
 		}
@@ -223,10 +226,11 @@ func (self *Repository) getFromBackend(
 	return artifact, true
 }
 
-func (self *Repository) saveArtifact(artifact *artifacts_proto.Artifact) error {
+func (self *Repository) saveArtifact(
+	ctx context.Context, artifact *artifacts_proto.Artifact) error {
 	name := artifact.Name
 	if self.parent != nil {
-		_, pres := self.parent.Get(self.parent_config_obj, name)
+		_, pres := self.parent.Get(ctx, self.parent_config_obj, name)
 		if pres {
 			return fmt.Errorf(
 				"Can not override an artifact from the root org: %s", name)

@@ -77,7 +77,7 @@ func (self *Launcher) DeleteFlow(
 	// Remove all result sets from artifacts.
 	for _, artifact_name := range collection_context.ArtifactsWithResults {
 		path_manager, err := artifact_paths.NewArtifactPathManager(
-			config_obj, client_id, flow_id, artifact_name)
+			ctx, config_obj, client_id, flow_id, artifact_name)
 		if err != nil {
 			continue
 		}

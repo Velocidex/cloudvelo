@@ -117,7 +117,9 @@ func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
 	return hunt_info, true
 }
 
-func (self HuntDispatcher) MutateHunt(config_obj *config_proto.Config,
+func (self HuntDispatcher) MutateHunt(
+	ctx context.Context,
+	config_obj *config_proto.Config,
 	mutation *api_proto.HuntMutation) error {
 	return errors.New("HuntDispatcher.HuntMutation Not implemented")
 }
