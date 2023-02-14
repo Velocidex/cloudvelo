@@ -32,8 +32,9 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 	sub_ctx, cancel := context.WithCancel(self.ctx)
 	collection_context, err := server_artifacts.NewCollectionContextManager(
 		sub_ctx, self.wg, self.config_obj, &crypto_proto.VeloMessage{
-			Source:    "server",
-			SessionId: session_id,
+			Source:      "server",
+			SessionId:   session_id,
+			FlowRequest: req,
 		})
 	if err != nil {
 		return err
