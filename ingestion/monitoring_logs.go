@@ -16,7 +16,7 @@ import (
 )
 
 func (self Ingestor) HandleMonitoringLogs(
-	config_obj *config_proto.Config,
+	ctx context.Context, config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
 	row := message.LogMessage
@@ -32,7 +32,7 @@ func (self Ingestor) HandleMonitoringLogs(
 	}
 
 	log_path_manager, err := artifact_paths.NewArtifactLogPathManager(
-		config_obj, message.Source, message.SessionId, artifact_name)
+		ctx, config_obj, message.Source, message.SessionId, artifact_name)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (self Ingestor) HandleMonitoringResponses(
 		[]byte(message.VQLResponse.JSONLResponse), "ClientId", message.Source)
 
 	path_manager, err := artifact_paths.NewArtifactPathManager(
-		config_obj, message.Source,
+		ctx, config_obj, message.Source,
 		message.SessionId, message.VQLResponse.Query.Name)
 	if err != nil {
 		return err

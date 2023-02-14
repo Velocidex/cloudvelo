@@ -103,7 +103,7 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
-		err = journal.PushRowsToArtifact(config_obj,
+		err = journal.PushRowsToArtifact(ctx, config_obj,
 			[]*ordereddict.Dict{ordereddict.NewDict().
 				Set("ClientId", arg.ClientId).
 				Set("Principal", vql_subsystem.GetPrincipal(scope))},
@@ -118,7 +118,7 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 		notifier, err := services.GetNotifier(config_obj)
 		if err == nil {
 			err = notifier.NotifyListener(
-				config_obj, arg.ClientId, "DeleteClient")
+				ctx, config_obj, arg.ClientId, "DeleteClient")
 			if err != nil {
 				scope.Log("client_delete: %s", err)
 				return

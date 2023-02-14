@@ -1,6 +1,6 @@
 package api
 
 type NotificationRecord struct {
-	Key       string `json:"key"`
-	Timestamp int64  `json:"timestamp"`
+	Key       string `json:"key,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
 }

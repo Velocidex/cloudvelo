@@ -49,7 +49,7 @@ func (self HuntDispatcher) CreateHunt(
 	hunt.ArtifactSources = []string{}
 	for _, artifact := range hunt.StartRequest.Artifacts {
 		for _, source := range hunt_dispatcher.GetArtifactSources(
-			config_obj, artifact) {
+			ctx, config_obj, artifact) {
 			hunt.ArtifactSources = append(
 				hunt.ArtifactSources, path.Join(artifact, source))
 		}

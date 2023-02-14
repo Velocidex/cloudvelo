@@ -71,7 +71,7 @@ func (self Ingestor) Process(
 	// Handle the monitoring data - write to timed result set.
 	if message.SessionId == constants.MONITORING_WELL_KNOWN_FLOW {
 		if message.LogMessage != nil {
-			return self.HandleMonitoringLogs(config_obj, message)
+			return self.HandleMonitoringLogs(ctx, config_obj, message)
 		}
 
 		if message.VQLResponse != nil {

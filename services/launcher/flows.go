@@ -166,6 +166,10 @@ func mergeRecords(
 	collection_context *flows_proto.ArtifactCollectorContext,
 	stats_context *flows_proto.ArtifactCollectorContext) *flows_proto.ArtifactCollectorContext {
 
+	if stats_context.Request != nil {
+		collection_context.Request = stats_context.Request
+	}
+
 	// Copy relevant fields into the main context
 	if stats_context.TotalUploadedFiles > 0 {
 		collection_context.TotalUploadedFiles = stats_context.TotalUploadedFiles

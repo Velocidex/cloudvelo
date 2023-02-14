@@ -46,11 +46,6 @@ func StartClientServices(
 		return nil, err
 	}
 
-	exe, err := executor.NewClientExecutor(ctx, writeback.ClientId, config_obj)
-	if err != nil {
-		return nil, fmt.Errorf("Can not create executor: %w", err)
-	}
-
 	// Wait for all services to properly start
 	// before we begin the comms.
 	sm := services.NewServiceManager(ctx, config_obj)
@@ -66,6 +61,11 @@ func StartClientServices(
 		return sm, err
 	}
 
+	exe, err := executor.NewClientExecutor(ctx, writeback.ClientId, config_obj)
+	if err != nil {
+		return nil, fmt.Errorf("Can not create executor: %w", err)
+	}
+
 	comm, err := http_comms.StartHttpCommunicatorService(
 		ctx, sm.Wg, config_obj, exe, on_error)
 	if err != nil {
@@ -76,12 +76,6 @@ func StartClientServices(
 		config_obj, writeback.ClientId, comm.Manager, exe)
 	if err != nil {
 		return nil, err
-	}
-
-	err = executor.StartEventTableService(
-		ctx, sm.Wg, config_obj, exe.Outbound)
-	if err != nil {
-		return sm, err
 	}
 
 	return sm, nil

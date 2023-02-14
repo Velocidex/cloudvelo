@@ -61,7 +61,9 @@ func (self Nofitier) ListenForNotification(id string) (chan bool, func()) {
 	return output_chan, cancel
 }
 
-func (self Nofitier) NotifyListener(config_obj *config_proto.Config, id, tag string) error {
+func (self Nofitier) NotifyListener(
+	ctx context.Context,
+	config_obj *config_proto.Config, id, tag string) error {
 	return cvelo_services.SetElasticIndex(
 		context.Background(),
 		self.config_obj.OrgId, "notifications",
@@ -79,7 +81,10 @@ func (self Nofitier) CountConnectedClients() uint64 {
 }
 
 // Notify in the near future - no guarantee of delivery.
-func (self Nofitier) NotifyListenerAsync(config_obj *config_proto.Config, id, tag string) {}
+func (self Nofitier) NotifyListenerAsync(
+	ctx context.Context,
+	config_obj *config_proto.Config, id, tag string) {
+}
 
 // Check if there is someone listening for the specified id. This
 // method queries all minion nodes to check if the client is

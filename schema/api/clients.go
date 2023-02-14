@@ -16,20 +16,20 @@ import (
 // use for better searching.
 type ClientRecord struct {
 	// Stored in '<client id>'
-	ClientId    string `json:"client_id"`
-	Hostname    string `json:"hostname"`
-	System      string `json:"system"`
-	FirstSeenAt uint64 `json:"first_seen_at"`
+	ClientId    string `json:"client_id,omitempty"`
+	Hostname    string `json:"hostname,omitempty"`
+	System      string `json:"system,omitempty"`
+	FirstSeenAt uint64 `json:"first_seen_at,omitempty"`
 
 	// Stored in '<client id>_ping'
-	Ping uint64 `json:"ping"`
+	Ping uint64 `json:"ping,omitempty"`
 
-	MacAddresses []string `json:"mac_addresses"`
+	MacAddresses []string `json:"mac_addresses,omitempty"`
 
 	// Stored in '<client id>_hunts'
-	AssignedHunts         []string `json:"assigned_hunts"`
-	LastHuntTimestamp     uint64   `json:"last_hunt_timestamp"`
-	LastEventTableVersion uint64   `json:"last_event_table_version"`
+	AssignedHunts         []string `json:"assigned_hunts,omitempty"`
+	LastHuntTimestamp     uint64   `json:"last_hunt_timestamp,omitempty"`
+	LastEventTableVersion uint64   `json:"last_event_table_version,omitempty"`
 
 	// Additional fields in the index we use for search
 
@@ -37,9 +37,9 @@ type ClientRecord struct {
 	Type string `json:"type"`
 
 	// Stored in '<client id>_labels'
-	LastLabelTimestamp uint64   `json:"labels_timestamp"`
-	Labels             []string `json:"labels"`
-	LowerLabels        []string `json:"lower_labels"`
+	LastLabelTimestamp uint64   `json:"labels_timestamp,omitempty"`
+	Labels             []string `json:"labels,omitempty"`
+	LowerLabels        []string `json:"lower_labels,omitempty"`
 }
 
 func ToClientInfo(record *ClientRecord) *services.ClientInfo {

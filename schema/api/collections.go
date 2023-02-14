@@ -11,12 +11,12 @@ import (
 
 // We use the database to manipulate exposed fields.
 type ArtifactCollectorRecord struct {
-	ClientId  string `json:"client_id"`
-	SessionId string `json:"session_id"`
-	Raw       string `json:"context"`
-	Tasks     string `json:"tasks"`
-	Type      string `json:"type"`
-	Timestamp int64  `json:"timestamp"`
+	ClientId  string `json:"client_id,omitempty"`
+	SessionId string `json:"session_id,omitempty"`
+	Raw       string `json:"context,omitempty"`
+	Tasks     string `json:"tasks,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
 }
 
 func (self *ArtifactCollectorRecord) ToProto() (

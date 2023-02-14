@@ -103,7 +103,9 @@ func NewRepositoryManager(
 	}, nil
 }
 
-func (self *RepositoryManager) SetArtifactFile(config_obj *config_proto.Config, principal string,
+func (self *RepositoryManager) SetArtifactFile(
+	ctx context.Context,
+	config_obj *config_proto.Config, principal string,
 	definition, required_prefix string) (*artifacts_proto.Artifact, error) {
 
 	// Use regexes to force the artifact into the correct prefix.
@@ -138,7 +140,8 @@ func (self *RepositoryManager) SetArtifactFile(config_obj *config_proto.Config, 
 		definition, true /* validate */, false /* built_in */)
 }
 
-func (self *RepositoryManager) DeleteArtifactFile(config_obj *config_proto.Config,
+func (self *RepositoryManager) DeleteArtifactFile(
+	ctx context.Context, config_obj *config_proto.Config,
 	principal, name string) error {
 	err := cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
 		"repository", name, cvelo_services.Sync)
