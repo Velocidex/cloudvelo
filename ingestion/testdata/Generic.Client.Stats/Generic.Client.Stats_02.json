@@ -1,14 +1,11 @@
 {
  "session_id": "F.Monitoring",
  "request_id": 980,
- "response_id": 1664246489016650335,
  "source": "C.1352adc54e292a23",
  "auth_state": 1,
  "LogMessage": {
-  "id": 1,
-  "message": "Time 120: Generic.Client.Stats: Sending response part 0 1.0 kB (11 rows).",
-  "timestamp": 1664246489016642,
-  "artifact": "Generic.Client.Stats",
-  "level": "DEFAULT"
+  "number_of_rows": 5,
+  "jsonl": "{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Starting query execution for Generic.Client.Stats.\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Starting query execution for Generic.Client.Stats.\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Generic.Client.Stats: Skipping query due to preconditions\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Collection Generic.Client.Stats is done after 12.258991ms\\n\"}\n{\"client_time\":1676476473,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":1,\\\"PluginsCalled\\\":1,\\\"FunctionsCalled\\\":0,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":4}\\n\"}\n",
+  "artifact": "Generic.Client.Stats"
  }
 }

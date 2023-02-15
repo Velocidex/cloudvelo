@@ -8,7 +8,7 @@
    "timestamp": 1661391005000000000,
    "date": 1661385600,
    "vfs_path": "/clients/C.1352adc54e292a23/monitoring_logs/Generic.Client.Stats/2022-08-25.json",
-   "data": "{\"client_time\":1664246489,\"level\":\"DEFAULT\",\"message\":\"Time 120: Generic.Client.Stats: Sending response part 0 1.0 kB (11 rows).\"}"
+   "data": "{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Starting query execution for Generic.Client.Stats.\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Starting query execution for Generic.Client.Stats.\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Generic.Client.Stats: Skipping query due to preconditions\\n\"}\n{\"client_time\":1676476473,\"level\":\"INFO\",\"message\":\"Collection Generic.Client.Stats is done after 12.258991ms\\n\"}\n{\"client_time\":1676476473,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":1,\\\"PluginsCalled\\\":1,\\\"FunctionsCalled\\\":0,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":4}\\n\"}\n"
   },
   {
    "client_id": "C.1352adc54e292a23",
