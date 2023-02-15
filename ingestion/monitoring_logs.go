@@ -3,7 +3,6 @@ package ingestion
 import (
 	"context"
 
-	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
@@ -11,6 +10,7 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/paths"
 	artifact_paths "www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
@@ -31,11 +31,11 @@ func (self Ingestor) HandleMonitoringLogs(
 		return nil
 	}
 
-	log_path_manager, err := artifact_paths.NewArtifactLogPathManager(
-		ctx, config_obj, message.Source, message.SessionId, artifact_name)
-	if err != nil {
-		return err
-	}
+	new_json_response := artifacts.DeobfuscateString(config_obj, row.Jsonl)
+
+	log_path_manager := artifact_paths.NewArtifactLogPathManagerWithMode(
+		config_obj, message.Source, message.SessionId, artifact_name,
+		paths.MODE_CLIENT_EVENT)
 	log_path_manager.Clock = cvelo_utils.Clock
 
 	file_store_factory := file_store.GetFileStore(config_obj)
@@ -47,10 +47,7 @@ func (self Ingestor) HandleMonitoringLogs(
 	}
 	defer rs_writer.Close()
 
-	rs_writer.Write(ordereddict.NewDict().
-		Set("client_time", int64(row.Timestamp)/1000000).
-		Set("level", row.Level).
-		Set("message", row.Message))
+	rs_writer.WriteJSONL([]byte(new_json_response), int(row.NumberOfRows))
 
 	return nil
 }
@@ -80,12 +77,10 @@ func (self Ingestor) HandleMonitoringResponses(
 	new_json_response := json.AppendJsonlItem(
 		[]byte(message.VQLResponse.JSONLResponse), "ClientId", message.Source)
 
-	path_manager, err := artifact_paths.NewArtifactPathManager(
-		ctx, config_obj, message.Source,
-		message.SessionId, message.VQLResponse.Query.Name)
-	if err != nil {
-		return err
-	}
+	path_manager := artifact_paths.NewArtifactPathManagerWithMode(
+		config_obj, message.Source,
+		message.SessionId, message.VQLResponse.Query.Name,
+		paths.MODE_CLIENT_EVENT)
 	path_manager.Clock = cvelo_utils.Clock
 
 	file_store_factory := file_store.GetFileStore(config_obj)

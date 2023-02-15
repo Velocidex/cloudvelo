@@ -6,7 +6,7 @@
  "ClientRecord": {
   "client_id": "C.1352adc54e292a23",
   "hostname": "devbox",
-  "first_seen_at": 1661391004000000000,
+  "first_seen_at": 1661391005000000000,
   "type": "main"
  }
 }
