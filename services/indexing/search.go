@@ -97,7 +97,7 @@ const (
 
 	getAllClientsQuery = `
 {"sort": [{
-    "client_id": {"order": "asc", "unmapped_type": "string"}
+    "client_id": {"order": "asc", "unmapped_type": "keyword"}
  }],
  "_source": false,
  "query": {"bool": {"must": [%s]}}
