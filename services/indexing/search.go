@@ -154,7 +154,8 @@ func (self *Indexer) searchClientsByLabel(
 	in *api_proto.SearchClientsRequest,
 	limit uint64) ([]*api.ClientRecord, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "lower_labels", label)}
+	terms := []string{json.Format(
+		fieldSearchQuery, "lower_labels", strings.ToLower(label))}
 	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
 }
@@ -312,7 +313,7 @@ func (self *Indexer) SearchClients(
 	operator, term := splitIntoOperatorAndTerms(in.Query)
 	if operator == "label" && in.NameOnly {
 		return self.searchWithNames(ctx, config_obj,
-			"lower_labels", operator, term, in.Offset, in.Limit)
+			"labels", operator, term, in.Offset, in.Limit)
 	}
 
 	result := &api_proto.SearchClientsResponse{}
