@@ -132,7 +132,7 @@ func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
 
 const getAllHuntsQuery = `
 {"query": {"match_all" : {}},
- "sort": [{"hunt_id": "desc"}],
+ "sort": [{"hunt_id": "desc", "unmapped_type" : "string"}],
  "from": %q, "size": %q}
 `
 

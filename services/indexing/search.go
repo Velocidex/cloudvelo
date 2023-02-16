@@ -50,7 +50,7 @@ func splitIntoOperatorAndTerms(term string) (string, string) {
 const (
 	clientsMRUQuery = `
 {"sort": [{
-    "timestamp": {"order": "desc"}
+    "timestamp": {"order": "desc", "unmapped_type": "long"}
   }],
   "query": {"match": {"username": %q}},
   "from": %q, "size": %q
@@ -97,7 +97,7 @@ const (
 
 	getAllClientsQuery = `
 {"sort": [{
-    "client_id": {"order": "asc"}
+    "client_id": {"order": "asc", "unmapped_type": "string"}
  }],
  "_source": false,
  "query": {"bool": {"must": [%s]}}
@@ -113,7 +113,7 @@ const (
 `
 	sortQueryPart = `
 "sort": [{
-    %q: {"order": %q}
+    %q: {"order": %q, "unmapped_type": "long"}
  }],
 `
 	limitQueryPart = `,

@@ -24,7 +24,7 @@ func (self *ClientMonitoringManager) ListAvailableEventResults(
 const getAvailableArtifactsQuery = `
 {
   "sort": [{
-    "artifact": {"order": "asc"}
+    "artifact": {"order": "asc", "unmapped_type" : "keyword"}
   }],
   "query": {
     "bool": {
@@ -76,7 +76,7 @@ func listAvailableEventArtifacts(
 const getAvailableEventTimesQuery = `
 {
   "sort": [{
-    "date": {"order": "asc"}
+    "date": {"order": "asc", "unmapped_type" : "long"}
   }],
   "query": {
     "bool": {
