@@ -83,7 +83,7 @@ func (self Indexer) SearchIndexWithPrefix(
 			return
 
 		case "label":
-			terms := []string{json.Format(fieldSearchQuery, "lower_labels", term)}
+			terms := []string{json.Format(fieldSearchQuery, "labels", term)}
 			query := json.Format(
 				getAllClientsQuery, strings.Join(terms, ","),
 				`,{"_source":{"includes":["client_id"]}}`)
