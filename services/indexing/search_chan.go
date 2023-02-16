@@ -58,7 +58,7 @@ func (self *Indexer) searchClientsByLabelChan(
 	config_obj *config_proto.Config,
 	label string) (chan *api.ClientRecord, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "lower_labels", label)}
+	terms := []string{json.Format(fieldSearchQuery, "labels", label)}
 	return self.searchWithTermsChan(ctx, config_obj, terms)
 }
 
