@@ -13,9 +13,8 @@ import (
 var (
 	// Query to retrieve all the task queued for a client.
 	getClientTasksQuery = `{
-  "sort": [
-  {
-    "timestamp": {"order": "asc"}
+  "sort": [{
+    "timestamp": {"order": "asc", "unmapped_type" : "long"}
   }],
   "query": {
     "bool": {
