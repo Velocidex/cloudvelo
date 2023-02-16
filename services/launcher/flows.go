@@ -25,7 +25,7 @@ var (
 const getFlowsQuery = `
 {
   "sort": [{
-    "type": {"order": "asc", "unmapped_type" : "keyword"}
+    "type": {"order": "asc", "unmapped_type" : "term"}
   }, {
     "timestamp": {"order": "asc"}
   }],
@@ -99,7 +99,7 @@ func (self Launcher) GetFlows(
 const getFlowDetailsQuery = `
 {
   "sort": [
-   {"type": {"order": "asc", "unmapped_type" : "keyword"}},
+   {"type": {"order": "asc", "unmapped_type" : "term"}},
    {"timestamp": {"order": "asc", "unmapped_type" : "long"}}
   ],
   "query": {
