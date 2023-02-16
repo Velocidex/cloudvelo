@@ -69,6 +69,8 @@ func (self Ingestor) HandleUploads(
 			Set("_Components", components).
 			Set("_Type", upload_request.Type).
 			Set("file_size", response.Size).
+			Set("_accessor", message.FileBuffer.Pathspec.Accessor).
+			Set("_client_components", message.FileBuffer.Pathspec.Components).
 			Set("uploaded_size", response.StoredSize))
 
 	return nil
