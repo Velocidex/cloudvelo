@@ -52,7 +52,7 @@ const (
 {"sort": [{
     "timestamp": {"order": "desc", "unmapped_type": "long"}
   }],
-  "query": {"match": {"username": %q}},
+  "query": {"term": {"username": %q}},
   "from": %q, "size": %q
 }`
 )
@@ -88,7 +88,7 @@ func (self *Indexer) searchRecents(
 }
 
 const (
-	allClientsQuery    = `{"match_all" : {}}`
+	allClientsQuery    = `{"exists": {"field": "hostname"}}`
 	recentClientsQuery = `{
    "range": {
      "ping": {"gt": %q}
@@ -97,13 +97,22 @@ const (
 
 	getAllClientsQuery = `
 {"sort": [{
-    "client_id": {"order": "asc", "unmapped_type": "term"}
+    "client_id": {"order": "asc", "unmapped_type": "keyword"}
  }],
  "_source": false,
  "query": {"bool": {"must": [%s]}}
  %s
 }
 `
+	getAllClientsNamesQuery = `
+{"sort": [{
+    "client_id": {"order": "asc", "unmapped_type": "keyword"}
+ }],
+ "query": {"bool": {"must": [%s]}}
+ %s
+}
+`
+
 	getSortedClientsQuery = `
 {%s
  "query": {"bool": {"must": [%s]}},
@@ -203,38 +212,6 @@ func (self *Indexer) searchClientsByMac(
 		in.Filter, terms, in.Offset, in.Limit)
 }
 
-func (self *Indexer) searchWithNames(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	field, operator, label string,
-	offset, limit uint64) (*api_proto.SearchClientsResponse, error) {
-
-	query := json.Format(getAllClientsAgg, field, offset, limit+1)
-
-	hits, err := cvelo_services.QueryElasticAggregations(
-		ctx, config_obj.OrgId, "clients", query)
-	if err != nil {
-		return nil, err
-	}
-
-	prefix, filter := splitSearchTermIntoPrefixAndFilter(label)
-
-	result := &api_proto.SearchClientsResponse{}
-	for _, hit := range hits {
-		if !strings.HasPrefix(hit, prefix) {
-			continue
-		}
-
-		if filter != nil && !filter.MatchString(hit) {
-			continue
-		}
-
-		result.Names = append(result.Names, operator+":"+hit)
-
-	}
-	return result, nil
-}
-
 // This names query does not use aggregation because the fields it
 // typically looks at should be mostly unique
 func (self *Indexer) searchWithPrefixedNames(
@@ -245,17 +222,29 @@ func (self *Indexer) searchWithPrefixedNames(
 
 	prefix, filter := splitSearchTermIntoPrefixAndFilter(term)
 	query := json.Format(
-		getAllClientsQuery,
+		getAllClientsNamesQuery,
 		json.Format(fieldSearchQuery, field, prefix),
 		json.Format(limitQueryPart, offset, limit+1))
 
-	hits, err := cvelo_services.QueryElasticIds(
+	hits, err := cvelo_services.QueryElasticRaw(
 		ctx, config_obj.OrgId, "clients", query)
 	if err != nil {
 		return nil, err
 	}
 
-	return searchClientsFromHits(ctx, config_obj, hits, field, filter)
+	result := []*api.ClientRecord{}
+	for _, hit := range hits {
+		record := &api.ClientRecord{}
+		err = json.Unmarshal(hit, record)
+		if err != nil || record.ClientId == "" {
+			continue
+		}
+
+		if filterClientInfo(record, field, filter) {
+			result = append(result, record)
+		}
+	}
+	return result, nil
 }
 
 func filterClientInfo(client_info *api.ClientRecord,
@@ -284,8 +273,12 @@ func (self *Indexer) searchWithSortTerms(
 
 	// Show clients that pinged more recently than 10 min ago
 	if filter == api_proto.SearchClientsRequest_ONLINE {
-		terms = append(terms, json.Format(recentClientsQuery,
-			time.Now().UnixNano()-600000000000))
+		// We can not have both conditions because the records are
+		// split: A ping range query operates on ping records but
+		// other queries (like hostname queries) operate on the
+		// hostname which may be in a different record.
+		terms = []string{json.Format(recentClientsQuery,
+			time.Now().UnixNano()-600000000000)}
 	}
 
 	query := json.Format(
@@ -309,10 +302,9 @@ func (self *Indexer) SearchClients(
 	in *api_proto.SearchClientsRequest,
 	principal string) (*api_proto.SearchClientsResponse, error) {
 
-	operator, term := splitIntoOperatorAndTerms(in.Query)
-	if operator == "label" && in.NameOnly {
-		return self.searchWithNames(ctx, config_obj,
-			"labels", operator, term, in.Offset, in.Limit)
+	// Handle name only searches.
+	if in.NameOnly {
+		return self.searchClientNameOnly(ctx, config_obj, in)
 	}
 
 	result := &api_proto.SearchClientsResponse{}

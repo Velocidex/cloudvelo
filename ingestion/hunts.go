@@ -11,6 +11,7 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
+	velo_utils "www.velocidex.com/golang/velociraptor/utils"
 )
 
 func (self Ingestor) maybeHandleHuntResponse(
@@ -18,13 +19,11 @@ func (self Ingestor) maybeHandleHuntResponse(
 	config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
-	// Hunt responses have special SessionId like "F.1234.H.1234"
-	parts := strings.Split(message.SessionId, ".H.")
-	if len(parts) == 1 {
+	// Hunt responses have special SessionId like "F.1234.H"
+	hunt_id, ok := velo_utils.ExtractHuntId(message.SessionId)
+	if !ok {
 		return nil
 	}
-
-	hunt_id := "H." + parts[1]
 
 	// All hunt requests start with an initial log message - we use
 	// this log message to increment the hunt scheduled parts and
@@ -86,13 +85,11 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 		return nil
 	}
 
-	// Hunt responses have special SessionId like "F.1234.H.1234"
-	parts := strings.Split(collection_context.SessionId, ".H.")
-	if len(parts) == 1 {
+	// Hunt responses have special SessionId like "F.1234.H"
+	hunt_id, ok := velo_utils.ExtractHuntId(collection_context.SessionId)
+	if !ok {
 		return nil
 	}
-
-	hunt_id := "H." + parts[1]
 
 	// Increment the failed flow counter
 	if failed {

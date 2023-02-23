@@ -13,6 +13,11 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 )
 
+type Tool struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
 type ElasticConfiguration struct {
 	Username           string   `json:"username"`
 	Password           string   `json:"password"`
@@ -35,6 +40,8 @@ type ElasticConfiguration struct {
 	S3PartSize        uint64 `json:"s3_part_size"`
 
 	ForemanIntervalSeconds int `json:"foreman_interval_seconds"`
+
+	ApprovedTools []Tool `json:"approved_tools"`
 }
 
 // Create a new cloud config object which contains the original

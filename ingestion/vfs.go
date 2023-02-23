@@ -121,15 +121,21 @@ func (self Ingestor) HandleSystemVfsUpload(
 			// download record.
 			dir_components := append([]string{message.Source, accessor},
 				row.Components[:len(row.Components)-1]...)
-			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
-			id := cvelo_services.MakeId(utils.JoinComponents(dir_components, "/"))
+			file_components := append([]string{message.Source, accessor},
+				row.Components...)
 
+			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
+			dir_id := cvelo_services.MakeId(
+				utils.JoinComponents(dir_components, "/"))
+			file_id := cvelo_services.MakeId(
+				utils.JoinComponents(file_components, "/"))
 			stats := &cvelo_vfs_service.VFSRecord{
-				Id:        id,
+				Id:        dir_id,
 				Downloads: []string{json.MustMarshalString(row)},
 			}
 
-			cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "vfs", "", stats)
+			cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "vfs",
+				"download_"+file_id, stats)
 		}
 	}
 	return nil

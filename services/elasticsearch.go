@@ -357,7 +357,7 @@ func GetElasticRecord(
 	response := ordereddict.NewDict()
 	err = response.UnmarshalJSON(data)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	found_any, pres := response.Get("found")
@@ -368,7 +368,7 @@ func GetElasticRecord(
 		}
 	}
 
-	return nil, makeElasticError(data)
+	return nil, makeReadElasticError(data)
 }
 
 type doc_id struct {
@@ -383,7 +383,15 @@ type docs struct {
 // Gets a single elastic record by id.
 func GetMultipleElasticRecords(
 	ctx context.Context, org_id, index string, ids []string) ([]json.RawMessage, error) {
-	defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	if len(ids) > 4 {
+		defer Debug("GetMultipleElasticRecords %v %v ...", index, ids[:4])()
+	} else {
+		defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
+	}
 
 	client, err := GetElasticClient()
 	if err != nil {
@@ -428,7 +436,7 @@ func GetMultipleElasticRecords(
 	response := ordereddict.NewDict()
 	err = response.UnmarshalJSON(data)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	found_any, pres := response.Get("found")
@@ -439,7 +447,7 @@ func GetMultipleElasticRecords(
 		}
 	}
 
-	return nil, makeElasticError(data)
+	return nil, makeReadElasticError(data)
 }
 
 // Automatically take care of paging by returning a channel.  Query
@@ -556,7 +564,7 @@ func DeleteByQuery(
 		return nil
 	}
 
-	return makeElasticError(data)
+	return makeReadElasticError(data)
 }
 
 func QueryElasticAggregations(
@@ -586,13 +594,13 @@ func QueryElasticAggregations(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	var results []string
@@ -647,13 +655,13 @@ func QueryElasticRaw(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	var results []json.RawMessage
@@ -693,13 +701,13 @@ func QueryElasticIds(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	var results []string
@@ -741,13 +749,13 @@ func QueryElastic(
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeElasticError(data)
+		return nil, makeReadElasticError(data)
 	}
 
 	var results []Result
@@ -849,6 +857,28 @@ func makeElasticError(data []byte) error {
 	}
 
 	err_type := utils.GetString(response, "error.type")
+	err_reason := utils.GetString(response, "error.reason")
+	if false && err_type != "" && err_reason != "" {
+		return fmt.Errorf("Elastic Error: %v: %v", err_type, err_reason)
+	}
+
+	return fmt.Errorf("Elastic Error: %v", response)
+}
+
+// For read operations, an index not found error is not considered an
+// error - we just return no results.
+func makeReadElasticError(data []byte) error {
+	response := ordereddict.NewDict()
+	err := response.UnmarshalJSON(data)
+	if err != nil {
+		return fmt.Errorf("Elastic Error: %v", string(data))
+	}
+
+	err_type := utils.GetString(response, "error.type")
+	if err_type == "index_not_found_exception" {
+		return nil
+	}
+
 	err_reason := utils.GetString(response, "error.reason")
 	if false && err_type != "" && err_reason != "" {
 		return fmt.Errorf("Elastic Error: %v: %v", err_type, err_reason)

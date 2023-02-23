@@ -1,20 +1,20 @@
-// +build XXXX
-
 package main
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"sync"
 
-	"www.velocidex.com/golang/cloudvelo/startup"
 	config "www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_utils "www.velocidex.com/golang/velociraptor/crypto/utils"
 	"www.velocidex.com/golang/velociraptor/executor"
+	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/server"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/startup"
 )
 
 var (
@@ -69,33 +69,37 @@ func doPoolClient() error {
 
 	server.IncreaseLimits(client_config.VeloConf())
 
-	// Make a copy of all the configs for each client.
-	configs := make([]*config_proto.Config, 0, number_of_clients)
-	serialized, _ := json.Marshal(client_config)
-
-	for i := 0; i < number_of_clients; i++ {
-		client_config := &config_proto.Config{}
-		err := json.Unmarshal(serialized, &client_config)
-		if err != nil {
-			return fmt.Errorf("Copying configs: %w", err)
-		}
-		configs = append(configs, client_config)
+	err = startup.StartPoolClientServices(sm, client_config.VeloConf())
+	if err != nil {
+		return err
 	}
+
+	// Make a copy of all the configs for each client.
+	serialized, _ := json.Marshal(client_config)
 
 	c := counter{}
 
 	for i := 0; i < number_of_clients; i++ {
 		go func(i int) error {
-			client_config := configs[i]
+			client_config := &config_proto.Config{}
+			err := json.Unmarshal(serialized, &client_config)
+			if err != nil {
+				return fmt.Errorf("Copying configs: %w", err)
+			}
+
 			filename := fmt.Sprintf("pool_client.yaml.%d", i)
 			client_config.Client.WritebackLinux = path.Join(
 				*pool_client_writeback_dir, filename)
 
+			// Create an in memory ring buffer because the file ring
+			// buffer assumes there is only one communicator!
 			client_config.Client.WritebackWindows = client_config.Client.WritebackLinux
 			if client_config.Client.LocalBuffer != nil {
 				client_config.Client.LocalBuffer.DiskSize = 0
 			}
 			client_config.Client.Concurrency = uint64(*pool_client_concurrency)
+			// Disable client info updates in pool clients
+			client_config.Client.ClientInfoUpdateTime = -1
 
 			// Make sure the config is ok.
 			err = crypto_utils.VerifyConfig(client_config)
@@ -114,7 +118,9 @@ func doPoolClient() error {
 				return fmt.Errorf("Can not create executor: %w", err)
 			}
 
-			err = startup.StartPoolClientServices(sm, client_config, exe)
+			_, err = http_comms.StartHttpCommunicatorService(
+				sm.Ctx, sm.Wg, client_config, exe,
+				func(ctx context.Context, config_obj *config_proto.Config) {})
 			if err != nil {
 				return err
 			}

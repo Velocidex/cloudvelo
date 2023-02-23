@@ -206,9 +206,6 @@ func (self *Plan) ExecuteHuntUpdate(
 			continue
 		}
 
-		request := hunt.StartRequest
-		request.Creator = hunt.HuntId
-
 		logger.Info("Scheduling hunt %v on %v clients: %v", hunt.HuntId,
 			len(clients), slice(clients, 10))
 

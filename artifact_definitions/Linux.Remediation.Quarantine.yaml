@@ -1,0 +1,10 @@
+name: Linux.Remediation.Quarantine
+description: |
+  This is a placeholder artifact to remind the user that Quarantine is
+  not supported on cloud Velociraptor instances.
+
+sources:
+- query: |
+    SELECT log(message="Quarantine is not supported in this Velociraptor instance.",
+               level="ERROR")
+    FROM scope()

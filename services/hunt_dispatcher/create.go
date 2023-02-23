@@ -111,7 +111,9 @@ func (self HuntDispatcher) CreateHunt(
 
 	hunt_id := hunt_dispatcher.GetNewHuntId()
 	hunt.HuntId = hunt_id
+	hunt.StartRequest.FlowId = utils.CreateFlowIdFromHuntId(hunt.HuntId)
 	hunt.StartRequest.CompiledCollectorArgs = compiled
+	hunt.StartRequest.Creator = hunt.Creator
 
 	serialized, err := protojson.Marshal(hunt)
 	if err != nil {
@@ -170,8 +172,6 @@ func XXXscheduleClientsForHunt(
 	for record := range client_chan {
 		request := proto.Clone(
 			hunt.StartRequest).(*flows_proto.ArtifactCollectorArgs)
-
-		request.Creator = hunt.HuntId
 
 		// Schedule the collection on each client
 		request.ClientId = record.ClientId

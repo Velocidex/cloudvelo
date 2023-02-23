@@ -5,8 +5,8 @@ BINARY=./output/cvelociraptor
 CONFIG_ARGS= --config $(SERVER_CONFIG) --override_file $(OVERRIDE_FILE)
 CLIENT_CONFIG_ARGS= --config $(CLIENT_CONFIG) --override_file $(OVERRIDE_FILE)
 DLV=dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ --
-WRITEBACK_DIR=./pool_writebacks/
-POOL_NUMBER=200
+WRITEBACK_DIR=/tmp/pool_writebacks/
+POOL_NUMBER=20
 
 all:
 	go run make.go -v Auto

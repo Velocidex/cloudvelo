@@ -55,7 +55,8 @@ func StartGUIServices(
 
 	cvelo_services.RegisterServerArtifactsService(
 		server_artifacts.NewServerArtifactService(
-			sm.Ctx, config_obj.VeloConf(), sm.Wg))
+			sm.Ctx, config_obj.VeloConf(),
+			&config_obj.Cloud, sm.Wg))
 
 	// Start the listening server
 	server_builder, err := api.NewServerBuilder(

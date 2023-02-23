@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -14,9 +15,14 @@ import (
 type ServerArtifactsRunner struct {
 	*server_artifacts.ServerArtifactsRunner
 
-	ctx        context.Context
-	wg         *sync.WaitGroup
-	config_obj *config_proto.Config
+	ctx          context.Context
+	wg           *sync.WaitGroup
+	config_obj   *config_proto.Config
+	cloud_config *config.ElasticConfiguration
+}
+
+func (self *ServerArtifactsRunner) CloudConfig() *config.ElasticConfiguration {
+	return self.cloud_config
 }
 
 // Run the specified server collection in the background
@@ -56,6 +62,7 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 func NewServerArtifactService(
 	ctx context.Context,
 	config_obj *config_proto.Config,
+	cloud_config *config.ElasticConfiguration,
 	wg *sync.WaitGroup) services.ServerArtifactsService {
 
 	// Start a server_artifacts runner without checking the tasks
@@ -63,8 +70,9 @@ func NewServerArtifactService(
 	return &ServerArtifactsRunner{
 		ServerArtifactsRunner: server_artifacts.NewServerArtifactRunner(
 			ctx, config_obj, wg),
-		config_obj: config_obj,
-		ctx:        ctx,
-		wg:         wg,
+		config_obj:   config_obj,
+		ctx:          ctx,
+		wg:           wg,
+		cloud_config: cloud_config,
 	}
 }
