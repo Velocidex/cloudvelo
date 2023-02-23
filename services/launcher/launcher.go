@@ -146,8 +146,9 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	// Store the collection_context first, then queue all the tasks.
 	// This must be set synchronously because the server artifact
 	// collector will read it back out below.
+	doc_id := api.GetDocumentIdForCollection(client_id, session_id, "")
 	err := cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId, "collections", session_id, record)
+		self.config_obj.OrgId, "collections", doc_id, record)
 	if err != nil {
 		return "", err
 	}
@@ -181,9 +182,10 @@ func (self *Launcher) WriteFlow(
 	flow *flows_proto.ArtifactCollectorContext) error {
 
 	// Store the collection_context first, then queue all the tasks.
+	doc_id := api.GetDocumentIdForCollection(
+		flow.ClientId, flow.SessionId, "stats")
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections",
-		flow.SessionId+"_stats",
+		config_obj.OrgId, "collections", doc_id,
 		api.ArtifactCollectorRecordFromProto(flow))
 }
 
@@ -192,8 +194,9 @@ func (self *Launcher) GetFlowRequests(
 	client_id string, flow_id string,
 	offset uint64, count uint64) (*api_proto.ApiFlowRequestDetails, error) {
 
+	doc_id := api.GetDocumentIdForCollection(client_id, flow_id, "")
 	raw, err := cvelo_services.GetElasticRecord(self.ctx,
-		config_obj.OrgId, "collections", flow_id)
+		config_obj.OrgId, "collections", doc_id)
 	if err != nil {
 		return nil, err
 	}
