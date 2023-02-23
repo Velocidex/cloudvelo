@@ -179,9 +179,8 @@ require (
 	www.velocidex.com/golang/vtypes v0.0.0-20220816192452-6a27ae078f12 // indirect
 )
 
-//replace www.velocidex.com/golang/velociraptor => ./velociraptor
-replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
-
+replace www.velocidex.com/golang/velociraptor => ./velociraptor
+// replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs
 // replace www.velocidex.com/golang/go-pe => /home/mic/projects/go-pe
