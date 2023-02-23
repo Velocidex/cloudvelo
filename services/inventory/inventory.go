@@ -36,7 +36,8 @@ func (self Dummy) AddTool(ctx context.Context, config_obj *config_proto.Config,
 	return notImplementedError
 }
 
-func (self Dummy) RemoveTool(config_obj *config_proto.Config, tool_name string) error {
+func (self Dummy) RemoveTool(
+	config_obj *config_proto.Config, tool_name string) error {
 	return notImplementedError
 }
 

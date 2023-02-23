@@ -4,6 +4,7 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -16,10 +17,11 @@ import (
 // use for better searching.
 type ClientRecord struct {
 	// Stored in '<client id>'
-	ClientId    string `json:"client_id,omitempty"`
-	Hostname    string `json:"hostname,omitempty"`
-	System      string `json:"system,omitempty"`
-	FirstSeenAt uint64 `json:"first_seen_at,omitempty"`
+	ClientId        string `json:"client_id,omitempty"`
+	Hostname        string `json:"hostname,omitempty"`
+	System          string `json:"system,omitempty"`
+	FirstSeenAt     uint64 `json:"first_seen_at,omitempty"`
+	LastInterrogate string `json:"last_interrogate,omitempty"`
 
 	// Stored in '<client id>_ping'
 	Ping uint64 `json:"ping,omitempty"`
@@ -33,7 +35,7 @@ type ClientRecord struct {
 
 	// Additional fields in the index we use for search
 
-	// "primary" for primary key, "ping" for ping, "label" for label.
+	// "main" for primary key, "ping" for ping, "label" for label.
 	Type string `json:"type"`
 
 	// Stored in '<client id>_labels'
@@ -54,6 +56,7 @@ func ToClientInfo(record *ClientRecord) *services.ClientInfo {
 			MacAddresses:          record.MacAddresses,
 			LastHuntTimestamp:     record.LastHuntTimestamp,
 			LastEventTableVersion: record.LastEventTableVersion,
+			LastInterrogateFlowId: record.LastInterrogate,
 		},
 	}
 }
@@ -77,7 +80,8 @@ func GetMultipleClients(
 		return nil, err
 	}
 
-	lookup := make(map[string]*ClientRecord)
+	// Preserve the lookup order
+	lookup := ordereddict.NewDict() // make(map[string]*ClientRecord)
 	for _, hit := range hits {
 		record := &ClientRecord{}
 		err = json.Unmarshal(hit, record)
@@ -85,18 +89,25 @@ func GetMultipleClients(
 			continue
 		}
 
-		first, pres := lookup[record.ClientId]
+		first_any, pres := lookup.Get(record.ClientId)
 		if !pres {
-			lookup[record.ClientId] = record
+			lookup.Set(record.ClientId, record)
 			continue
 		}
 
-		mergeClientRecords(first, record)
+		first, ok := first_any.(*ClientRecord)
+		if ok {
+			mergeClientRecords(first, record)
+		}
 	}
 
 	result := make([]*ClientRecord, 0, len(client_ids))
-	for _, v := range lookup {
-		result = append(result, v)
+	for _, k := range lookup.Keys() {
+		v_any, _ := lookup.Get(k)
+		v, ok := v_any.(*ClientRecord)
+		if ok {
+			result = append(result, v)
+		}
 	}
 
 	return result, nil
@@ -114,6 +125,10 @@ func mergeClientRecords(first *ClientRecord, second *ClientRecord) {
 
 	if second.FirstSeenAt != 0 {
 		first.FirstSeenAt = second.FirstSeenAt
+	}
+
+	if second.LastInterrogate != "" {
+		first.LastInterrogate = second.LastInterrogate
 	}
 
 	if second.Ping != 0 {

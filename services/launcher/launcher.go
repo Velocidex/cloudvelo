@@ -3,7 +3,6 @@ package launcher
 import (
 	"context"
 	"errors"
-	"strings"
 	"sync"
 	"time"
 
@@ -93,14 +92,9 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		return "", errors.New("Client id not provided.")
 	}
 
-	session_id := launcher.NewFlowId(client_id)
-
-	// If the flow was created by a hunt, we encode the hunt id in the
-	// session id. The session id will be returned by the client, and
-	// the ingestor will be able to tie the session to the hunt
-	// without consulting the datastore.
-	if strings.HasPrefix(collector_request.Creator, "H.") {
-		session_id += "." + collector_request.Creator
+	session_id := collector_request.FlowId
+	if session_id == "" {
+		session_id = launcher.NewFlowId(client_id)
 	}
 
 	// Compile all the requests into specific tasks to be sent to the

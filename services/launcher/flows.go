@@ -25,7 +25,7 @@ var (
 const getFlowsQuery = `
 {
   "sort": [{
-    "type": {"order": "asc", "unmapped_type" : "term"}
+    "type": {"order": "asc", "unmapped_type" : "long"}
   }, {
     "timestamp": {"order": "asc"}
   }],

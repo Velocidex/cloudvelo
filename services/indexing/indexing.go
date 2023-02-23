@@ -155,13 +155,11 @@ func _makeApiClient(client_info *cvelo_api.ClientRecord) *api_proto.ApiClient {
 			Fqdn:         fqdn,
 			MacAddresses: client_info.MacAddresses,
 		},
-		FirstSeenAt: client_info.FirstSeenAt / 1000,
-		LastSeenAt:  client_info.Ping / 1000,
-		//LastIp:                      client_info.IpAddress,
-		//LastInterrogateFlowId:       client_info.LastInterrogateFlowId,
-		//		LastInterrogateArtifactName: client_info.LastInterrogateArtifactName,
+		FirstSeenAt:           client_info.FirstSeenAt / 1000,
+		LastSeenAt:            client_info.Ping / 1000,
 		LastHuntTimestamp:     client_info.LastHuntTimestamp,
 		LastEventTableVersion: client_info.LastEventTableVersion,
+		LastInterrogateFlowId: client_info.LastInterrogate,
 	}
 }
 
