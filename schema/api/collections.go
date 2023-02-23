@@ -40,3 +40,10 @@ func ArtifactCollectorRecordFromProto(
 
 	return self
 }
+
+func GetDocumentIdForCollection(session_id, client_id, doc_type string) string {
+	if doc_type != "" {
+		return client_id + "_" + session_id + "_" + doc_type
+	}
+	return client_id + "_" + session_id
+}

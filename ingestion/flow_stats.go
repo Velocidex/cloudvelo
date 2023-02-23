@@ -44,13 +44,15 @@ func (self Ingestor) HandleFlowStats(
 	failed, completed := calcFlowOutcome(collector_context)
 
 	// Progress messages are written to this doc id
-	doc_id := message.SessionId + "_stats"
+	doc_id := api.GetDocumentIdForCollection(
+		message.Source, message.SessionId, "stats")
 
 	// Because we can not guarantee the order of messages written we
 	// will write the final stat message to a different id. This
 	// ensures it can not be overwritten with an incomplete status
 	if completed {
-		doc_id += "_completed"
+		doc_id = api.GetDocumentIdForCollection(
+			message.Source, message.SessionId, "completed")
 	}
 
 	// The status needs to hit the DB quickly, so the GUI can show

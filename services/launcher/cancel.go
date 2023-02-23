@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -46,9 +47,11 @@ func (self *Launcher) CancelFlow(
 
 	collection_context_record := cvelo_schema_api.
 		ArtifactCollectorRecordFromProto(collection_context)
+
+	doc_id := api.GetDocumentIdForCollection(
+		collection_context.ClientId, collection_context.SessionId, "")
 	err = cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections",
-		collection_context.SessionId, collection_context_record)
+		config_obj.OrgId, "collections", doc_id, collection_context_record)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	ingestor_services "www.velocidex.com/golang/cloudvelo/ingestion/services"
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/utils"
@@ -40,10 +41,10 @@ func (self Ingestor) maybeHandleHuntResponse(
 			Timestamp: utils.Clock.Now().Unix(),
 			Status:    "started",
 		}
-
+		doc_id := api.GetDocumentIdForCollection(
+			message.Source, message.SessionId, "")
 		return services.SetElasticIndex(ctx,
-			config_obj.OrgId, "hunt_flows",
-			message.SessionId, hunt_flow_entry)
+			config_obj.OrgId, "hunt_flows", doc_id, hunt_flow_entry)
 	}
 
 	return nil
