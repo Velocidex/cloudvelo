@@ -111,7 +111,7 @@ func (self HuntDispatcher) CreateHunt(
 
 	hunt_id := hunt_dispatcher.GetNewHuntId()
 	hunt.HuntId = hunt_id
-	hunt.StartRequest.FlowId = "F.Hunt." + hunt.HuntId
+	hunt.StartRequest.FlowId = utils.CreateFlowIdFromHuntId(hunt.HuntId)
 	hunt.StartRequest.CompiledCollectorArgs = compiled
 	hunt.StartRequest.Creator = hunt.Creator
 
