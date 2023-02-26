@@ -73,13 +73,18 @@ func (self *TimedResultSetReader) Rows(
 		if end.IsZero() {
 			end = time.Unix(3000000000, 0)
 		}
+		start := self.start
+		if start.IsZero() {
+			start = time.Unix(0, 0)
+		}
+
 		query := json.Format(getTimedRowsQuery,
 			record.ClientId,
 			"F.Monitoring",
 			record.Artifact,
 			record.Type,
-			self.start.UnixNano(),
-			self.end.UnixNano(),
+			start.UnixNano(),
+			end.UnixNano(),
 		)
 		subctx, cancel := context.WithCancel(ctx)
 		defer cancel()

@@ -195,6 +195,10 @@ func mergeRecords(
 		collection_context.ActiveTime = stats_context.ActiveTime
 	}
 
+	if stats_context.CreateTime > 0 {
+		collection_context.CreateTime = stats_context.CreateTime
+	}
+
 	if len(stats_context.QueryStats) > 0 {
 		collection_context.QueryStats = stats_context.QueryStats
 	}

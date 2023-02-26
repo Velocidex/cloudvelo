@@ -19,10 +19,14 @@ import (
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
-	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
+)
+
+const (
+	EOF = true
 )
 
 // Initial request specifies the destination and receives an upload
@@ -67,18 +71,23 @@ type Uploader struct {
 	key       string
 	upload_id string
 
+	// The number of the upload in the collection.
+	upload_number int64
+
 	commit bool
 
 	start_url, put_url, commit_url string
 
 	md5_sum hash.Hash
 	sha_sum hash.Hash
+	size    int64
 	offset  uint64
 	part    uint64
 
 	parts []*s3.CompletedPart
 
-	exe *executor.ClientExecutor
+	Responder responder.Responder
+
 	// The token is used to authenticate to the upload endpoints. It
 	// consists of a normal empty cipher_text just like the regular
 	// POST data but the server can use it to verify the caller.
@@ -86,15 +95,12 @@ type Uploader struct {
 
 	path *accessors.OSPath
 
-	client_id  string
-	session_id string
-	accessor   string
-	mtime      time.Time
-	atime      time.Time
-	ctime      time.Time
-	btime      time.Time
-
-	session_tracker *SessionTracker
+	client_id string
+	accessor  string
+	mtime     time.Time
+	atime     time.Time
+	ctime     time.Time
+	btime     time.Time
 
 	// This indicates which type of file it is:
 	// 1. "idx" is an index file
@@ -120,7 +126,7 @@ func (self *Uploader) Start(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", self.start_url,
 		strings.NewReader(json.MustMarshalString(&UploadRequest{
 			ClientId:   self.client_id,
-			SessionId:  self.session_id,
+			SessionId:  self.Responder.FlowContext().SessionId(),
 			Accessor:   self.accessor,
 			Components: self.getComponents(self.path),
 			Type:       self.uploader_type,
@@ -156,13 +162,14 @@ func (self *Uploader) Start(ctx context.Context) error {
 	self.key = upload_response.Key
 	self.upload_id = upload_response.UploadId
 
+	self.upload_number = self.Responder.NextUploadId()
+
 	return nil
 }
 
 func (self *Uploader) Put(buf []byte) error {
 	self.md5_sum.Write(buf)
 	self.sha_sum.Write(buf)
-	self.offset += uint64(len(buf))
 
 	request := &UploadPutRequest{
 		Key:      self.key,
@@ -204,11 +211,65 @@ func (self *Uploader) Put(buf []byte) error {
 		return err
 	}
 	self.parts = append(self.parts, completed_part)
+
+	// Send the server an update that we uploaded a part.
+	self.updateServerStat(!EOF, uint64(len(buf)))
+
+	// First update must be at offset 0, so increment offset after.
+	self.offset += uint64(len(buf))
+
 	return nil
 }
 
 func (self *Uploader) Commit() {
 	self.commit = true
+}
+
+func (self *Uploader) updateServerStat(eof bool, buffer_size uint64) {
+	// Send the server a message that this file was uploaded.
+	message := &crypto_proto.VeloMessage{
+		SessionId: self.Responder.FlowContext().SessionId(),
+		FileBuffer: &actions_proto.FileBuffer{
+			Pathspec: &actions_proto.PathSpec{
+				// This is the string form that will be shown in the
+				// GUI.
+				Path:       self.path.String(),
+				Accessor:   self.accessor,
+				Components: self.getComponents(self.path),
+			},
+			Offset:       self.offset,
+			Size:         self.offset,
+			StoredSize:   uint64(self.size),
+			DataLength:   buffer_size,
+			Eof:          true,
+			UploadNumber: self.upload_number,
+		},
+	}
+
+	if !self.mtime.IsZero() {
+		message.FileBuffer.Mtime = self.mtime.Unix()
+	}
+
+	if !self.atime.IsZero() {
+		message.FileBuffer.Atime = self.atime.Unix()
+	}
+
+	if !self.ctime.IsZero() {
+		message.FileBuffer.Ctime = self.ctime.Unix()
+	}
+
+	if !self.btime.IsZero() {
+		message.FileBuffer.Btime = self.btime.Unix()
+	}
+
+	select {
+	case <-self.ctx.Done():
+		return
+
+	default:
+		// Send the packet to the server.
+		self.Responder.AddResponse(message)
+	}
 }
 
 func (self *Uploader) Close() error {
@@ -241,45 +302,8 @@ func (self *Uploader) Close() error {
 			resp.Status, string(serialized))
 	}
 
-	// Send the server a message that this file was uploaded.
-	message := &crypto_proto.VeloMessage{
-		SessionId: self.session_id,
-		FileBuffer: &actions_proto.FileBuffer{
-			Pathspec: &actions_proto.PathSpec{
-				// This is the string form that will be shown in the
-				// GUI.
-				Path:       self.path.String(),
-				Accessor:   self.accessor,
-				Components: self.getComponents(self.path),
-			},
-			Size:         self.offset,
-			StoredSize:   self.offset,
-			Eof:          true,
-			UploadNumber: int64(self.owner.ReturnTracker(self.session_tracker)),
-		},
-	}
-
-	if !self.mtime.IsZero() {
-		message.FileBuffer.Mtime = self.mtime.Unix()
-	}
-
-	if !self.atime.IsZero() {
-		message.FileBuffer.Atime = self.atime.Unix()
-	}
-
-	if !self.ctime.IsZero() {
-		message.FileBuffer.Ctime = self.ctime.Unix()
-	}
-
-	if !self.btime.IsZero() {
-		message.FileBuffer.Btime = self.btime.Unix()
-	}
-
-	if self.exe != nil {
-		self.exe.SendToServer(message)
-	}
-
-	json.Dump(message)
+	// Send the final status update to the server.
+	self.updateServerStat(EOF, 0)
 
 	return nil
 }
@@ -296,7 +320,9 @@ func (self *UploaderFactory) GetURL() (string, error) {
 
 func (self *UploaderFactory) NewUploader(
 	ctx context.Context,
-	session_id, accessor, uploader_type string,
+	responder responder.Responder,
+	accessor, uploader_type string,
+	size int64, // Expected size.
 	path *accessors.OSPath) (*Uploader, error) {
 
 	// Choose a random URL to upload to
@@ -328,24 +354,23 @@ func (self *UploaderFactory) NewUploader(
 	}
 
 	result := &Uploader{
-		config_obj:      self.config_obj,
-		start_url:       fmt.Sprintf("%supload/start", base_url),
-		put_url:         fmt.Sprintf("%supload/put", base_url),
-		commit_url:      fmt.Sprintf("%supload/commit", base_url),
-		client:          http_client,
-		md5_sum:         md5.New(),
-		sha_sum:         sha256.New(),
-		part:            1,
-		ctx:             ctx,
-		exe:             self.exe,
-		session_tracker: self.GetTracker(session_id),
-		session_id:      session_id,
-		client_id:       self.client_id,
-		owner:           self,
-		accessor:        accessor,
-		path:            path,
-		uploader_type:   uploader_type,
-		token:           base64.StdEncoding.EncodeToString(cipher_text),
+		config_obj:    self.config_obj,
+		start_url:     fmt.Sprintf("%supload/start", base_url),
+		put_url:       fmt.Sprintf("%supload/put", base_url),
+		commit_url:    fmt.Sprintf("%supload/commit", base_url),
+		client:        http_client,
+		md5_sum:       md5.New(),
+		sha_sum:       sha256.New(),
+		part:          1,
+		ctx:           ctx,
+		client_id:     self.client_id,
+		owner:         self,
+		accessor:      accessor,
+		path:          path,
+		uploader_type: uploader_type,
+		token:         base64.StdEncoding.EncodeToString(cipher_text),
+		Responder:     responder,
+		size:          size,
 	}
 
 	return result, result.Start(ctx)

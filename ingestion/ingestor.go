@@ -27,6 +27,10 @@ var (
 	idx = 0
 )
 
+type IngestorInterface interface {
+	Process(ctx context.Context, message *crypto_proto.VeloMessage) error
+}
+
 // Responsible for inserting VeloMessage objects into elastic.
 type Ingestor struct {
 	client *opensearch.Client
@@ -107,9 +111,6 @@ func (self Ingestor) Process(
 	if message.FileBuffer != nil {
 		return self.HandleUploads(ctx, config_obj, message)
 	}
-
-	json.Dump(message)
-
 	return nil
 }
 

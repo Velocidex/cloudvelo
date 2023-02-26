@@ -11,13 +11,17 @@ import (
 )
 
 var (
-	communicator = app.Command("frontend", "Run the server frontend")
+	communicator      = app.Command("frontend", "Run the server frontend")
+	communicator_mock = communicator.Flag("mock", "Run the mock ingestor").Bool()
 )
 
 func makeElasticBackend(
 	config_obj *config.Config,
 	crypto_manager *crypto_server.ServerCryptoManager) (server.CommunicatorBackend, error) {
 
+	if *communicator_mock {
+		return server.NewMockElasticBackend(config_obj)
+	}
 	return server.NewElasticBackend(config_obj, crypto_manager)
 }
 

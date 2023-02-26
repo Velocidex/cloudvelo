@@ -28,6 +28,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/services"
 	velo_uploads "www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -129,6 +130,9 @@ func (self *UploaderTestSuite) TestUploader() {
 	self.startServerCommunicator(ctx, wg, org_config_obj)
 	self.startClientCommunicator(ctx, wg, org_config_obj)
 
+	resp := responder.TestResponderWithFlowId(
+		self.ConfigObj.VeloConf(), "F.1234")
+
 	// Build a scope to run a query.
 	builder := services.ScopeBuilder{
 		Config:       org_config_obj,
@@ -136,11 +140,6 @@ func (self *UploaderTestSuite) TestUploader() {
 		ACLManager:   acl_managers.NullACLManager{},
 		Logger: logging.NewPlainLogger(
 			org_config_obj, &logging.FrontendComponent),
-
-		// SessionId is expected to be provided to the client by the
-		// VQL request.
-		Env: ordereddict.NewDict().
-			Set("_SessionId", "F.1234"),
 	}
 
 	manager, err := services.GetRepositoryManager(org_config_obj)
@@ -148,6 +147,8 @@ func (self *UploaderTestSuite) TestUploader() {
 
 	scope := manager.BuildScope(builder)
 	defer scope.Close()
+
+	scope.SetContext("_Responder", resp)
 
 	// Run the query which should upload the file
 	res := (&uploads.UploadFunction{}).Call(ctx, scope,
@@ -203,6 +204,9 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 	self.startServerCommunicator(ctx, wg, org_config_obj)
 	self.startClientCommunicator(ctx, wg, org_config_obj)
 
+	resp := responder.TestResponderWithFlowId(
+		self.ConfigObj.VeloConf(), "F.1231")
+
 	// Build a scope to run a query.
 	builder := services.ScopeBuilder{
 		Config:       org_config_obj,
@@ -210,11 +214,6 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 		ACLManager:   acl_managers.NullACLManager{},
 		Logger: logging.NewPlainLogger(
 			org_config_obj, &logging.FrontendComponent),
-
-		// SessionId is expected to be provided to the client by the
-		// VQL request.
-		Env: ordereddict.NewDict().
-			Set("_SessionId", "F.1231"),
 	}
 
 	manager, err := services.GetRepositoryManager(org_config_obj)
@@ -222,6 +221,8 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 
 	scope := manager.BuildScope(builder)
 	defer scope.Close()
+
+	scope.SetContext("_Responder", resp)
 
 	// Run the query which should upload the file
 	res := (&uploads.UploadFunction{}).Call(ctx, scope,

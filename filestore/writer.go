@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
 
@@ -98,8 +97,6 @@ func (self *S3Writer) writeBuf() (size int, err error) {
 		UploadId:      aws.String(self.upload_id),
 		ContentLength: aws.Int64(int64(len(data))),
 	}
-
-	json.Dump(partInput)
 
 	var resp *s3.UploadPartOutput
 	for i := 0; i <= maxRetries; i++ {

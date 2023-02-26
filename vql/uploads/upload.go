@@ -9,11 +9,12 @@ import (
 	"www.velocidex.com/golang/velociraptor/accessors"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/vfilter"
 )
 
-// S3 required a minimum of 5mb per multi part upload
+// S3 requires a minimum of 5mb per multi part upload
 var (
 	BUFF_SIZE       = 10 * 1024 * 1024
 	MAX_FILE_LENGTH = uint64(10 * 1000000000) // 10 Gb
@@ -41,6 +42,8 @@ func Upload(
 			size, mtime, atime, ctime, btime, reader)
 	}
 
+	// If we get here we have a specialized uploader factory
+
 	dest := ospath
 	if name != nil {
 		dest = name
@@ -49,7 +52,7 @@ func Upload(
 	// A regular uploader for bulk data.
 	uploader, err := makeUploader(
 		ctx, scope, dest, accessor, name,
-		mtime, atime, ctime, btime, "")
+		mtime, atime, ctime, btime, size, "")
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +63,7 @@ func Upload(
 		// A new uploader for the index file.
 		idx_uploader, err := makeUploader(
 			ctx, scope, dest, accessor, name, mtime,
-			atime, ctime, btime, "idx")
+			atime, ctime, btime, size, "idx")
 		if err != nil {
 			return nil, err
 		}
@@ -117,21 +120,23 @@ func makeUploader(
 	accessor string,
 	name *accessors.OSPath,
 	mtime, atime, ctime, btime time.Time,
+	size int64, // Expected size.
 	uploader_type string) (*Uploader, error) {
 
-	// Get the session ID
-	session_id_any, pres := scope.Resolve("_SessionId")
+	// We need a responder as we will be sending FileBuffer messages
+	// directly.
+	responder_any, pres := scope.GetContext("_Responder")
 	if !pres {
-		return nil, errors.New("Session ID not found")
+		return nil, errors.New("Responder not found")
 	}
 
-	session_id, ok := session_id_any.(string)
+	responder, ok := responder_any.(responder.Responder)
 	if !ok {
-		return nil, errors.New("Session ID not found")
+		return nil, errors.New("Responder not found")
 	}
 
 	uploader, err := gUploaderFactory.NewUploader(
-		ctx, session_id, accessor, uploader_type, dest)
+		ctx, responder, accessor, uploader_type, size, dest)
 	if err != nil {
 		return nil, err
 	}

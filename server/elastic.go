@@ -14,7 +14,16 @@ import (
 
 // Test with an elastic backend
 type ElasticBackend struct {
-	ingestor *ingestion.Ingestor
+	ingestor ingestion.IngestorInterface
+}
+
+func NewMockElasticBackend(config_obj *config.Config) (
+	*ElasticBackend, error) {
+	ingestor, err := ingestion.NewHTTPIngestor(config_obj)
+	if err != nil {
+		return nil, err
+	}
+	return &ElasticBackend{ingestor: ingestor}, nil
 }
 
 func NewElasticBackend(
@@ -25,7 +34,6 @@ func NewElasticBackend(
 	if err != nil {
 		return nil, err
 	}
-
 	return &ElasticBackend{ingestor: ingestor}, nil
 }
 

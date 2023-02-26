@@ -33,6 +33,9 @@ debug_gui:
 frontend:
 	$(BINARY) $(CONFIG_ARGS) frontend -v --debug
 
+frontend-Mock:
+	$(BINARY) $(CONFIG_ARGS) frontend -v --debug --mock
+
 .PHONY: foreman
 foreman:
 	$(BINARY) $(CONFIG_ARGS) foreman -v --debug
@@ -42,6 +45,9 @@ debug_foreman:
 
 debug_frontend:
 	$(DLV) $(CONFIG_ARGS) frontend -v --debug
+
+debug_frontend-Mock:
+	$(DLV) $(CONFIG_ARGS) frontend -v --debug --mock
 
 reset_elastic:
 	$(BINARY) $(CONFIG_ARGS) elastic reset --recreate $(INDEX)
