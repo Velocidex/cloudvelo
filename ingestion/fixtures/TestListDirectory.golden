@@ -80,6 +80,7 @@
   "context": {
    "client_id": "C.77ad4285690698d9",
    "session_id": "F.CEV6I8LHAT83O",
+   "create_time": 1661391000000000000,
    "total_collected_rows": 2,
    "total_requests": 3,
    "execution_duration": 519121078,
