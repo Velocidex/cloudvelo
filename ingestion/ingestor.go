@@ -27,6 +27,10 @@ var (
 	idx = 0
 )
 
+type IngestorInterface interface {
+	Process(ctx context.Context, message *crypto_proto.VeloMessage) error
+}
+
 // Responsible for inserting VeloMessage objects into elastic.
 type Ingestor struct {
 	client *opensearch.Client

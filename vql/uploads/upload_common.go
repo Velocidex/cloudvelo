@@ -19,9 +19,9 @@ import (
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
-	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
@@ -78,7 +78,8 @@ type Uploader struct {
 
 	parts []*s3.CompletedPart
 
-	exe *executor.ClientExecutor
+	responder responder.Responder
+
 	// The token is used to authenticate to the upload endpoints. It
 	// consists of a normal empty cipher_text just like the regular
 	// POST data but the server can use it to verify the caller.
@@ -227,6 +228,8 @@ func (self *Uploader) Close() error {
 		return err
 	}
 
+	upload_id := self.responder.NextUploadId()
+
 	req.Header.Set("Authorization", self.token)
 
 	resp, err := self.client.Do(req)
@@ -255,7 +258,7 @@ func (self *Uploader) Close() error {
 			Size:         self.offset,
 			StoredSize:   self.offset,
 			Eof:          true,
-			UploadNumber: int64(self.owner.ReturnTracker(self.session_tracker)),
+			UploadNumber: upload_id,
 		},
 	}
 
@@ -275,8 +278,13 @@ func (self *Uploader) Close() error {
 		message.FileBuffer.Btime = self.btime.Unix()
 	}
 
-	if self.exe != nil {
-		self.exe.SendToServer(message)
+	select {
+	case <-self.ctx.Done():
+		return errors.New("Cancelled!")
+
+	default:
+		// Send the packet to the server.
+		self.responder.AddResponse(message)
 	}
 
 	json.Dump(message)
@@ -337,7 +345,6 @@ func (self *UploaderFactory) NewUploader(
 		sha_sum:         sha256.New(),
 		part:            1,
 		ctx:             ctx,
-		exe:             self.exe,
 		session_tracker: self.GetTracker(session_id),
 		session_id:      session_id,
 		client_id:       self.client_id,

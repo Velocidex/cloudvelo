@@ -33,6 +33,9 @@ debug_gui:
 frontend:
 	$(BINARY) $(CONFIG_ARGS) frontend -v --debug
 
+frontend-Mock:
+	$(BINARY) $(CONFIG_ARGS) frontend -v --debug --mock
+
 .PHONY: foreman
 foreman:
 	$(BINARY) $(CONFIG_ARGS) foreman -v --debug
