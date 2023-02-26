@@ -25,6 +25,10 @@ import (
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
+const (
+	EOF = true
+)
+
 // Initial request specifies the destination and receives an upload
 // key.
 type UploadRequest struct {
@@ -67,18 +71,22 @@ type Uploader struct {
 	key       string
 	upload_id string
 
+	// The number of the upload in the collection.
+	upload_number int64
+
 	commit bool
 
 	start_url, put_url, commit_url string
 
 	md5_sum hash.Hash
 	sha_sum hash.Hash
+	size    int64
 	offset  uint64
 	part    uint64
 
 	parts []*s3.CompletedPart
 
-	responder responder.Responder
+	Responder responder.Responder
 
 	// The token is used to authenticate to the upload endpoints. It
 	// consists of a normal empty cipher_text just like the regular
@@ -87,15 +95,12 @@ type Uploader struct {
 
 	path *accessors.OSPath
 
-	client_id  string
-	session_id string
-	accessor   string
-	mtime      time.Time
-	atime      time.Time
-	ctime      time.Time
-	btime      time.Time
-
-	session_tracker *SessionTracker
+	client_id string
+	accessor  string
+	mtime     time.Time
+	atime     time.Time
+	ctime     time.Time
+	btime     time.Time
 
 	// This indicates which type of file it is:
 	// 1. "idx" is an index file
@@ -121,7 +126,7 @@ func (self *Uploader) Start(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", self.start_url,
 		strings.NewReader(json.MustMarshalString(&UploadRequest{
 			ClientId:   self.client_id,
-			SessionId:  self.session_id,
+			SessionId:  self.Responder.FlowContext().SessionId(),
 			Accessor:   self.accessor,
 			Components: self.getComponents(self.path),
 			Type:       self.uploader_type,
@@ -157,13 +162,14 @@ func (self *Uploader) Start(ctx context.Context) error {
 	self.key = upload_response.Key
 	self.upload_id = upload_response.UploadId
 
+	self.upload_number = self.Responder.NextUploadId()
+
 	return nil
 }
 
 func (self *Uploader) Put(buf []byte) error {
 	self.md5_sum.Write(buf)
 	self.sha_sum.Write(buf)
-	self.offset += uint64(len(buf))
 
 	request := &UploadPutRequest{
 		Key:      self.key,
@@ -205,6 +211,13 @@ func (self *Uploader) Put(buf []byte) error {
 		return err
 	}
 	self.parts = append(self.parts, completed_part)
+
+	// Send the server an update that we uploaded a part.
+	self.updateServerStat(!EOF, uint64(len(buf)))
+
+	// First update must be at offset 0, so increment offset after.
+	self.offset += uint64(len(buf))
+
 	return nil
 }
 
@@ -212,41 +225,10 @@ func (self *Uploader) Commit() {
 	self.commit = true
 }
 
-func (self *Uploader) Close() error {
-
-	// Write the buffer using a PUT request.
-	req, err := http.NewRequestWithContext(
-		self.ctx, http.MethodPost,
-		self.commit_url,
-		strings.NewReader(json.MustMarshalString(
-			&UploadCompletionRequest{
-				Key:      self.key,
-				UploadId: self.upload_id,
-				Parts:    self.parts,
-			})))
-	if err != nil {
-		return err
-	}
-
-	upload_id := self.responder.NextUploadId()
-
-	req.Header.Set("Authorization", self.token)
-
-	resp, err := self.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	serialized, err := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("Unable to put part: %v: %v\n",
-			resp.Status, string(serialized))
-	}
-
+func (self *Uploader) updateServerStat(eof bool, buffer_size uint64) {
 	// Send the server a message that this file was uploaded.
 	message := &crypto_proto.VeloMessage{
-		SessionId: self.session_id,
+		SessionId: self.Responder.FlowContext().SessionId(),
 		FileBuffer: &actions_proto.FileBuffer{
 			Pathspec: &actions_proto.PathSpec{
 				// This is the string form that will be shown in the
@@ -255,10 +237,12 @@ func (self *Uploader) Close() error {
 				Accessor:   self.accessor,
 				Components: self.getComponents(self.path),
 			},
+			Offset:       self.offset,
 			Size:         self.offset,
-			StoredSize:   self.offset,
+			StoredSize:   uint64(self.size),
+			DataLength:   buffer_size,
 			Eof:          true,
-			UploadNumber: upload_id,
+			UploadNumber: self.upload_number,
 		},
 	}
 
@@ -280,14 +264,46 @@ func (self *Uploader) Close() error {
 
 	select {
 	case <-self.ctx.Done():
-		return errors.New("Cancelled!")
+		return
 
 	default:
 		// Send the packet to the server.
-		self.responder.AddResponse(message)
+		self.Responder.AddResponse(message)
+	}
+}
+
+func (self *Uploader) Close() error {
+
+	// Write the buffer using a PUT request.
+	req, err := http.NewRequestWithContext(
+		self.ctx, http.MethodPost,
+		self.commit_url,
+		strings.NewReader(json.MustMarshalString(
+			&UploadCompletionRequest{
+				Key:      self.key,
+				UploadId: self.upload_id,
+				Parts:    self.parts,
+			})))
+	if err != nil {
+		return err
 	}
 
-	json.Dump(message)
+	req.Header.Set("Authorization", self.token)
+
+	resp, err := self.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	serialized, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Unable to put part: %v: %v\n",
+			resp.Status, string(serialized))
+	}
+
+	// Send the final status update to the server.
+	self.updateServerStat(EOF, 0)
 
 	return nil
 }
@@ -304,7 +320,9 @@ func (self *UploaderFactory) GetURL() (string, error) {
 
 func (self *UploaderFactory) NewUploader(
 	ctx context.Context,
-	session_id, accessor, uploader_type string,
+	responder responder.Responder,
+	accessor, uploader_type string,
+	size int64, // Expected size.
 	path *accessors.OSPath) (*Uploader, error) {
 
 	// Choose a random URL to upload to
@@ -336,23 +354,23 @@ func (self *UploaderFactory) NewUploader(
 	}
 
 	result := &Uploader{
-		config_obj:      self.config_obj,
-		start_url:       fmt.Sprintf("%supload/start", base_url),
-		put_url:         fmt.Sprintf("%supload/put", base_url),
-		commit_url:      fmt.Sprintf("%supload/commit", base_url),
-		client:          http_client,
-		md5_sum:         md5.New(),
-		sha_sum:         sha256.New(),
-		part:            1,
-		ctx:             ctx,
-		session_tracker: self.GetTracker(session_id),
-		session_id:      session_id,
-		client_id:       self.client_id,
-		owner:           self,
-		accessor:        accessor,
-		path:            path,
-		uploader_type:   uploader_type,
-		token:           base64.StdEncoding.EncodeToString(cipher_text),
+		config_obj:    self.config_obj,
+		start_url:     fmt.Sprintf("%supload/start", base_url),
+		put_url:       fmt.Sprintf("%supload/put", base_url),
+		commit_url:    fmt.Sprintf("%supload/commit", base_url),
+		client:        http_client,
+		md5_sum:       md5.New(),
+		sha_sum:       sha256.New(),
+		part:          1,
+		ctx:           ctx,
+		client_id:     self.client_id,
+		owner:         self,
+		accessor:      accessor,
+		path:          path,
+		uploader_type: uploader_type,
+		token:         base64.StdEncoding.EncodeToString(cipher_text),
+		Responder:     responder,
+		size:          size,
 	}
 
 	return result, result.Start(ctx)

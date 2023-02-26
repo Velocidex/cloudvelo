@@ -111,9 +111,6 @@ func (self Ingestor) Process(
 	if message.FileBuffer != nil {
 		return self.HandleUploads(ctx, config_obj, message)
 	}
-
-	json.Dump(message)
-
 	return nil
 }
 

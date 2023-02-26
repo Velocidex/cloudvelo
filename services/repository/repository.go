@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Velocidex/ordereddict"
 	"github.com/Velocidex/ttlcache/v2"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -87,7 +88,7 @@ func (self *Repository) List(
 	ctx context.Context,
 	config_obj *config_proto.Config) ([]string, error) {
 
-	results := []string{}
+	results := ordereddict.NewDict()
 
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
 		self.config_obj.OrgId, "repository", allNamesQuery, "name")
@@ -110,20 +111,23 @@ func (self *Repository) List(
 
 		// Refresh the TTL since this data is more recent.
 		self.lru.Set(artifact.Name, artifact)
-		results = append(results, artifact.Name)
+		results.Set(artifact.Name, true)
 	}
 
 	// Merge with the parent's listing
 	if self.parent != nil {
 		names, err := self.parent.List(ctx, self.parent_config_obj)
 		if err == nil {
-			results = append(results, names...)
+			for _, name := range names {
+				results.Set(name, true)
+			}
 		}
 	}
 
-	sort.Strings(results)
+	names := results.Keys()
+	sort.Strings(names)
 
-	return results, nil
+	return names, nil
 
 }
 

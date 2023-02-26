@@ -46,6 +46,9 @@ debug_foreman:
 debug_frontend:
 	$(DLV) $(CONFIG_ARGS) frontend -v --debug
 
+debug_frontend-Mock:
+	$(DLV) $(CONFIG_ARGS) frontend -v --debug --mock
+
 reset_elastic:
 	$(BINARY) $(CONFIG_ARGS) elastic reset --recreate $(INDEX)
 
