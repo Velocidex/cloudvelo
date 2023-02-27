@@ -7,7 +7,7 @@ type BufferedWriter struct {
 	buf_idx    uint64
 	buf_length uint64
 
-	uploader *Uploader
+	uploader CloudUploader
 
 	// Total amount of data stored
 	total uint64
@@ -30,6 +30,7 @@ func (self *BufferedWriter) Close() error {
 		return err
 	}
 
+	self.uploader.Commit()
 	return self.uploader.Close()
 }
 
@@ -66,7 +67,7 @@ func (self *BufferedWriter) Copy(reader io.Reader, length uint64) error {
 	return nil
 }
 
-func NewBufferWriter(uploader *Uploader) *BufferedWriter {
+func NewBufferWriter(uploader CloudUploader) *BufferedWriter {
 	return &BufferedWriter{
 		buf:        make([]byte, BUFF_SIZE),
 		buf_length: uint64(BUFF_SIZE),

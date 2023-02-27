@@ -15,8 +15,8 @@ import (
 func UploadSparse(
 	ctx context.Context,
 	ospath *accessors.OSPath,
-	idx_uploader *Uploader,
-	uploader *Uploader,
+	idx_uploader CloudUploader,
+	uploader CloudUploader,
 	range_reader uploads.RangeReader) (*uploads.UploadResponse, error) {
 
 	index := &actions_proto.Index{}
@@ -65,8 +65,10 @@ func UploadSparse(
 		}
 	}
 
+	// We need to buffer writes untilt they reach 5mb before we can
+	// send them. This is managed by the BufferedWriter object which
+	// wraps the uploader.
 	buffer := NewBufferWriter(uploader)
-
 	for _, rng := range ranges {
 		if rng.IsSparse {
 			continue
@@ -100,6 +102,7 @@ func UploadSparse(
 			return nil, err
 		}
 
+		idx_uploader.Commit()
 		err = idx_uploader.Close()
 		if err != nil {
 			return nil, err
