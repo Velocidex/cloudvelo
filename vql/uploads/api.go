@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"www.velocidex.com/golang/velociraptor/accessors"
+	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	"www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/vfilter"
 )
@@ -32,6 +33,8 @@ type CloudUploader interface {
 
 	// Finalize the upload.
 	Close() error
+
+	SetIndex(index *actions_proto.Index)
 
 	GetVQLResponse() *uploads.UploadResponse
 }

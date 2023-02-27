@@ -121,10 +121,36 @@ type VeloCloudUploader struct {
 	// empty is a regular file.
 	uploader_type string
 
+	response *uploads.UploadResponse
+	closed   bool
+
 	manager crypto.ICryptoManager
+	index   *actions_proto.Index
+}
+
+func (self *VeloCloudUploader) SetIndex(index *actions_proto.Index) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if index == nil || len(index.Ranges) == 0 {
+		return
+	}
+
+	self.index = index
+
+	// Update the size to be the end of the last range
+	last_run := index.Ranges[len(index.Ranges)-1]
+	self.size = last_run.OriginalOffset + last_run.Length
 }
 
 func (self *VeloCloudUploader) GetVQLResponse() *uploads.UploadResponse {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.response != nil {
+		return self.response
+	}
+
 	return &uploads.UploadResponse{
 		Path:       self.path.String(),
 		StoredName: self.path.String(),
@@ -355,12 +381,17 @@ func (self *VeloCloudUploader) updateServerStat(eof bool, buffer_size uint64) {
 				Components: self.getComponents(self.path),
 			},
 			Offset:       self.offset,
-			Size:         self.offset,
-			StoredSize:   uint64(self.size),
+			Size:         uint64(self.size),
+			StoredSize:   self.offset + buffer_size,
 			DataLength:   buffer_size,
-			Eof:          true,
+			Eof:          eof,
 			UploadNumber: self.upload_number,
 		},
+	}
+
+	if self.index != nil {
+		message.FileBuffer.IsSparse = true
+		message.FileBuffer.Index = self.index
 	}
 
 	if !self.mtime.IsZero() {
@@ -390,6 +421,13 @@ func (self *VeloCloudUploader) updateServerStat(eof bool, buffer_size uint64) {
 }
 
 func (self *VeloCloudUploader) Close() error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.closed {
+		return nil
+	}
+	self.closed = true
 
 	// Write the buffer using a PUT request.
 	req, err := http.NewRequestWithContext(
@@ -402,6 +440,7 @@ func (self *VeloCloudUploader) Close() error {
 				Parts:    self.parts,
 			})))
 	if err != nil {
+		self.response = &uploads.UploadResponse{Error: err.Error()}
 		return err
 	}
 
@@ -409,12 +448,14 @@ func (self *VeloCloudUploader) Close() error {
 
 	resp, err := self.client.Do(req)
 	if err != nil {
+		self.response = &uploads.UploadResponse{Error: err.Error()}
 		return err
 	}
 	defer resp.Body.Close()
 
 	serialized, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
+		self.response = &uploads.UploadResponse{Error: err.Error()}
 		return fmt.Errorf("Unable to put part: %v: %v\n",
 			resp.Status, string(serialized))
 	}

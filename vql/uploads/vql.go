@@ -152,17 +152,20 @@ func (self UploadFunction) Upload(
 	if err != nil {
 		return nil, err
 	}
+	defer uploader.Close()
 
 	// Try to upload a sparse file.
 	range_reader, ok := reader.(uploads.RangeReader)
 	if ok {
 		// A new uploader for the index file.
+		idx_name := name.Dirname().Append(name.Basename() + ".idx")
 		idx_uploader, err := gUploaderFactory.New(
-			ctx, scope, dest, accessor, name, mtime,
+			ctx, scope, dest, accessor, idx_name, mtime,
 			atime, ctime, btime, size, "idx")
 		if err != nil {
 			return nil, err
 		}
+		defer idx_uploader.Close()
 
 		return UploadSparse(ctx, dest, idx_uploader, uploader, range_reader)
 	}
@@ -189,14 +192,7 @@ func (self UploadFunction) Upload(
 
 	// If we get here it all went well - commit the result.
 	uploader.Commit()
-
-	err = uploader.Close()
-	if err != nil {
-		scope.Log("ERROR: Finalizing %v: %v", dest, err)
-		return &uploads.UploadResponse{
-			Error: err.Error(),
-		}, nil
-	}
+	uploader.Close()
 
 	return uploader.GetVQLResponse(), nil
 }

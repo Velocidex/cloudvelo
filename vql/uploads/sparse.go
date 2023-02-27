@@ -69,6 +69,8 @@ func UploadSparse(
 	// send them. This is managed by the BufferedWriter object which
 	// wraps the uploader.
 	buffer := NewBufferWriter(uploader)
+	defer buffer.Close()
+
 	for _, rng := range ranges {
 		if rng.IsSparse {
 			continue
@@ -85,11 +87,6 @@ func UploadSparse(
 		}
 	}
 
-	err := buffer.Close()
-	if err != nil {
-		return nil, err
-	}
-
 	// If we are sparse upload the sparse file in one part.
 	if is_sparse {
 		serialized, err := json.Marshal(index)
@@ -103,10 +100,9 @@ func UploadSparse(
 		}
 
 		idx_uploader.Commit()
-		err = idx_uploader.Close()
-		if err != nil {
-			return nil, err
-		}
+
+		// Set the index on the actual uploader
+		uploader.SetIndex(index)
 	}
 
 	result.Size = uint64(real_size)

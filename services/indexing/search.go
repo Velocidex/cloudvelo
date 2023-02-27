@@ -88,7 +88,7 @@ func (self *Indexer) searchRecents(
 }
 
 const (
-	allClientsQuery    = `{"exists": {"field": "hostname"}}`
+	allClientsQuery    = `{"range": {"first_seen_at": {"gt": 0}}}`
 	recentClientsQuery = `{
    "range": {
      "ping": {"gt": %q}

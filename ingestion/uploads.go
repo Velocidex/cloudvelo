@@ -31,15 +31,16 @@ func (self Ingestor) HandleUploads(
 
 	response := message.FileBuffer
 
+	// We only store the EOF messages
+	if !response.Eof {
+		return nil
+	}
+
 	upload_request := &uploads.UploadRequest{
 		ClientId:   message.Source,
 		SessionId:  message.SessionId,
 		Accessor:   message.FileBuffer.Pathspec.Accessor,
 		Components: message.FileBuffer.Pathspec.Components,
-	}
-
-	if message.FileBuffer.Index != nil {
-		upload_request.Type = "idx"
 	}
 
 	// Figure out where in the filestore the server's
@@ -61,17 +62,33 @@ func (self Ingestor) HandleUploads(
 		elastic_writer.SetStartRow(int64(response.UploadNumber))
 	}
 
+	// Write a reference to the main file
 	rs_writer.Write(
 		ordereddict.NewDict().
 			Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
 			Set("started", cvelo_utils.Clock.Now()).
 			Set("vfs_path", response.Pathspec.Path).
 			Set("_Components", components).
-			Set("_Type", upload_request.Type).
+			Set("_Type", "").
 			Set("file_size", response.Size).
 			Set("_accessor", message.FileBuffer.Pathspec.Accessor).
 			Set("_client_components", message.FileBuffer.Pathspec.Components).
 			Set("uploaded_size", response.StoredSize))
+
+	// Write a reference to the index file.
+	if response.IsSparse {
+		rs_writer.Write(
+			ordereddict.NewDict().
+				Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
+				Set("started", cvelo_utils.Clock.Now()).
+				Set("vfs_path", response.Pathspec.Path+".idx").
+				Set("_Components", components).
+				Set("_Type", "idx").
+				Set("file_size", response.Size).
+				Set("_accessor", message.FileBuffer.Pathspec.Accessor).
+				Set("_client_components", message.FileBuffer.Pathspec.Components).
+				Set("uploaded_size", response.StoredSize))
+	}
 
 	return nil
 }
