@@ -1,3 +1,10 @@
+// This uploader communicates with the server's HTTP server to
+// implement an upload protocol similar to S3 multi part sequence:
+
+// 1. First call the /start endpoint to establish the multipart upload.
+// 2. Next call /put to upload specific parts.
+// 3. Finally call /commit to commit the upload.
+
 package uploads
 
 import (
@@ -6,23 +13,28 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/crypto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/responder"
+	"www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
+	"www.velocidex.com/golang/vfilter"
 )
 
 const (
@@ -62,7 +74,9 @@ type UploadCompletionRequest struct {
 	Parts    []*s3.CompletedPart `json:"parts"`
 }
 
-type Uploader struct {
+type VeloCloudUploader struct {
+	mu sync.Mutex
+
 	client     *http.Client
 	ctx        context.Context
 	config_obj *config_proto.Config
@@ -106,14 +120,117 @@ type Uploader struct {
 	// 1. "idx" is an index file
 	// empty is a regular file.
 	uploader_type string
-	owner         *UploaderFactory
+
+	manager crypto.ICryptoManager
+}
+
+func (self *VeloCloudUploader) GetVQLResponse() *uploads.UploadResponse {
+	return &uploads.UploadResponse{
+		Path:       self.path.String(),
+		StoredName: self.path.String(),
+		Size:       self.offset,
+		StoredSize: self.offset,
+		Sha256:     hex.EncodeToString(self.sha_sum.Sum(nil)),
+		Md5:        hex.EncodeToString(self.md5_sum.Sum(nil)),
+	}
+}
+
+func (self *VeloCloudUploader) New(
+	ctx context.Context,
+	scope vfilter.Scope,
+	// How the file will be stored on the server
+	dest *accessors.OSPath,
+
+	// What file we will open and send
+	accessor string,
+	name *accessors.OSPath,
+
+	mtime, atime, ctime, btime time.Time,
+	size int64, // Expected size.
+	uploader_type string) (CloudUploader, error) {
+
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if dest == nil {
+		dest = name
+	}
+
+	// We need a responder as we will be sending FileBuffer messages
+	// directly.
+	responder_any, pres := scope.GetContext("_Responder")
+	if !pres {
+		return nil, errors.New("Responder not found")
+	}
+
+	responder, ok := responder_any.(responder.Responder)
+	if !ok {
+		return nil, errors.New("Responder not found")
+	}
+
+	// Use a standard VeloMessage to create a token with which we can
+	// communicate with the server. The server will be able to verify
+	// this token using its private key.
+	server_name := "VelociraptorServer"
+	if self.config_obj.Client != nil &&
+		self.config_obj.Client.PinnedServerName != "" {
+		server_name = self.config_obj.Client.PinnedServerName
+	}
+
+	cipher_text, err := self.manager.Encrypt(
+		nil, crypto_proto.PackedMessageList_UNCOMPRESSED,
+		self.config_obj.Client.Nonce, server_name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new uploader based on the present one but initialized
+	// for a new upload.
+	result := &VeloCloudUploader{
+		// Carry over old information
+		config_obj: self.config_obj,
+		start_url:  self.start_url,
+		put_url:    self.put_url,
+		commit_url: self.commit_url,
+		client:     self.client,
+		client_id:  self.client_id,
+
+		// Manage the new file
+		md5_sum:       md5.New(),
+		sha_sum:       sha256.New(),
+		part:          1,
+		ctx:           ctx,
+		mtime:         mtime,
+		atime:         atime,
+		ctime:         ctime,
+		btime:         btime,
+		accessor:      accessor,
+		path:          dest,
+		uploader_type: uploader_type,
+		Responder:     responder,
+		size:          size,
+		token:         base64.StdEncoding.EncodeToString(cipher_text),
+	}
+
+	return result, result.Start(ctx)
+}
+
+func GetURL(config_obj *config_proto.Config) (string, error) {
+	if config_obj.Client == nil ||
+		len(config_obj.Client.ServerUrls) == 0 {
+		return "", errors.New("No server URLs configured")
+	}
+
+	// Choose a random url to upload to from the configured URLs.
+	idx := http_comms.GetRand()(len(config_obj.Client.ServerUrls))
+	return config_obj.Client.ServerUrls[idx], nil
 }
 
 // In the client's VFS we store files as subdirectories of the
 // root. This means we can not represent a proper pathspec (because
 // navigation is tree based). For very complex OSPath paths, we encode
 // them as JSON and use a single component.
-func (self *Uploader) getComponents(path *accessors.OSPath) []string {
+func (self *VeloCloudUploader) getComponents(path *accessors.OSPath) []string {
 	if path.DelegatePath() != "" {
 		return []string{path.String()}
 	}
@@ -122,7 +239,7 @@ func (self *Uploader) getComponents(path *accessors.OSPath) []string {
 }
 
 // Initiate the upload request and get a key for the parts.
-func (self *Uploader) Start(ctx context.Context) error {
+func (self *VeloCloudUploader) Start(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", self.start_url,
 		strings.NewReader(json.MustMarshalString(&UploadRequest{
 			ClientId:   self.client_id,
@@ -167,7 +284,7 @@ func (self *Uploader) Start(ctx context.Context) error {
 	return nil
 }
 
-func (self *Uploader) Put(buf []byte) error {
+func (self *VeloCloudUploader) Put(buf []byte) error {
 	self.md5_sum.Write(buf)
 	self.sha_sum.Write(buf)
 
@@ -221,11 +338,11 @@ func (self *Uploader) Put(buf []byte) error {
 	return nil
 }
 
-func (self *Uploader) Commit() {
+func (self *VeloCloudUploader) Commit() {
 	self.commit = true
 }
 
-func (self *Uploader) updateServerStat(eof bool, buffer_size uint64) {
+func (self *VeloCloudUploader) updateServerStat(eof bool, buffer_size uint64) {
 	// Send the server a message that this file was uploaded.
 	message := &crypto_proto.VeloMessage{
 		SessionId: self.Responder.FlowContext().SessionId(),
@@ -272,7 +389,7 @@ func (self *Uploader) updateServerStat(eof bool, buffer_size uint64) {
 	}
 }
 
-func (self *Uploader) Close() error {
+func (self *VeloCloudUploader) Close() error {
 
 	// Write the buffer using a PUT request.
 	req, err := http.NewRequestWithContext(
@@ -308,70 +425,31 @@ func (self *Uploader) Close() error {
 	return nil
 }
 
-func (self *UploaderFactory) GetURL() (string, error) {
-	if len(self.config_obj.Client.ServerUrls) == 0 {
-		return "", errors.New("No server URLs configured")
-	}
-
-	// Choose a random url to upload to from the configured URLs.
-	idx := http_comms.GetRand()(len(self.config_obj.Client.ServerUrls))
-	return self.config_obj.Client.ServerUrls[idx], nil
-}
-
-func (self *UploaderFactory) NewUploader(
-	ctx context.Context,
-	responder responder.Responder,
-	accessor, uploader_type string,
-	size int64, // Expected size.
-	path *accessors.OSPath) (*Uploader, error) {
-
-	// Choose a random URL to upload to
-	base_url, err := self.GetURL()
-	if err != nil {
-		return nil, err
-	}
-
-	var cipher_text []byte
-	if self.manager != nil {
-		server_name := "VelociraptorServer"
-		if self.config_obj.Client != nil &&
-			self.config_obj.Client.PinnedServerName != "" {
-			server_name = self.config_obj.Client.PinnedServerName
-		}
-
-		cipher_text, err = self.manager.Encrypt(
-			nil, crypto_proto.PackedMessageList_UNCOMPRESSED,
-			self.config_obj.Client.Nonce, server_name)
-		if err != nil {
-			return nil, err
-		}
-	}
+// Install a new VeloCloudUploader into the factory.
+func InstallVeloCloudUploader(
+	config_obj *config_proto.Config,
+	client_id string,
+	manager crypto.ICryptoManager) error {
 
 	http_client, err := networking.GetDefaultHTTPClient(
-		self.config_obj.Client, "")
+		config_obj.Client, "")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	result := &Uploader{
-		config_obj:    self.config_obj,
-		start_url:     fmt.Sprintf("%supload/start", base_url),
-		put_url:       fmt.Sprintf("%supload/put", base_url),
-		commit_url:    fmt.Sprintf("%supload/commit", base_url),
-		client:        http_client,
-		md5_sum:       md5.New(),
-		sha_sum:       sha256.New(),
-		part:          1,
-		ctx:           ctx,
-		client_id:     self.client_id,
-		owner:         self,
-		accessor:      accessor,
-		path:          path,
-		uploader_type: uploader_type,
-		token:         base64.StdEncoding.EncodeToString(cipher_text),
-		Responder:     responder,
-		size:          size,
+	// Choose a random URL to upload to
+	base_url, err := GetURL(config_obj)
+	if err != nil {
+		return err
 	}
 
-	return result, result.Start(ctx)
+	return SetUploaderService(&VeloCloudUploader{
+		config_obj: config_obj,
+		start_url:  fmt.Sprintf("%supload/start", base_url),
+		put_url:    fmt.Sprintf("%supload/put", base_url),
+		commit_url: fmt.Sprintf("%supload/commit", base_url),
+		client:     http_client,
+		client_id:  client_id,
+		manager:    manager,
+	})
 }

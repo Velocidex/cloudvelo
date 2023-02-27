@@ -4,15 +4,25 @@ package uploads
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/velociraptor/accessors"
+	"www.velocidex.com/golang/velociraptor/artifacts"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/uploads"
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 	"www.velocidex.com/golang/velociraptor/vql/functions"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 	"www.velocidex.com/golang/vfilter"
 	"www.velocidex.com/golang/vfilter/arg_parser"
+)
+
+// S3 requires a minimum of 5mb per multi part upload
+var (
+	BUFF_SIZE       = 10 * 1024 * 1024
+	MAX_FILE_LENGTH = uint64(10 * 1000000000) // 10 Gb
 )
 
 type UploadFunction struct{}
@@ -78,7 +88,7 @@ func (self *UploadFunction) Call(ctx context.Context,
 	ctime, _ := functions.TimeFromAny(scope, arg.Ctime)
 	btime, _ := functions.TimeFromAny(scope, arg.Btime)
 
-	upload_response, err := Upload(
+	upload_response, err := self.Upload(
 		ctx, config_obj,
 		scope, arg.File,
 		arg.Accessor,
@@ -103,6 +113,92 @@ func (self UploadFunction) Info(scope vfilter.Scope, type_map *vfilter.TypeMap) 
 			"it in the server's file store.",
 		ArgType: type_map.AddType(scope, &networking.UploadFunctionArgs{}),
 	}
+}
+
+// Upload the file possibly using the configured uploader factory.
+func (self UploadFunction) Upload(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	scope vfilter.Scope,
+	ospath *accessors.OSPath,
+	accessor string,
+	name *accessors.OSPath,
+	size int64, // Expected size.
+	mtime, atime, ctime, btime time.Time,
+	reader accessors.ReadSeekCloser) (*uploads.UploadResponse, error) {
+
+	if gUploaderFactory == nil {
+		// No uploader factory configured, Try to get an uploader from
+		// the scope. This happens with command line tools etc.
+		uploader, ok := artifacts.GetUploader(scope)
+		if !ok {
+			return nil, errors.New("Uploader not configured")
+		}
+
+		return uploader.Upload(ctx, scope, ospath, accessor, name,
+			size, mtime, atime, ctime, btime, reader)
+	}
+
+	// If we get here we have a specialized uploader factory
+	dest := ospath
+	if name != nil {
+		dest = name
+	}
+
+	// A regular uploader for bulk data.
+	uploader, err := gUploaderFactory.New(
+		ctx, scope, dest, accessor, name,
+		mtime, atime, ctime, btime, size, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Try to upload a sparse file.
+	range_reader, ok := reader.(uploads.RangeReader)
+	if ok {
+		// A new uploader for the index file.
+		idx_uploader, err := gUploaderFactory.New(
+			ctx, scope, dest, accessor, name, mtime,
+			atime, ctime, btime, size, "idx")
+		if err != nil {
+			return nil, err
+		}
+
+		return UploadSparse(ctx, dest, idx_uploader, uploader, range_reader)
+	}
+
+	// We need to buffer writes untilt they reach 5mb before we can
+	// send them. This is managed by the BufferedWriter object which
+	// wraps the uploader.
+	buffer := NewBufferWriter(uploader)
+	err = buffer.Copy(reader, MAX_FILE_LENGTH)
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	err = buffer.Flush()
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	// If we get here it all went well - commit the result.
+	uploader.Commit()
+
+	err = uploader.Close()
+	if err != nil {
+		scope.Log("ERROR: Finalizing %v: %v", dest, err)
+		return &uploads.UploadResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	return uploader.GetVQLResponse(), nil
 }
 
 func init() {

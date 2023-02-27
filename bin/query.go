@@ -9,7 +9,6 @@ import (
 	"github.com/Velocidex/ordereddict"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"www.velocidex.com/golang/cloudvelo/startup"
-	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 	"www.velocidex.com/golang/velociraptor/file_store/uploader"
@@ -71,9 +70,6 @@ func doQuery() error {
 			config_obj,
 			file_store.GetFileStore(config_obj),
 			output_path_spec)
-
-		// Install the uploader globally
-		uploads.SetUploaderService(config_obj, "C.1234", nil, nil)
 	}
 
 	manager, err := services.GetRepositoryManager(config_obj)
