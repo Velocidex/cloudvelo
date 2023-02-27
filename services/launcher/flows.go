@@ -99,7 +99,7 @@ func (self Launcher) GetFlows(
 const getFlowDetailsQuery = `
 {
   "sort": [
-   {"type": {"order": "asc", "unmapped_type" : "term"}},
+   {"type": {"order": "asc", "unmapped_type" : "long"}},
    {"timestamp": {"order": "asc", "unmapped_type" : "long"}}
   ],
   "query": {
