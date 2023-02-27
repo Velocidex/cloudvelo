@@ -391,7 +391,6 @@ func (self *VeloCloudUploader) updateServerStat(eof bool, buffer_size uint64) {
 
 	if self.index != nil {
 		message.FileBuffer.IsSparse = true
-		message.FileBuffer.Index = self.index
 	}
 
 	if !self.mtime.IsZero() {
