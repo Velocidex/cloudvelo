@@ -9,6 +9,9 @@ require (
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/alecthomas/assert v1.0.0
 	github.com/aws/aws-sdk-go v1.44.118
+	github.com/aws/aws-sdk-go-v2 v1.17.5
+	github.com/aws/aws-sdk-go-v2/config v1.15.12
+	github.com/aws/aws-sdk-go-v2/service/kms v1.20.5
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/magefile/mage v1.14.0
@@ -57,6 +60,15 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.7 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.7 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.29 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.8 // indirect
+	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -180,6 +192,7 @@ require (
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
+
 // replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs

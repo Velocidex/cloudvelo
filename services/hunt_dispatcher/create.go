@@ -2,10 +2,17 @@ package hunt_dispatcher
 
 import (
 	"context"
+	"crypto/sha512"
+	b64 "encoding/base64"
 	"errors"
+	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	kms2 "github.com/aws/aws-sdk-go/service/kms"
 	"path"
 	"time"
 
+	aws_config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -115,7 +122,21 @@ func (self HuntDispatcher) CreateHunt(
 	hunt.StartRequest.CompiledCollectorArgs = compiled
 	hunt.StartRequest.Creator = hunt.Creator
 
+	// get a serialization of the hunt - without a signature
 	serialized, err := protojson.Marshal(hunt)
+	if err != nil {
+		return "", err
+	}
+
+	// generate the signature
+	signature, sigErr := sign(serialized)
+	if sigErr != nil {
+		return "", sigErr
+	}
+
+	// re-serialise with the signature
+	hunt.StartRequest.UserData = signature
+	serialized, err = protojson.Marshal(hunt)
 	if err != nil {
 		return "", err
 	}
@@ -184,4 +205,32 @@ func XXXscheduleClientsForHunt(
 	}
 
 	return nil
+}
+
+func sign(serialisedHunt []byte) (string, error) {
+	cfg, err := aws_config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return "", err
+	}
+
+	client := kms.NewFromConfig(cfg)
+
+	h := sha512.New384()
+	h.Write(serialisedHunt)
+	hash := h.Sum(nil)
+
+	keyString := fmt.Sprintf("alias/velociraptor-signing-key-%s", cfg.Region)
+	input := &kms.SignInput{
+		KeyId:            aws.String(keyString),
+		Message:          hash[:],
+		MessageType:      kms2.MessageTypeDigest,
+		SigningAlgorithm: kms2.SigningAlgorithmSpecEcdsaSha384,
+	}
+
+	result, err := client.Sign(context.Background(), input)
+	if err != nil {
+		return "", err
+	}
+
+	return b64.StdEncoding.EncodeToString(result.Signature), nil
 }
