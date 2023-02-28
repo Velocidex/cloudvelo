@@ -6,11 +6,20 @@ package foreman
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/sha512"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"google.golang.org/protobuf/encoding/protojson"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"www.velocidex.com/golang/cloudvelo/config"
@@ -47,6 +56,8 @@ var (
 		},
 	)
 )
+
+var huntSigningKey *ecdsa.PublicKey
 
 type Foreman struct {
 	last_run_time time.Time
@@ -200,6 +211,8 @@ func (self Foreman) GetActiveHunts(
 	ctx context.Context,
 	org_config_obj *config_proto.Config) ([]*api_proto.Hunt, error) {
 
+	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+
 	hunt_dispatcher, err := services.GetHuntDispatcher(org_config_obj)
 	if err != nil {
 		return nil, err
@@ -228,7 +241,16 @@ func (self Foreman) GetActiveHunts(
 			continue
 		}
 
-		result = append(result, hunt)
+		validated := validateHuntSignature(hunt_dispatcher, hunt.HuntId)
+		if validated {
+			result = append(result, hunt)
+		} else {
+			logger.Error("Invalid Signature found for Hunt: %s", hunt.HuntId)
+		}
+	}
+
+	if logger != nil {
+		logger.Debug("Active Hunts: %v", result)
 	}
 
 	return result, nil
@@ -345,6 +367,85 @@ func StartForemanService(ctx context.Context,
 	service := NewForeman()
 
 	return service.Start(ctx, wg, config_obj)
+}
+
+func validateHuntSignature(huntDispatcher services.IHuntDispatcher, huntId string) bool {
+
+	hunt, exists := huntDispatcher.GetHunt(huntId)
+	if exists == false {
+		return false
+	}
+
+	validate, err := verifySignature(hunt)
+	if err != nil {
+		return false
+	}
+
+	return validate
+}
+
+func verifySignature(hunt *api_proto.Hunt) (bool, error) {
+	signingKey, err := getSigningKey()
+	if err != nil {
+		return false, err
+	}
+
+	// in order to verify the hunt object we have to remove the signature
+	// we cannot copy the hunt, so unsetting and resetting the signature is
+	// the most straightforward method.
+	sig := hunt.StartRequest.UserData
+	hunt.StartRequest.UserData = ""
+	serialized, err := protojson.Marshal(hunt)
+	if err != nil {
+		return false, err
+	}
+
+	h := sha512.New384()
+	h.Write(serialized)
+	hash := h.Sum(nil)
+
+	verified := ecdsa.VerifyASN1(signingKey, hash, []byte(sig))
+
+	// put the signature back
+	hunt.StartRequest.UserData = sig
+
+	return verified, nil
+}
+
+func getSigningKey() (*ecdsa.PublicKey, error) {
+
+	if huntSigningKey != nil {
+		return huntSigningKey, nil
+	}
+
+	cfg, err := aws_config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	client := kms.NewFromConfig(cfg)
+
+	keyString := fmt.Sprintf("alias/velociraptor-signing-key-%s", cfg.Region)
+	input := &kms.GetPublicKeyInput{
+		KeyId: aws.String(keyString),
+	}
+
+	result, err := client.GetPublicKey(context.Background(), input)
+
+	keyMaterial := base64.RawStdEncoding.EncodeToString(result.PublicKey)
+	pubPemKey := fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s\n-----END PUBLIC KEY-----", keyMaterial)
+	block, _ := pem.Decode([]byte(pubPemKey))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		panic("Failed to decode PEM public key")
+	}
+
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic("Failed to parse ECDSA public key")
+	}
+	ecdsaKey := publicKey.(*ecdsa.PublicKey)
+
+	return ecdsaKey, nil
 }
 
 func slice(a []string, length int) []string {
