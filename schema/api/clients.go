@@ -19,6 +19,10 @@ type ClientRecord struct {
 	// Stored in '<client id>'
 	ClientId        string `json:"client_id,omitempty"`
 	Hostname        string `json:"hostname,omitempty"`
+	Release         string `json:"release,omitempty"`
+	Architecture    string `json:"architecture,omitempty"`
+	ClientVersion   string `json:"client_version,omitempty"`
+	BuildTime       string `json:"build_time,omitempty"`
 	System          string `json:"system,omitempty"`
 	FirstSeenAt     uint64 `json:"first_seen_at,omitempty"`
 	LastInterrogate string `json:"last_interrogate,omitempty"`
@@ -117,6 +121,18 @@ func mergeClientRecords(first *ClientRecord, second *ClientRecord) {
 
 	if second.Hostname != "" {
 		first.Hostname = second.Hostname
+	}
+
+	if second.Release != "" {
+		first.Release = second.Release
+	}
+
+	if second.Architecture != "" {
+		first.Architecture = second.Architecture
+	}
+
+	if second.BuildTime != "" {
+		first.BuildTime = second.BuildTime
 	}
 
 	if second.System != "" {

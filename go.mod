@@ -20,7 +20,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
-	www.velocidex.com/golang/vfilter v0.0.0-20230205055939-24cd6452d8bd
+	www.velocidex.com/golang/vfilter v0.0.0-20230228090108-bafcf1fc297f
 )
 
 require (
@@ -172,7 +172,7 @@ require (
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
 	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
 	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230221030709-f91b68ac3222 // indirect
-	www.velocidex.com/golang/go-pe v0.1.1-0.20230221012148-9abf830a16b4 // indirect
+	www.velocidex.com/golang/go-pe v0.1.1-0.20230228112150-ef2eadf34bc3 // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect
 	www.velocidex.com/golang/regparser v0.0.0-20221020153526-bbc758cbd18b // indirect
@@ -180,7 +180,8 @@ require (
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
-// replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
+
+//replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs
 // replace www.velocidex.com/golang/go-pe => /home/mic/projects/go-pe

@@ -12,15 +12,16 @@ import (
 )
 
 type ClientInfoUpdate struct {
-	Name         string   `json:"Name"`
-	BuildTime    string   `json:"BuildTime"`
-	Labels       []string `json:"Labels"`
-	Hostname     string   `json:"Hostname"`
-	OS           string   `json:"OS"`
-	Architecture string   `json:"Architecture"`
-	Platform     string   `json:"Platform"`
-	MACAddresses []string `json:"MACAddresses"`
-	InstallTime  uint64   `json:"InstallTime"`
+	Name          string   `json:"Name"`
+	BuildTime     string   `json:"BuildTime"`
+	Labels        []string `json:"Labels"`
+	Hostname      string   `json:"Hostname"`
+	ClientVersion string   `json:"client_version"`
+	OS            string   `json:"OS"`
+	Architecture  string   `json:"Architecture"`
+	Platform      string   `json:"Platform"`
+	MACAddresses  []string `json:"MACAddresses"`
+	InstallTime   uint64   `json:"InstallTime"`
 }
 
 // Register a new client - update the client record and update it's
@@ -64,13 +65,14 @@ func (self Ingestor) HandleClientInfoUpdates(
 		}
 		err = client_info_manager.Set(ctx,
 			&services.ClientInfo{actions_proto.ClientInfo{
-				ClientId:     message.Source,
-				Hostname:     row.Hostname,
-				Fqdn:         row.Hostname,
-				System:       row.OS,
-				Architecture: row.Architecture,
-				MacAddresses: row.MACAddresses,
-				FirstSeenAt:  row.InstallTime,
+				ClientId:      message.Source,
+				Hostname:      row.Hostname,
+				Fqdn:          row.Hostname,
+				ClientVersion: row.ClientVersion,
+				System:        row.OS,
+				Architecture:  row.Architecture,
+				MacAddresses:  row.MACAddresses,
+				FirstSeenAt:   row.InstallTime,
 			}})
 		if err != nil {
 			return err

@@ -47,6 +47,9 @@ func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
 
 	case "STOPPED":
 		hunt_info.State = api_proto.Hunt_STOPPED
+
+	case "ARCHIVED":
+		hunt_info.State = api_proto.Hunt_ARCHIVED
 	}
 
 	return hunt_info, nil
@@ -162,7 +165,10 @@ func (self HuntDispatcher) ListHunts(
 		if err != nil {
 			continue
 		}
-		result.Items = append(result.Items, hunt_info)
+
+		if hunt_info.State != api_proto.Hunt_ARCHIVED {
+			result.Items = append(result.Items, hunt_info)
+		}
 	}
 
 	return result, nil

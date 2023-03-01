@@ -19,13 +19,11 @@ var (
 	NotFoundError = errors.New("Not found")
 )
 
-// Get all the flows for this client. Sort by type to guarantee that
-// the static part of the proto (type = "") will come before the
-// "stats" part of the proto.
+// Get all the flows for this client.
 const getFlowsQuery = `
 {
   "sort": [{
-    "type": {"order": "asc", "unmapped_type" : "long"}
+    "type": {"order": "asc", "unmapped_type" : "keyword"}
   }, {
     "timestamp": {"order": "asc"}
   }],
@@ -99,8 +97,8 @@ func (self Launcher) GetFlows(
 const getFlowDetailsQuery = `
 {
   "sort": [
-   {"type": {"order": "asc", "unmapped_type" : "long"}},
-   {"timestamp": {"order": "asc", "unmapped_type" : "long"}}
+   {"type": {"order": "asc"}},
+   {"timestamp": {"order": "asc"}}
   ],
   "query": {
      "bool": {

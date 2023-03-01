@@ -4,6 +4,9 @@
         "properties": {
             "client_id":                 { "type": "keyword" },
             "hostname":                  { "type": "keyword" },
+            "release":                   { "type": "keyword" },
+            "architecture":              { "type": "keyword" },
+            "build_time":                { "type": "keyword" },
             "system":                    { "type": "keyword"  },
             "ping":                      { "type": "long" },
             "first_seen_at":             { "type": "long" },
