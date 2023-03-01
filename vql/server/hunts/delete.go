@@ -12,6 +12,17 @@ import (
 	"www.velocidex.com/golang/vfilter/arg_parser"
 )
 
+const (
+	archiveHuntScript = `
+{
+  "script" : {
+    "source": "ctx._source.state=\"ARCHIVED\";",
+    "lang": "painless"
+  }
+}
+`
+)
+
 type DeleteHuntArgs struct {
 	HuntId     string `vfilter:"required,field=hunt_id"`
 	ReallyDoIt bool   `vfilter:"optional,field=really_do_it"`
@@ -54,6 +65,22 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 			return
 		}
 
+		// Now remove the hunt from the database immediately so the
+		// GUI reflects the changes. We can not really delete the hunt
+		// because we might get updates for it for collections that
+		// are still in flight, so we set the hunt to the archived
+		// state instead. It might take a little while to actually
+		// delete all the contents but the GUI should reflect the hunt
+		// is deleted immediately.
+		if arg.ReallyDoIt {
+			err := cvelo_services.UpdateIndex(
+				ctx, config_obj.OrgId, "hunts",
+				arg.HuntId, archiveHuntScript)
+			if err != nil {
+				scope.Log("hunt_delete: %v", err)
+			}
+		}
+
 		hunt_dispatcher, err := services.GetHuntDispatcher(config_obj)
 		if err != nil {
 			scope.Log("hunt_delete: %s", err)
@@ -79,16 +106,6 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 			}
 		}
 
-		// Now remove the hunt from the hunt manager
-		if arg.ReallyDoIt {
-			err := cvelo_services.DeleteDocument(
-				ctx, config_obj.OrgId, "hunts",
-				arg.HuntId, cvelo_services.SyncDelete)
-			if err != nil {
-				scope.Log("hunt_delete: %v", err)
-			}
-
-		}
 	}()
 
 	return output_chan

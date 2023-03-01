@@ -5,6 +5,7 @@ import (
 
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
+	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 )
 
 var (
@@ -33,5 +34,6 @@ type ServerArtifactsService interface {
 	LaunchServerArtifact(
 		config_obj *config_proto.Config,
 		session_id string,
-		req *crypto_proto.FlowRequest) error
+		req *crypto_proto.FlowRequest,
+		collection_context *flows_proto.ArtifactCollectorContext) error
 }

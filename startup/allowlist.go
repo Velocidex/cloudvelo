@@ -82,6 +82,7 @@ var (
 		"cancel_flow",
 		"cidr_contains",
 		"client_create",
+		"client_info",
 		"client_metadata",
 		"client_set_metadata",
 		"collect_client",

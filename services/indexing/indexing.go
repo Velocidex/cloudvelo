@@ -141,17 +141,18 @@ func (self Indexer) FastGetApiClient(
 func _makeApiClient(client_info *cvelo_api.ClientRecord) *api_proto.ApiClient {
 	fqdn := client_info.Hostname
 	return &api_proto.ApiClient{
-		ClientId:         client_info.ClientId,
-		Labels:           client_info.Labels,
+		ClientId: client_info.ClientId,
+		Labels:   client_info.Labels,
 		AgentInformation: &api_proto.AgentInformation{
-			//Version: client_info.ClientVersion,
-			//Name:    client_info.ClientName,
+			BuildTime: client_info.BuildTime,
+			Version:   client_info.ClientVersion,
+			Name:      "Velociraptor",
 		},
 		OsInfo: &api_proto.Uname{
-			System:   client_info.System,
-			Hostname: client_info.Hostname,
-			//Release:      client_info.Release,
-			//Machine:      client_info.Architecture,
+			System:       client_info.System,
+			Hostname:     client_info.Hostname,
+			Release:      client_info.Release,
+			Machine:      client_info.Architecture,
 			Fqdn:         fqdn,
 			MacAddresses: client_info.MacAddresses,
 		},

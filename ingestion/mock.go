@@ -126,8 +126,10 @@ func (self *HTTPIngestor) Execute(
 			switch plan.Script.IdOrCode {
 			case "increment-hunt-started-script":
 				query = incrementHuntScheduled
+
 			case "increment-hunt-errored-script":
 				query = incrementHuntError
+
 			case "increment-hunt-completed-script":
 				query = incrementHuntCompleted
 
@@ -163,6 +165,8 @@ func (self *HTTPIngestor) Process(
 	serialized = json.AppendJsonlItem(serialized, "orgId",
 		utils.NormalizedOrgId(self.config_obj.OrgId))
 	serialized = json.AppendJsonlItem(serialized, "client_id", message.Source)
+
+	fmt.Printf("Sending %v\n", string(serialized))
 
 	req, err := http.NewRequestWithContext(ctx, "POST",
 		self.incoming_url, bytes.NewReader(serialized))
