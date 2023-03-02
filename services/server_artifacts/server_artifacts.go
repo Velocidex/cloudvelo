@@ -39,7 +39,7 @@ func (self *ServerArtifactsRunner) LaunchServerArtifact(
 
 	sub_ctx, cancel := context.WithCancel(self.ctx)
 	collection_context_manager, err := server_artifacts.NewCollectionContextManager(
-		sub_ctx, self.wg, self.config_obj, &crypto_proto.VeloMessage{
+		sub_ctx, self.wg, config_obj, &crypto_proto.VeloMessage{
 			Source:      "server",
 			SessionId:   session_id,
 			FlowRequest: req,
@@ -75,7 +75,6 @@ func NewServerArtifactService(
 	return &ServerArtifactsRunner{
 		ServerArtifactsRunner: server_artifacts.NewServerArtifactRunner(
 			ctx, config_obj, wg),
-		config_obj:   config_obj,
 		ctx:          ctx,
 		wg:           wg,
 		cloud_config: cloud_config,

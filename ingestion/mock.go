@@ -168,12 +168,12 @@ func (self *HTTPIngestor) Process(
 
 	fmt.Printf("Sending %v\n", string(serialized))
 
-	req, err := http.NewRequestWithContext(ctx, "POST",
+	req, err := http.NewRequestWithContext(ctx, "PUT",
 		self.incoming_url, bytes.NewReader(serialized))
 	if err != nil {
 		return err
 	}
-
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := self.client.Do(req)
 	if err != nil {
 		return err
@@ -189,17 +189,13 @@ func (self *HTTPIngestor) Process(
 
 	fmt.Printf("Plan: %v\n", string(serialized_response))
 
-	for _, line := range bytes.Split(serialized_response, []byte("\n")) {
-		if len(line) < 2 {
-			continue
-		}
+	plans := []*UpdatePlan{}
+	err = json.Unmarshal(serialized_response, &plans)
+	if err != nil {
+		return err
+	}
 
-		plan := &UpdatePlan{}
-		err = json.Unmarshal(line, plan)
-		if err != nil {
-			return err
-		}
-
+	for _, plan := range plans {
 		err = self.Execute(ctx, plan)
 		if err != nil {
 			fmt.Printf("%v: %v\n", err, string(serialized_response))
@@ -218,7 +214,7 @@ func NewHTTPIngestor(config_obj *config.Config) (*HTTPIngestor, error) {
 	return &HTTPIngestor{
 		config_obj:   config_obj,
 		client:       http_client,
-		incoming_url: "http://localhost:8123/incoming",
+		incoming_url: "http://localhost:8080/v1/velociraptor/ingest",
 	}, nil
 }
 

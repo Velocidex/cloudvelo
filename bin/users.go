@@ -53,8 +53,8 @@ func doOrgUserAdd() error {
 	}
 
 	record.Orgs = append(record.Orgs, &api_proto.OrgRecord{
-		Name:  *orgs_user_add_org_name,
-		OrgId: *orgs_user_add_org,
+		Name: *orgs_user_add_org_name,
+		Id:   *orgs_user_add_org,
 	})
 
 	return user_manager.SetUser(ctx, record)

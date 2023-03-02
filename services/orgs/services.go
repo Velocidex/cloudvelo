@@ -36,13 +36,16 @@ func (self *OrgManager) getContext(org_id string) (*OrgContext, error) {
 func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgContext, error) {
 	// Create a new service container and cache it for next time
 	record := &api_proto.OrgRecord{
+		// For backwards compatibility
 		OrgId: org_id,
+		Id:    org_id,
 		Name:  name,
 		Nonce: nonce,
 	}
 
 	if utils.IsRootOrg(org_id) {
 		record.OrgId = "root"
+		record.Id = "root"
 		record.Name = "<root>"
 		record.Nonce = self.config_obj.Client.Nonce
 	}
@@ -139,12 +142,14 @@ func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgCo
 	// Create a new service container and cache it for next time
 	record := &api_proto.OrgRecord{
 		OrgId: org_id,
+		Id:    org_id,
 		Name:  name,
 		Nonce: nonce,
 	}
 
 	if utils.IsRootOrg(org_id) {
 		record.OrgId = "root"
+		record.Id = "root"
 		record.Name = "<root>"
 		record.Nonce = self.config_obj.Client.Nonce
 	}
