@@ -113,8 +113,8 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	}
 
 	self.mu.Lock()
-	self.orgs[org_context.record.OrgId] = org_context
-	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.orgs[org_context.record.Id] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.Id
 	self.mu.Unlock()
 
 	org_record := org_context.record
@@ -122,14 +122,14 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	// Write the org into the index.
 	return org_record, cvelo_services.SetElasticIndex(self.ctx,
 		services.ROOT_ORG_ID,
-		"orgs", org_record.OrgId, org_record)
+		"orgs", org_record.Id, org_record)
 }
 
 func (self *OrgManager) makeNewConfigObj(
 	record *api_proto.OrgRecord) *config_proto.Config {
 
 	result := proto.Clone(self.config_obj).(*config_proto.Config)
-	result.OrgId = record.OrgId
+	result.OrgId = record.Id
 	result.OrgName = record.Name
 
 	if result.Client != nil {
@@ -153,26 +153,31 @@ func (self *OrgManager) Scan() error {
 		record := &api_proto.OrgRecord{}
 		err = json.Unmarshal(hit, record)
 		if err == nil {
+			// Read existing records for backwards compatibility
+			if record.OrgId != "" && record.Id == "" {
+				record.Id = record.OrgId
+			}
+
 			self.mu.Lock()
-			if utils.IsRootOrg(record.OrgId) {
-				record.OrgId = "root"
+			if utils.IsRootOrg(record.Id) {
+				record.Id = "root"
 				record.Name = "<root>"
 				record.Nonce = self.config_obj.Client.Nonce
 			}
 
-			_, pres := self.orgs[record.OrgId]
+			_, pres := self.orgs[record.Id]
 			self.mu.Unlock()
 
 			if !pres {
 				org_context, err := self.makeNewOrgContext(
-					record.OrgId, record.Name, record.Nonce)
+					record.Id, record.Name, record.Nonce)
 				if err != nil {
 					continue
 				}
 
 				self.mu.Lock()
-				self.orgs[record.OrgId] = org_context
-				self.org_id_by_nonce[record.Nonce] = record.OrgId
+				self.orgs[record.Id] = org_context
+				self.org_id_by_nonce[record.Nonce] = record.Id
 				self.mu.Unlock()
 			}
 		}
@@ -195,8 +200,8 @@ func (self *OrgManager) StartClientOrgManager(
 	}
 
 	self.mu.Lock()
-	self.orgs[org_context.record.OrgId] = org_context
-	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.orgs[org_context.record.Id] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.Id
 	self.mu.Unlock()
 
 	// Get the root org's repository manager
@@ -263,8 +268,8 @@ func (self *OrgManager) Start(
 	}
 
 	self.mu.Lock()
-	self.orgs[org_context.record.OrgId] = org_context
-	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.OrgId
+	self.orgs[org_context.record.Id] = org_context
+	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.Id
 	self.mu.Unlock()
 
 	// Get the root org's repository manager

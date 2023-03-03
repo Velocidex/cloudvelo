@@ -280,7 +280,7 @@ func (self Foreman) RunOnce(
 	orgCountGauge.Set(float64(len(orgs)))
 
 	for _, org := range orgs {
-		org_config_obj.OrgId = org.OrgId
+		org_config_obj.OrgId = org.Id
 		if logger != nil {
 			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
 		}

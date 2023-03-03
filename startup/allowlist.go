@@ -4,6 +4,7 @@ package startup
 
 var (
 	allowed_plugins = []string{
+		"profile",
 		"artifact_definitions",
 		"batch",
 		"chain",
@@ -150,6 +151,7 @@ var (
 		"read_file",
 		"relpath",
 		"remap",
+		"regex_replace",
 		"rm_client_monitoring",
 		"rot13",
 		"scope",

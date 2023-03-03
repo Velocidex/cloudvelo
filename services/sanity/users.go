@@ -72,8 +72,10 @@ func createInitialUsers(
 				}
 
 				new_user.Orgs = append(new_user.Orgs, &api_proto.OrgRecord{
-					Name:  org_config_obj.OrgName,
+					Name: org_config_obj.OrgName,
+					// For backwards compatibility.
 					OrgId: org_config_obj.OrgId,
+					Id:    org_config_obj.OrgId,
 				})
 
 				// Give them the administrator role in the respective org
