@@ -182,17 +182,13 @@ func (self UploadFunction) Upload(
 		}, nil
 	}
 
-	err = buffer.Flush()
+	err = buffer.Close()
 	if err != nil {
 		scope.Log("ERROR: Finalizing %v: %v", dest, err)
 		return &uploads.UploadResponse{
 			Error: err.Error(),
 		}, nil
 	}
-
-	// If we get here it all went well - commit the result.
-	uploader.Commit()
-	uploader.Close()
 
 	return uploader.GetVQLResponse(), nil
 }

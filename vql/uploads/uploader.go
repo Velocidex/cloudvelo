@@ -310,6 +310,10 @@ func (self *VeloCloudUploader) Start(ctx context.Context) error {
 	return nil
 }
 
+func (self *VeloCloudUploader) PutWhole(buf []byte) error {
+	return self.Put(buf)
+}
+
 func (self *VeloCloudUploader) Put(buf []byte) error {
 	self.md5_sum.Write(buf)
 	self.sha_sum.Write(buf)

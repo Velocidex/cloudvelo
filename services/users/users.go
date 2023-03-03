@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -49,7 +50,7 @@ func (self *UserManager) SetUser(
 	self.lru.Set(user_record.Name, user_record)
 
 	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
+		services.ROOT_ORG_ID,
 		"users", user_record.Name, &UserRecord{
 			Username: user_record.Name,
 			Record:   string(serialized),
@@ -87,6 +88,11 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 
 	grpc_user_info := users.GetGRPCUserInfo(
 		self.config_obj.VeloConf(), ctx, self.ca_pool)
+
+	if grpc_user_info.Name == "" {
+		return nil, nil, fmt.Errorf("empty username supplied to GetUserFromContext")
+	}
+
 	user_record, err := self.GetUser(ctx, grpc_user_info.Name)
 	if err != nil {
 		return nil, nil, err
@@ -97,7 +103,7 @@ func (self *UserManager) GetUserFromContext(ctx context.Context) (
 		user_record.Orgs = grpc_user_info.Orgs
 	}
 
-	// Fetch the appropriate config file fro the org manager.
+	// Fetch the appropriate config file from the org manager.
 	org_manager, err := services.GetOrgManager()
 	if err != nil {
 		return nil, nil, err
@@ -121,7 +127,7 @@ func (self *UserManager) GetUserWithHashes(
 	}
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		self.config_obj.OrgId, "users", username)
+		services.ROOT_ORG_ID, "users", username)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +217,7 @@ func (self *UserManager) SetUserOptions(
 	}
 
 	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
+		services.ROOT_ORG_ID,
 		"user_options", username, &UserGUIOptions{
 			Username:   username,
 			GUIOptions: string(serialized),
@@ -222,7 +228,7 @@ func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		self.config_obj.OrgId, "user_options", username)
+		services.ROOT_ORG_ID, "user_options", username)
 	if err == os.ErrNotExist {
 		return &api_proto.SetGUIOptionsRequest{}, nil
 	}

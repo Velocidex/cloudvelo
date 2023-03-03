@@ -12,16 +12,14 @@ import (
 )
 
 type ClientInfoUpdate struct {
-	Name          string   `json:"Name"`
-	BuildTime     string   `json:"BuildTime"`
-	Labels        []string `json:"Labels"`
-	Hostname      string   `json:"Hostname"`
-	ClientVersion string   `json:"client_version"`
-	OS            string   `json:"OS"`
-	Architecture  string   `json:"Architecture"`
-	Platform      string   `json:"Platform"`
-	MACAddresses  []string `json:"MACAddresses"`
-	InstallTime   uint64   `json:"InstallTime"`
+	ClientId      string `json:"client_id"`
+	Hostname      string `json:"hostname"`
+	Release       string `json:"release"`
+	Architecture  string `json:"architecture"`
+	ClientVersion string `json:"client_version"`
+	BuildTime     string `json:"build_time"`
+	System        string `json:"system"`
+	InstallTime   uint64 `json:"install_time"`
 }
 
 // Register a new client - update the client record and update it's
@@ -69,9 +67,9 @@ func (self Ingestor) HandleClientInfoUpdates(
 				Hostname:      row.Hostname,
 				Fqdn:          row.Hostname,
 				ClientVersion: row.ClientVersion,
-				System:        row.OS,
+				BuildTime:     row.BuildTime,
+				System:        row.System,
 				Architecture:  row.Architecture,
-				MacAddresses:  row.MACAddresses,
 				FirstSeenAt:   row.InstallTime,
 			}})
 		if err != nil {

@@ -52,9 +52,10 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 
 	org_config := self.makeNewConfigObj(record)
 	service_manager := &LazyServiceContainer{
-		wg:         self.wg,
-		ctx:        self.ctx,
-		config_obj: org_config,
+		wg:           self.wg,
+		ctx:          self.ctx,
+		config_obj:   org_config,
+		cloud_config: self.cloud_config,
 	}
 
 	org_context := &OrgContext{

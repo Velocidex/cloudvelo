@@ -153,15 +153,14 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		return "", err
 	}
 
-	// Run server artifacts inline.  NOTE: There is a race here
-	// between writing the collection and it becoming available for
-	// reading by the server artifact runner, so we just pass it along
-	// inline.
+	// Run server artifacts inline.
 	if client_id == "server" {
-		server_artifacts_service, err := cvelo_services.GetServerArtifactService()
+		server_artifacts_service, err := services.GetServerArtifactRunner(
+			config_obj)
 		if err != nil {
 			return "", err
 		}
+
 		err = server_artifacts_service.LaunchServerArtifact(
 			config_obj, session_id, task.FlowRequest, collection_context)
 		return collection_context.SessionId, err
