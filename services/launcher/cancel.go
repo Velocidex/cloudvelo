@@ -24,6 +24,21 @@ func (self *Launcher) CancelFlow(
 		return &api_proto.StartFlowResponse{}, nil
 	}
 
+	// Handle server collections especially via the server artifact
+	// runner.
+	if client_id == "server" {
+		server_artifacts_service, err := services.GetServerArtifactRunner(
+			config_obj)
+		if err != nil {
+			return nil, err
+		}
+
+		server_artifacts_service.Cancel(ctx, flow_id, username)
+		return &api_proto.StartFlowResponse{
+			FlowId: flow_id,
+		}, nil
+	}
+
 	// Update the collection context to set it as stopped.
 	collection_details, err := self.GetFlowDetails(
 		config_obj, client_id, flow_id)

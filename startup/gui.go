@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"www.velocidex.com/golang/cloudvelo/config"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
-	"www.velocidex.com/golang/cloudvelo/services/server_artifacts"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	file_store_accessor "www.velocidex.com/golang/velociraptor/accessors/file_store"
 	"www.velocidex.com/golang/velociraptor/api"
@@ -52,11 +50,6 @@ func StartGUIServices(
 	if err != nil {
 		return sm, err
 	}
-
-	cvelo_services.RegisterServerArtifactsService(
-		server_artifacts.NewServerArtifactService(
-			sm.Ctx, config_obj.VeloConf(),
-			&config_obj.Cloud, sm.Wg))
 
 	// Start the listening server
 	server_builder, err := api.NewServerBuilder(

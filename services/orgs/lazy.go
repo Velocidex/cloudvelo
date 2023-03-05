@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/acl_manager"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
@@ -15,6 +16,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/launcher"
 	"www.velocidex.com/golang/cloudvelo/services/notebook"
 	"www.velocidex.com/golang/cloudvelo/services/notifier"
+	"www.velocidex.com/golang/cloudvelo/services/server_artifacts"
 	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -26,9 +28,10 @@ import (
 type LazyServiceContainer struct {
 	mu sync.Mutex
 
-	ctx        context.Context
-	wg         *sync.WaitGroup
-	config_obj *config_proto.Config
+	ctx          context.Context
+	wg           *sync.WaitGroup
+	config_obj   *config_proto.Config
+	cloud_config *config.ElasticConfiguration
 
 	// Elastic is too slow to serve the repository manager directly so
 	// we cache it here.
@@ -50,6 +53,10 @@ func (self *LazyServiceContainer) Notifier() (services.Notifier, error) {
 
 func (self *LazyServiceContainer) ServerEventManager() (services.ServerEventManager, error) {
 	return nil, errors.New("LazyServiceContainer.ServerEventManager is Not implemented")
+}
+
+func (self *LazyServiceContainer) ServerArtifactRunner() (services.ServerArtifactRunner, error) {
+	return server_artifacts.NewServerArtifactService(self.ctx, self.config_obj, self.cloud_config, self.wg)
 }
 
 func (self *LazyServiceContainer) ClientEventManager() (services.ClientEventTable, error) {

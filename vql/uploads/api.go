@@ -22,6 +22,10 @@ type CloudUploader interface {
 		size int64, // Expected size.
 		uploader_type string) (CloudUploader, error)
 
+	// Upload the buffer as a single part upload. This is used for
+	// files that are smaller than BUFF_SIZE.
+	PutWhole(buf []byte) error
+
 	// Upload the buffer as a multipart upload.  NOTE: This will be
 	// called with minimum 5mb buffers for each part except for the
 	// final part.

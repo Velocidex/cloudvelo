@@ -11,10 +11,15 @@ type BufferedWriter struct {
 
 	// Total amount of data stored
 	total uint64
+
+	// If the uploader is closed before sending a single part, we send
+	// the part using a different API.
+	sent_first_buffer bool
 }
 
 // Flush a buffer into the uploader
 func (self *BufferedWriter) Flush() error {
+	self.sent_first_buffer = true
 	err := self.uploader.Put(self.buf[:self.buf_idx])
 	if err != nil {
 		return err
@@ -25,6 +30,10 @@ func (self *BufferedWriter) Flush() error {
 }
 
 func (self *BufferedWriter) Close() error {
+	if !self.sent_first_buffer {
+		return self.uploader.PutWhole(self.buf[:self.buf_idx])
+	}
+
 	err := self.Flush()
 	if err != nil {
 		return err
