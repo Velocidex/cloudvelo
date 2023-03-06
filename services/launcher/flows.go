@@ -41,13 +41,15 @@ func (self Launcher) GetFlows(
 
 	if length == 0 {
 		length = 1000
+	} else {
+		length = length * 4
 	}
 
 	// Each flow is divided into at least 4 records so we need to
 	// overfetch records to have all the data.
 	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.config_obj.OrgId, "collections",
-		json.Format(getFlowsQuery, client_id, offset, length*4))
+		json.Format(getFlowsQuery, client_id, offset, length))
 	if err != nil {
 		return nil, err
 	}
