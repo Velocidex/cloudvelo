@@ -13,6 +13,6 @@ func (self ClientInfoManager) GetMetadata(ctx context.Context,
 }
 
 func (self ClientInfoManager) SetMetadata(ctx context.Context,
-	client_id string, metadata *ordereddict.Dict) error {
+	client_id string, metadata *ordereddict.Dict, principal string) error {
 	return errors.New("Not implemented")
 }
