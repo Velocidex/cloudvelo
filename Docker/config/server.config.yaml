@@ -257,6 +257,7 @@ api_config: {}
 defaults:
   hunt_expiry_hours: 168
   notebook_cell_timeout_min: 10
+  max_row_buffer_size: 900000
 obfuscation_nonce: ""
 
 
