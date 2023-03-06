@@ -23,9 +23,7 @@ var (
 const getFlowsQuery = `
 {
   "sort": [{
-    "type": {"order": "asc", "unmapped_type" : "keyword"}
-  }, {
-    "timestamp": {"order": "asc"}
+    "session_id": {"order": "desc"}
   }],
   "query": {
      "match": {"client_id" : %q}
@@ -45,9 +43,11 @@ func (self Launcher) GetFlows(
 		length = 1000
 	}
 
+	// Each flow is divided into at least 4 records so we need to
+	// overfetch records to have all the data.
 	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.config_obj.OrgId, "collections",
-		json.Format(getFlowsQuery, client_id, offset, length))
+		json.Format(getFlowsQuery, client_id, offset, length*4))
 	if err != nil {
 		return nil, err
 	}

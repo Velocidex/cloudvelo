@@ -142,6 +142,7 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 
 	record := api.ArtifactCollectorRecordFromProto(collection_context)
 	record.Tasks = json.MustMarshalString([]*crypto_proto.VeloMessage{task})
+	record.Type = "main"
 
 	// Store the collection_context first, then queue all the tasks.
 	// This must be set synchronously because the server artifact
@@ -187,9 +188,12 @@ func (self *Launcher) WriteFlow(
 	// Store the collection_context first, then queue all the tasks.
 	doc_id := api.GetDocumentIdForCollection(
 		flow.ClientId, flow.SessionId, "stats")
+
+	stats := api.ArtifactCollectorRecordFromProto(flow)
+	stats.Type = "stats"
+	stats.Timestamp = utils.GetTime().Now().UnixNano()
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections", doc_id,
-		api.ArtifactCollectorRecordFromProto(flow))
+		config_obj.OrgId, "collections", doc_id, stats)
 }
 
 func (self *Launcher) GetFlowRequests(
