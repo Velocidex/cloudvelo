@@ -55,7 +55,7 @@ func (self *ServerArtifactRunner) LaunchServerArtifact(
 	}
 
 	collection_context_manager, err := server_artifacts.NewCollectionContextManager(
-		context.Background(), self.wg, config_obj, req, collection_context)
+		self.ctx, self.wg, config_obj, req, collection_context)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (self *ServerArtifactRunner) LaunchServerArtifact(
 	go func() {
 		defer self.wg.Done()
 		defer cancel()
-		defer collection_context_manager.Save()
+		defer collection_context_manager.Close(self.ctx)
 
 		self.ProcessTask(sub_ctx, config_obj,
 			session_id, collection_context_manager, req)

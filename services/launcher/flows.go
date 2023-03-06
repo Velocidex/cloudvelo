@@ -23,9 +23,7 @@ var (
 const getFlowsQuery = `
 {
   "sort": [{
-    "type": {"order": "asc", "unmapped_type" : "keyword"}
-  }, {
-    "timestamp": {"order": "asc"}
+    "session_id": {"order": "desc"}
   }],
   "query": {
      "match": {"client_id" : %q}
@@ -43,8 +41,18 @@ func (self Launcher) GetFlows(
 
 	if length == 0 {
 		length = 1000
+	} else {
+		length = length * 4
 	}
 
+	// Elastic limits the size of queries. This should be large enough
+	// though.
+	if length > 2000 {
+		length = 2000
+	}
+
+	// Each flow is divided into at least 4 records so we need to
+	// overfetch records to have all the data.
 	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.config_obj.OrgId, "collections",
 		json.Format(getFlowsQuery, client_id, offset, length))
