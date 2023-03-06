@@ -45,6 +45,12 @@ func (self Launcher) GetFlows(
 		length = length * 4
 	}
 
+	// Elastic limits the size of queries. This should be large enough
+	// though.
+	if length > 2000 {
+		length = 2000
+	}
+
 	// Each flow is divided into at least 4 records so we need to
 	// overfetch records to have all the data.
 	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
