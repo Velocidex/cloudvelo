@@ -206,7 +206,7 @@ func (self *HTTPIngestor) Process(
 }
 
 func NewHTTPIngestor(config_obj *config.Config) (*HTTPIngestor, error) {
-	http_client, err := networking.GetDefaultHTTPClient(config_obj.Client, "")
+	http_client, err := networking.GetDefaultHTTPClient(config_obj.Client, "", nil)
 	if err != nil {
 		return nil, err
 	}

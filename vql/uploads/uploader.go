@@ -476,7 +476,7 @@ func InstallVeloCloudUploader(
 	manager crypto.ICryptoManager) error {
 
 	http_client, err := networking.GetDefaultHTTPClient(
-		config_obj.Client, "")
+		config_obj.Client, "", nil)
 	if err != nil {
 		return err
 	}

@@ -56,7 +56,7 @@ type serverPublicKeyResolver struct {
 	ctx context.Context
 }
 
-func (self *serverPublicKeyResolver) Delete(client_id string) {
+func (self *serverPublicKeyResolver) DeleteSubject(client_id string) {
 }
 
 func (self *serverPublicKeyResolver) GetPublicKey(
