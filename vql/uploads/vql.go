@@ -147,7 +147,7 @@ func (self UploadFunction) Upload(
 
 	// A regular uploader for bulk data.
 	uploader, err := gUploaderFactory.New(
-		ctx, scope, dest, accessor, name,
+		ctx, scope, dest, accessor, dest,
 		mtime, atime, ctime, btime, size, "")
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (self UploadFunction) Upload(
 	range_reader, ok := reader.(uploads.RangeReader)
 	if ok {
 		// A new uploader for the index file.
-		idx_name := name.Dirname().Append(name.Basename() + ".idx")
+		idx_name := dest.Dirname().Append(dest.Basename() + ".idx")
 		idx_uploader, err := gUploaderFactory.New(
 			ctx, scope, dest, accessor, idx_name, mtime,
 			atime, ctime, btime, size, "idx")

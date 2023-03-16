@@ -4,6 +4,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/constants"
 )
 
-const (
+var (
 	VERSION = constants.VERSION
 )
