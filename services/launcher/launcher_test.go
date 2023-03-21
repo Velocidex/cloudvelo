@@ -3,6 +3,7 @@ package launcher_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert"
 	"github.com/stretchr/testify/suite"
@@ -16,6 +17,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
+	"www.velocidex.com/golang/velociraptor/vtesting"
 )
 
 const (
@@ -75,8 +77,18 @@ sources:
 
 	assert.Equal(self.T(), flow_id, flow_id)
 
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	// Wait here for the async flow to be written.
+	vtesting.WaitUntil(5*time.Second, self.T(), func() bool {
+		flows, _ := launcher.GetFlows(self.Ctx,
+			config_obj, client_id, true, nil, 0, 100)
+		return len(flows.Items) > 0
+	})
+
 	// Get Flows API
-	flows, err := launcher.GetFlows(
+	flows, err := launcher.GetFlows(self.Ctx,
 		config_obj, client_id, true, nil, 0, 100)
 	assert.NoError(self.T(), err)
 
