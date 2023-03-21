@@ -36,7 +36,8 @@ func (self Ingestor) HandleResponses(
 	case "System.VFS.ListDirectory/Stats":
 		_ = self.HandleSystemVfsListDirectory(ctx, config_obj, message)
 
-	case "Generic.Client.Info/BasicInformation":
+	case "Generic.Client.Info/BasicInformation",
+		"Custom.Generic.Client.Info/BasicInformation":
 		_ = self.HandleInterrogation(ctx, config_obj, message)
 
 	case "System.VFS.DownloadFile":
