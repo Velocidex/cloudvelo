@@ -20,7 +20,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
-	www.velocidex.com/golang/vfilter v0.0.0-20230309171307-e8de2383d93b
+	www.velocidex.com/golang/vfilter v0.0.0-20230316180946-365e0a88120f
 )
 
 require (

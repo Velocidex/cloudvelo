@@ -59,6 +59,8 @@ func (self *S3Writer) Size() (int64, error) {
 }
 
 func (self *S3Writer) Write(data []byte) (size int, err error) {
+	defer Instrument("S3Reader.Write")()
+
 	if len(data) == 0 {
 		return 0, nil
 	}
@@ -80,6 +82,8 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 			return 0, err
 		}
 	}
+
+	s3_counter_upload.Add(float64(len(data)))
 
 	return len(data), nil
 }

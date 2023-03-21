@@ -57,49 +57,20 @@ func (self Launcher) ScheduleArtifactCollection(
 		ctx, config_obj, collector_request, args, completion)
 }
 
-// The Elastic version stores collections in their own index.
-func (self Launcher) ScheduleVQLCollectorArgsOnMultipleClients(
-	ctx context.Context,
+// Calculate the Elastic record, and collection context.
+func prepareCollectionContext(ctx context.Context,
 	config_obj *config_proto.Config,
 	collector_request *flows_proto.ArtifactCollectorArgs,
-	clients []string) error {
-
-	for _, client_id := range clients {
-		request := proto.Clone(collector_request).(*flows_proto.ArtifactCollectorArgs)
-
-		request.ClientId = client_id
-		_, err := self.ScheduleArtifactCollectionFromCollectorArgs(
-			ctx, config_obj, request, request.CompiledCollectorArgs,
-			func() {})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// The Elastic version stores collections in their own index.
-func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	collector_request *flows_proto.ArtifactCollectorArgs,
-	vql_collector_args []*actions_proto.VQLCollectorArgs,
-	completion func()) (string, error) {
+	vql_collector_args []*actions_proto.VQLCollectorArgs) (
+	collection_context *flows_proto.ArtifactCollectorContext,
+	record *api.ArtifactCollectorRecord, task *crypto_proto.VeloMessage) {
 
 	client_id := collector_request.ClientId
-	if client_id == "" {
-		return "", errors.New("Client id not provided.")
-	}
-
 	session_id := collector_request.FlowId
-	if session_id == "" {
-		session_id = launcher.NewFlowId(client_id)
-	}
 
 	// Compile all the requests into specific tasks to be sent to the
 	// client.
-	task := &crypto_proto.VeloMessage{
+	task = &crypto_proto.VeloMessage{
 		SessionId:   session_id,
 		RequestId:   constants.ProcessVQLResponses,
 		FlowRequest: &crypto_proto.FlowRequest{},
@@ -127,7 +98,7 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 	}
 
 	// Generate a new collection context for this flow.
-	collection_context := &flows_proto.ArtifactCollectorContext{
+	collection_context = &flows_proto.ArtifactCollectorContext{
 		SessionId:            session_id,
 		CreateTime:           uint64(time.Now().UnixNano() / 1000),
 		State:                flows_proto.ArtifactCollectorContext_RUNNING,
@@ -140,19 +111,90 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		OutstandingRequests:  int64(len(vql_collector_args)),
 	}
 
-	record := api.ArtifactCollectorRecordFromProto(collection_context)
+	record = api.ArtifactCollectorRecordFromProto(collection_context)
 	record.Tasks = json.MustMarshalString([]*crypto_proto.VeloMessage{task})
 	record.Type = "main"
 
-	// Store the collection_context first, then queue all the tasks.
-	// This must be set synchronously because the server artifact
-	// collector will read it back out below.
-	doc_id := api.GetDocumentIdForCollection(client_id, session_id, "")
-	err := cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId, "collections", doc_id, record)
+	return collection_context, record, task
+}
+
+// The Elastic version stores collections in their own index.
+func (self Launcher) ScheduleVQLCollectorArgsOnMultipleClients(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	collector_request *flows_proto.ArtifactCollectorArgs,
+	client_ids []string) error {
+
+	client_info_manager, err := services.GetClientInfoManager(config_obj)
 	if err != nil {
-		return "", err
+		return err
 	}
+
+	// If the client info manager supports scheduling the same request
+	// on multiple clients we can do this more efficiently.
+	multi_scheduler, ok := client_info_manager.(cvelo_services.MultiClientMessageQueuer)
+	if ok {
+		_, record, task := prepareCollectionContext(
+			ctx, config_obj, collector_request,
+			collector_request.CompiledCollectorArgs)
+
+		// Write all the collection_context records
+		for _, client_id := range client_ids {
+			record.ClientId = client_id
+
+			// Store the collection_context first, then queue all the tasks.
+			doc_id := api.GetDocumentIdForCollection(
+				client_id, collector_request.FlowId, "")
+			cvelo_services.SetElasticIndexAsync(
+				self.config_obj.OrgId, "collections", doc_id, record)
+		}
+
+		return multi_scheduler.QueueMessageForMultipleClients(ctx, client_ids,
+			task, services.NOTIFY_CLIENT)
+	}
+
+	// Otherwise just schedule all messages one at the time.
+	for _, client_id := range client_ids {
+		request := proto.Clone(collector_request).(*flows_proto.ArtifactCollectorArgs)
+
+		request.ClientId = client_id
+		_, err := self.ScheduleArtifactCollectionFromCollectorArgs(
+			ctx, config_obj, request, request.CompiledCollectorArgs,
+			func() {})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// The Elastic version stores collections in their own index.
+func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	collector_request *flows_proto.ArtifactCollectorArgs,
+	vql_collector_args []*actions_proto.VQLCollectorArgs,
+	completion func()) (string, error) {
+
+	client_id := collector_request.ClientId
+	if client_id == "" {
+		return "", errors.New("Client id not provided.")
+	}
+
+	// Make sure we generate a new flow id if needed
+	if collector_request.FlowId == "" {
+		collector_request.FlowId = launcher.NewFlowId(client_id)
+	}
+
+	collection_context, record, task := prepareCollectionContext(
+		ctx, config_obj, collector_request, vql_collector_args)
+
+	// Store the collection_context first, then queue all the tasks.
+	doc_id := api.GetDocumentIdForCollection(
+		client_id, collector_request.FlowId, "")
+	cvelo_services.SetElasticIndexAsync(
+		self.config_obj.OrgId, "collections", doc_id, record)
 
 	// Run server artifacts inline.
 	if client_id == "server" {
@@ -163,7 +205,8 @@ func (self Launcher) ScheduleArtifactCollectionFromCollectorArgs(
 		}
 
 		err = server_artifacts_service.LaunchServerArtifact(
-			config_obj, session_id, task.FlowRequest, collection_context)
+			config_obj, collector_request.FlowId,
+			task.FlowRequest, collection_context)
 		return collection_context.SessionId, err
 	}
 

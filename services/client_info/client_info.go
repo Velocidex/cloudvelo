@@ -8,6 +8,7 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
+	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
@@ -98,6 +99,11 @@ func (self ClientInfoQueuer) QueueMessageForMultipleClients(
 	client_ids []string,
 	req *crypto_proto.VeloMessage,
 	notify bool) error {
+
+	logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+	logger.Debug("QueueMessageForMultipleClients: Queue message for %v clients",
+		len(client_ids))
+
 	for _, client_id := range client_ids {
 		err := self.QueueMessageForClient(ctx, client_id, req, notify, nil)
 		if err != nil {

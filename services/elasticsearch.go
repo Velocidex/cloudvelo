@@ -114,6 +114,9 @@ func GetIndex(org_id, index string) string {
 
 func DeleteDocument(
 	ctx context.Context, org_id, index string, id string, sync bool) error {
+
+	defer Instrument("DeleteDocument")()
+
 	defer Debug("DeleteDocument %v", id)()
 	client, err := GetElasticClient()
 	if err != nil {
@@ -162,6 +165,7 @@ func FlushIndex(
 
 func UpdateIndex(
 	ctx context.Context, org_id, index, id string, query string) error {
+	defer Instrument("UpdateIndex")()
 	defer Debug("UpdateIndex %v %v", index, id)()
 	return retry(func() error {
 		return _UpdateIndex(ctx, org_id, index, id, query)
@@ -203,6 +207,9 @@ func _UpdateIndex(
 
 func UpdateByQuery(
 	ctx context.Context, org_id, index string, query string) error {
+
+	defer Instrument("UpdateByQuery")()
+
 	client, err := GetElasticClient()
 	if err != nil {
 		return err
@@ -253,7 +260,9 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 
 func SetElasticIndex(ctx context.Context,
 	org_id, index, id string, record interface{}) error {
+	defer Instrument("SetElasticIndex")()
 	defer Debug("SetElasticIndex %v %v", index, id)()
+
 	return retry(func() error {
 		return _SetElasticIndex(ctx, org_id, index, id, record)
 	})
@@ -327,6 +336,7 @@ type _ElasticResponse struct {
 func GetElasticRecord(
 	ctx context.Context, org_id, index, id string) (json.RawMessage, error) {
 	defer Debug("GetElasticRecord %v %v", index, id)()
+	defer Instrument("GetElasticRecord")()
 
 	client, err := GetElasticClient()
 	if err != nil {
@@ -382,7 +392,11 @@ type docs struct {
 
 // Gets a single elastic record by id.
 func GetMultipleElasticRecords(
-	ctx context.Context, org_id, index string, ids []string) ([]json.RawMessage, error) {
+	ctx context.Context,
+	org_id, index string, ids []string) ([]json.RawMessage, error) {
+
+	defer Instrument("GetMultipleElasticRecords")()
+
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -539,6 +553,9 @@ func QueryChan(
 
 func DeleteByQuery(
 	ctx context.Context, org_id, index, query string) error {
+
+	defer Instrument("DeleteByQuery")()
+
 	client, err := GetElasticClient()
 	if err != nil {
 		return err
@@ -570,6 +587,7 @@ func DeleteByQuery(
 func QueryElasticAggregations(
 	ctx context.Context, org_id, index, query string) ([]string, error) {
 
+	defer Instrument("QueryElasticAggregations")()
 	defer Debug("QueryElasticAggregations %v", index)()
 
 	es, err := GetElasticClient()
@@ -631,6 +649,7 @@ func QueryElasticRaw(
 	ctx context.Context,
 	org_id, index, query string) ([]json.RawMessage, error) {
 
+	defer Instrument("QueryElasticRaw")()
 	defer Debug("QueryElasticRaw %v", index)()
 
 	es, err := GetElasticClient()
@@ -679,6 +698,7 @@ func QueryElasticIds(
 	ctx context.Context,
 	org_id, index, query string) ([]string, error) {
 
+	defer Instrument("QueryElasticIds")()
 	es, err := GetElasticClient()
 	if err != nil {
 		return nil, err
@@ -726,6 +746,8 @@ type Result struct {
 func QueryElastic(
 	ctx context.Context,
 	org_id, index, query string) ([]Result, error) {
+
+	defer Instrument("QueryElastic")()
 
 	es, err := GetElasticClient()
 	if err != nil {

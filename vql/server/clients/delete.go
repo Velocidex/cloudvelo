@@ -68,7 +68,8 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
-		flows, err := launcher.GetFlows(config_obj, arg.ClientId, true, nil, 0, 10000)
+		flows, err := launcher.GetFlows(
+			ctx, config_obj, arg.ClientId, true, nil, 0, 10000)
 		if err != nil {
 			scope.Log("client_delete:get_flows: %s", err)
 			return

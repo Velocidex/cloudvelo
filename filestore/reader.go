@@ -23,6 +23,8 @@ type S3Reader struct {
 }
 
 func (self *S3Reader) Read(buff []byte) (int, error) {
+	defer Instrument("S3Reader.Read")()
+
 	n, err := self.downloader.Download(aws.NewWriteAtBuffer(buff),
 		&s3.GetObjectInput{
 			Bucket: aws.String(self.bucket),
@@ -46,6 +48,8 @@ func (self *S3Reader) Read(buff []byte) (int, error) {
 	}
 	self.offset += n
 
+	s3_counter_download.Add(float64(n))
+
 	return int(n), nil
 }
 
@@ -55,6 +59,8 @@ func (self *S3Reader) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (self *S3Reader) Stat() (api.FileInfo, error) {
+	defer Instrument("S3Reader.Read")()
+
 	svc := s3.New(self.session)
 	headObj := s3.HeadObjectInput{
 		Bucket: aws.String(self.bucket),
