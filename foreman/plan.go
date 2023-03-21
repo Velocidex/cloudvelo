@@ -90,6 +90,7 @@ func (self *Plan) scheduleRequestOnClients(
 		return err
 	}
 
+	// If the launcher support bulk scheduling do this.
 	multi_launcher, ok := laucher_manager.(cvelo_services.MultiLauncher)
 	if ok {
 		request_copy := proto.Clone(request).(*flows_proto.ArtifactCollectorArgs)
@@ -102,6 +103,7 @@ func (self *Plan) scheduleRequestOnClients(
 
 	}
 
+	// Otherwise just schedule clients one at the time.
 	for _, client_id := range clients {
 		request_copy := proto.Clone(request).(*flows_proto.ArtifactCollectorArgs)
 		request_copy.ClientId = client_id

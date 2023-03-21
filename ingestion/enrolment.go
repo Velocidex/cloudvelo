@@ -3,10 +3,10 @@ package ingestion
 import (
 	"context"
 
+	"www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
-	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
 
@@ -47,7 +47,12 @@ func (self Ingestor) HandleInterrogation(
 	ctx context.Context, config_obj *config_proto.Config,
 	message *crypto_proto.VeloMessage) error {
 
-	query := json.Format(updateClientInterrogate, message.SessionId)
-	return services.UpdateIndex(
-		ctx, config_obj.OrgId, "clients", message.Source, query)
+	services.SetElasticIndexAsync(
+		config_obj.OrgId, "clients", message.Source+"_interrogate",
+		&api.ClientRecord{
+			ClientId:        message.Source,
+			Type:            "interrogation",
+			LastInterrogate: message.SessionId,
+		})
+	return nil
 }

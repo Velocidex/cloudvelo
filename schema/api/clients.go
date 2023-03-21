@@ -76,6 +76,7 @@ func GetMultipleClients(
 		terms = append(terms, i+"_ping")
 		terms = append(terms, i+"_labels")
 		terms = append(terms, i+"_hunts")
+		terms = append(terms, i+"_interrogate")
 	}
 
 	hits, err := cvelo_services.GetMultipleElasticRecords(

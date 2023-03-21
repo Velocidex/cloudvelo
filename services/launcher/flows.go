@@ -1,6 +1,7 @@
 package launcher
 
 import (
+	"context"
 	"errors"
 	"sort"
 
@@ -34,6 +35,7 @@ const getFlowsQuery = `
 `
 
 func (self Launcher) GetFlows(
+	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string, include_archived bool,
 	flow_filter func(flow *flows_proto.ArtifactCollectorContext) bool,
@@ -53,7 +55,7 @@ func (self Launcher) GetFlows(
 
 	// Each flow is divided into at least 4 records so we need to
 	// overfetch records to have all the data.
-	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
+	hits, err := cvelo_services.QueryElasticRaw(ctx,
 		self.config_obj.OrgId, "collections",
 		json.Format(getFlowsQuery, client_id, offset, length))
 	if err != nil {
