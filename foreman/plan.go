@@ -100,7 +100,6 @@ func (self *Plan) scheduleRequestOnClients(
 
 		return multi_launcher.ScheduleVQLCollectorArgsOnMultipleClients(
 			ctx, org_config_obj, request_copy, clients)
-
 	}
 
 	// Otherwise just schedule clients one at the time.

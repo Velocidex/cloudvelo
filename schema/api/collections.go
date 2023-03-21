@@ -28,6 +28,13 @@ func (self *ArtifactCollectorRecord) ToProto() (
 		return nil, err
 	}
 
+	// For mass duplicated flows, client id inside the protobuf is not
+	// set (since it is the same for all requests). We therefore
+	// override it from the Elastic record.
+	if result.ClientId == "" {
+		result.ClientId = self.ClientId
+	}
+
 	return result, nil
 }
 
