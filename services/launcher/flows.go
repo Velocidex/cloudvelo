@@ -9,6 +9,7 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
@@ -170,6 +171,16 @@ func (self *Launcher) GetFlowDetails(
 	}, nil
 }
 
+// Are any queries currenrly running.
+func is_running(context *flows_proto.ArtifactCollectorContext) bool {
+	for _, s := range context.QueryStats {
+		if s.Status == crypto_proto.VeloStatus_PROGRESS {
+			return true
+		}
+	}
+	return false
+}
+
 func mergeRecords(
 	collection_context *flows_proto.ArtifactCollectorContext,
 	stats_context *flows_proto.ArtifactCollectorContext) *flows_proto.ArtifactCollectorContext {
@@ -207,8 +218,15 @@ func mergeRecords(
 		collection_context.CreateTime = stats_context.CreateTime
 	}
 
+	// We will encounter two records with QueryStats: the progress
+	// messages and the completed messages. Make sure that if we see a
+	// completion message it always replaces the progress message
+	// regardless which order it appears.
 	if len(stats_context.QueryStats) > 0 {
-		collection_context.QueryStats = stats_context.QueryStats
+		if len(collection_context.QueryStats) == 0 ||
+			is_running(collection_context) && !is_running(stats_context) {
+			collection_context.QueryStats = stats_context.QueryStats
+		}
 	}
 
 	return collection_context
