@@ -253,7 +253,7 @@ func (self Foreman) CalculateUpdate(
 
 	for _, hunt := range hunts {
 		hunt_start := int64(hunt.StartTime) * 1000
-		if hunt_start > early_time_range && hunt_start < now {
+		if hunt_start >= early_time_range && hunt_start < now {
 			started_hunts = append(started_hunts, hunt)
 		} else {
 			running_hunts = append(running_hunts, hunt)
