@@ -61,7 +61,8 @@ func (self *Indexer) searchWithNames(
 	field, operator, label string,
 	offset, limit uint64) (*api_proto.SearchClientsResponse, error) {
 
-	query := json.Format(getAllClientsAgg, field, offset, limit+1)
+	query := json.Format(getAllClientsAgg, field, label,
+		field, offset, limit+1)
 	hits, err := cvelo_services.QueryElasticAggregations(
 		ctx, config_obj.OrgId, "clients", query)
 	if err != nil {

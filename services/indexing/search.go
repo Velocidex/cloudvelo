@@ -131,6 +131,7 @@ const (
 
 	getAllClientsAgg = `
 {
+ "query": {"prefix": {%q: {"value": %q,  "case_insensitive": true}}},
  "aggs": {
     "genres": {
       "terms": { "field": %q }
@@ -145,7 +146,16 @@ const (
 func (self *Indexer) getAllClients(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	in *api_proto.SearchClientsRequest) ([]*api.ClientRecord, error) {
+	in *api_proto.SearchClientsRequest,
+	limit uint64) ([]*api.ClientRecord, error) {
+
+	// If the user wants to sort we search by filename - this is
+	// currently the only field we can sort on.
+	if in.Sort == api_proto.SearchClientsRequest_SORT_DOWN ||
+		in.Sort == api_proto.SearchClientsRequest_SORT_UP {
+		return self.searchClientsByHost(ctx, config_obj,
+			"host", "", in, limit)
+	}
 
 	terms := []string{allClientsQuery}
 	return self.searchWithTerms(ctx, config_obj,
@@ -334,7 +344,7 @@ func (self *Indexer) SearchClientRecords(
 	operator, term := splitIntoOperatorAndTerms(in.Query)
 	switch operator {
 	case "all":
-		return self.getAllClients(ctx, config_obj, in)
+		return self.getAllClients(ctx, config_obj, in, limit)
 
 	case "label":
 		return self.searchClientsByLabel(ctx, config_obj,
