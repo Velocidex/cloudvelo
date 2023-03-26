@@ -24,6 +24,13 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+const (
+	// Schedule clients that pings this far back on new hunts. This
+	// ensures we schedule as many clients as possible in large more
+	// efficient operations.
+	MAXIMUM_PING_BACKLOG = 3 * time.Hour
+)
+
 var (
 	huntCountGauge = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -118,7 +125,7 @@ func (self Foreman) planHuntForClient(
 		return
 	}
 
-	// Hunt specifies labels does the client have these labels?
+	// Hunt specifies labels. Does the client have these labels?
 	labels := hunt.Condition.GetLabels()
 	if labels != nil && len(labels.Label) > 0 {
 
@@ -171,6 +178,55 @@ func (self Foreman) planForClient(
 	self.planMonitoringForClient(ctx, org_config_obj, client_info, plan)
 }
 
+// Find clients that polled back up to 3 hours and schedule them for
+// new hunts. This function spawns a goroutine to do this in the
+// background as it can take a while.
+func (self Foreman) scheduleClientsWithBacklog(
+	ctx context.Context,
+	org_config_obj *config_proto.Config,
+	hunts []*api_proto.Hunt) {
+
+	new_plan, err := NewPlan(org_config_obj)
+	if err != nil {
+		return
+	}
+
+	// Schedule started hunts in the background because it could take
+	// a while.
+	go func() {
+		indexer, err := services.GetIndexer(org_config_obj)
+		if err != nil {
+			return
+		}
+
+		// Consider all clients that were active in the last 3 hours
+		// for scheduling.
+		early_time_range := utils.GetTime().Now().
+			Add(-MAXIMUM_PING_BACKLOG).UnixNano()
+		clients_chan, err := indexer.(*cvelo_indexing.Indexer).SearchClientRecordsChan(
+			ctx, nil, org_config_obj,
+			fmt.Sprintf("after:%d", early_time_range), "")
+
+		if err != nil {
+			logging.GetLogger(org_config_obj, &logging.ClientComponent).
+				Error("Foreman CalculateUpdate: %v", err)
+			return
+		}
+
+		for client_info := range clients_chan {
+			self.planForClient(ctx, org_config_obj,
+				client_info, hunts, new_plan)
+		}
+
+		err = new_plan.ExecuteHuntUpdate(ctx, org_config_obj)
+		if err != nil {
+			logging.GetLogger(org_config_obj, &logging.ClientComponent).
+				Error("Foreman CalculateUpdate: %v", err)
+		}
+	}()
+
+}
+
 func (self Foreman) CalculateUpdate(
 	ctx context.Context,
 	org_config_obj *config_proto.Config,
@@ -182,9 +238,36 @@ func (self Foreman) CalculateUpdate(
 		return err
 	}
 
+	now := utils.GetTime().Now().UnixNano()
+	early_time_range := self.last_run_time.UnixNano()
+
+	// Split hunts into two sets
+	// 1. Hunts that were started between the last sweep time and now.
+	// 2. Hunts there were started before the last sweep time.
+	//
+	// For the first case we need to schedule clients that were active
+	// in the recent past. In the second case we only need to schedule
+	// clients that were active since the last sweep time.
+	var started_hunts []*api_proto.Hunt
+	var running_hunts []*api_proto.Hunt
+
+	for _, hunt := range hunts {
+		hunt_start := int64(hunt.StartTime) * 1000
+		if hunt_start >= early_time_range && hunt_start < now {
+			started_hunts = append(started_hunts, hunt)
+		} else {
+			running_hunts = append(running_hunts, hunt)
+		}
+	}
+
+	// Schedule new hunts with backlog of client pings.
+	if len(started_hunts) > 0 {
+		self.scheduleClientsWithBacklog(ctx, org_config_obj, started_hunts)
+	}
+
 	clients_chan, err := indexer.(*cvelo_indexing.Indexer).SearchClientRecordsChan(
 		ctx, nil, org_config_obj,
-		fmt.Sprintf("after:%d", self.last_run_time.UnixNano()), "")
+		fmt.Sprintf("after:%d", early_time_range), "")
 	if err != nil {
 		return err
 	}
@@ -215,7 +298,8 @@ func (self Foreman) GetActiveHunts(
 
 	result := make([]*api_proto.Hunt, 0, len(hunts.Items))
 	for _, hunt := range hunts.Items {
-		if hunt.State != api_proto.Hunt_RUNNING {
+		if hunt.State != api_proto.Hunt_RUNNING ||
+			hunt.StartTime == 0 {
 			continue
 		}
 

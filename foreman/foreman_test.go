@@ -291,6 +291,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			HuntId:       "H.AllClients",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			// Expire in 24 hours. Expires is set in uS
 			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
@@ -301,6 +302,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			HuntId:       "H.OnlyLabelFoo",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
@@ -317,6 +319,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			HuntId:       "H.EmptyLabels",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
@@ -331,6 +334,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			HuntId:       "H.ExceptLabelFoo",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
@@ -592,6 +596,7 @@ func (self *ForemanTestSuite) setupOSHunts() {
 			HuntId:       "H.AllOSes",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			// Expire in 24 hours. Expires is set in uS
 			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
@@ -602,6 +607,7 @@ func (self *ForemanTestSuite) setupOSHunts() {
 			HuntId:       "H.WindowsOnly",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{
@@ -618,6 +624,7 @@ func (self *ForemanTestSuite) setupOSHunts() {
 			HuntId:       "H.LinuxOnly",
 			StartRequest: start_request,
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
+			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
 			Expires:      uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 			Condition: &api_proto.HuntCondition{

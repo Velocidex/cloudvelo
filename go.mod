@@ -65,7 +65,7 @@ require (
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/crewjam/httperr v0.2.0 // indirect
-	github.com/crewjam/saml v0.4.12 // indirect
+	github.com/crewjam/saml v0.4.13 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
