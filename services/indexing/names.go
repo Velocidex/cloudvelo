@@ -19,14 +19,30 @@ func (self *Indexer) searchClientNameOnly(
 	in *api_proto.SearchClientsRequest) (*api_proto.SearchClientsResponse, error) {
 
 	operator, term := splitIntoOperatorAndTerms(in.Query)
+	if term == "*" {
+		term = ""
+	}
+
 	switch operator {
 	case "label":
 		return self.searchWithNames(ctx, config_obj,
 			"labels", operator, term, in.Offset, in.Limit)
 
+	case "os":
+		return self.searchWithNames(ctx, config_obj,
+			"system", operator, term, in.Offset, in.Limit)
+
+	case "client":
+		return self.searchWithNames(ctx, config_obj,
+			"client_id", operator, term, in.Offset, in.Limit)
+
 	case "host":
 		return self.searchWithNames(ctx, config_obj,
 			"hostname", operator, term, in.Offset, in.Limit)
+
+	case "mac":
+		return self.searchWithNames(ctx, config_obj,
+			"mac_addresses", operator, term, in.Offset, in.Limit)
 
 	default:
 		return self.searchVerbsWithNames(ctx, config_obj,
