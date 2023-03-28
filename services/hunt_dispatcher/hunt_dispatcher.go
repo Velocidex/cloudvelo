@@ -166,6 +166,11 @@ func (self HuntDispatcher) ListHunts(
 			continue
 		}
 
+		if in.UserFilter != "" &&
+			in.UserFilter != hunt_info.Creator {
+			continue
+		}
+
 		if hunt_info.State != api_proto.Hunt_ARCHIVED {
 			result.Items = append(result.Items, hunt_info)
 		}

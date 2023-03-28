@@ -43,6 +43,7 @@ require (
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-magic v0.0.0-20211018155418-c5dc48282f28 // indirect
 	github.com/Velocidex/go-yara v1.1.10-0.20221202090138-c7dde4c43aa4 // indirect
+	github.com/Velocidex/grok v0.0.1 // indirect
 	github.com/Velocidex/grpc-go-pool v1.2.2-0.20211129003310-ece3b3fe13f4 // indirect
 	github.com/Velocidex/json v0.0.0-20220224052537-92f3c0326e5a // indirect
 	github.com/Velocidex/pkcs7 v0.0.0-20230220112103-d4ed02e1862a // indirect
@@ -144,7 +145,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/valyala/fastjson v1.6.3 // indirect
-	github.com/vjeantet/grok v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.starlark.net v0.0.0-20221010140840-6bf6f0955179 // indirect

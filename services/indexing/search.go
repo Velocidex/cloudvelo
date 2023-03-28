@@ -21,11 +21,8 @@ var (
 	verbs = []string{
 		"label:",
 		"host:",
-		"mac:",
+		"os:",
 		"client:",
-		"recent:",
-		"after:",
-		"ip:",
 	}
 )
 
@@ -212,12 +209,19 @@ func (self *Indexer) searchClientsByMac(
 	in *api_proto.SearchClientsRequest,
 	limit uint64) ([]*api.ClientRecord, error) {
 
-	if in.NameOnly {
-		return self.searchWithPrefixedNames(ctx, config_obj,
-			"mac_addresses", operator, mac, in.Offset, in.Limit)
-	}
-
 	terms := []string{json.Format(fieldSearchQuery, "mac_addresses", mac)}
+	return self.searchWithTerms(ctx, config_obj,
+		in.Filter, terms, in.Offset, in.Limit)
+}
+
+func (self *Indexer) searchClientsByOs(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	operator, mac string,
+	in *api_proto.SearchClientsRequest,
+	limit uint64) ([]*api.ClientRecord, error) {
+
+	terms := []string{json.Format(fieldSearchQuery, "system", mac)}
 	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
 }
@@ -356,6 +360,10 @@ func (self *Indexer) SearchClientRecords(
 
 	case "mac":
 		return self.searchClientsByMac(ctx, config_obj,
+			operator, term, in, limit)
+
+	case "os":
+		return self.searchClientsByOs(ctx, config_obj,
 			operator, term, in, limit)
 
 	case "client":
