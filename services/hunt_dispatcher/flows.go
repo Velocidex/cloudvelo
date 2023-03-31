@@ -63,7 +63,7 @@ func (self HuntDispatcher) GetFlows(
 				continue
 			}
 			flow_details, err := laucher_manager.GetFlowDetails(
-				config_obj, entry.ClientId, entry.FlowId)
+				ctx, config_obj, entry.ClientId, entry.FlowId)
 			if err != nil {
 				continue
 			}
