@@ -169,7 +169,7 @@ func (self *IngestionTestSuite) TestListDirectory() {
 	assert.NoError(self.T(), err)
 
 	flow_details, err := launcher.GetFlowDetails(
-		config_obj, client_id, flow_id)
+		self.Ctx, config_obj, client_id, flow_id)
 	assert.NoError(self.T(), err)
 
 	self.golden.Set("System.VFS.ListDirectory FlowDetail",

@@ -12,8 +12,6 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/paths"
-	"www.velocidex.com/golang/velociraptor/reporting"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
 )
 
@@ -105,72 +103,6 @@ func (self Launcher) GetFlows(
 	return result, nil
 }
 
-const getFlowDetailsQuery = `
-{
-  "sort": [
-   {"type": {"order": "asc"}},
-   {"timestamp": {"order": "asc"}}
-  ],
-  "query": {
-     "bool": {
-       "must": [
-         {"match": {"client_id" : %q}},
-         {"match": {"session_id" : %q}}
-      ]}
-  }
-}
-`
-
-func (self *Launcher) GetFlowDetails(
-	config_obj *config_proto.Config,
-	client_id string, flow_id string) (*api_proto.FlowDetails, error) {
-	if flow_id == "" || client_id == "" {
-		return &api_proto.FlowDetails{}, nil
-	}
-
-	hits, err := cvelo_services.QueryElasticRaw(self.ctx,
-		self.config_obj.OrgId, "collections",
-		json.Format(getFlowDetailsQuery, client_id, flow_id))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(hits) == 0 {
-		return nil, NotFoundError
-	}
-
-	var collection_context *flows_proto.ArtifactCollectorContext
-
-	for _, hit := range hits {
-		item := &cvelo_schema_api.ArtifactCollectorRecord{}
-		err = json.Unmarshal(hit, item)
-		if err != nil {
-			return nil, err
-		}
-
-		stats_context, err := item.ToProto()
-		if err != nil {
-			continue
-		}
-
-		if collection_context == nil {
-			collection_context = stats_context
-			continue
-		}
-
-		collection_context = mergeRecords(collection_context, stats_context)
-	}
-
-	availableDownloads, _ := availableDownloadFiles(config_obj, client_id, flow_id)
-
-	launcher.UpdateFlowStats(collection_context)
-
-	return &api_proto.FlowDetails{
-		Context:            collection_context,
-		AvailableDownloads: availableDownloads,
-	}, nil
-}
-
 // Are any queries currenrly running.
 func is_running(context *flows_proto.ArtifactCollectorContext) bool {
 	for _, s := range context.QueryStats {
@@ -230,27 +162,4 @@ func mergeRecords(
 	}
 
 	return collection_context
-}
-
-// availableDownloads returns the prepared zip downloads available to
-// be fetched by the user at this moment.
-func availableDownloadFiles(config_obj *config_proto.Config,
-	client_id string, flow_id string) (*api_proto.AvailableDownloads, error) {
-
-	flow_path_manager := paths.NewFlowPathManager(client_id, flow_id)
-	download_dir := flow_path_manager.GetDownloadsDirectory()
-
-	return reporting.GetAvailableDownloadFiles(config_obj, download_dir)
-}
-
-func cleanUpContext(item *flows_proto.ArtifactCollectorContext) {
-	// Remove empty string from the ArtifactsWithResults
-	results := []string{}
-	for _, i := range item.ArtifactsWithResults {
-		if i != "" {
-			results = append(results, i)
-		}
-	}
-
-	item.ArtifactsWithResults = results
 }

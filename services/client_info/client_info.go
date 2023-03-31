@@ -3,6 +3,7 @@ package client_info
 import (
 	"context"
 	"errors"
+	"regexp"
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -27,6 +28,22 @@ type ClientInfoBase struct {
 
 type ClientInfoQueuer struct {
 	config_obj *config_proto.Config
+}
+
+var (
+	client_id_regex              = regexp.MustCompile("(?i)^(C\\.[a-z0-9]+|server)")
+	client_id_not_provided_error = errors.New("ClientId not provided")
+	client_id_not_valid_error    = errors.New("ClientId is not valid")
+)
+
+func (self *ClientInfoBase) ValidateClientId(client_id string) error {
+	if client_id == "" {
+		return client_id_not_provided_error
+	}
+	if !client_id_regex.MatchString(client_id) {
+		return client_id_not_valid_error
+	}
+	return nil
 }
 
 func (self *ClientInfoBase) Set(

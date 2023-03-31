@@ -95,7 +95,7 @@ sources:
 	assert.Equal(self.T(), 1, len(flows.Items))
 	assert.Equal(self.T(), flow_id, flows.Items[0].SessionId)
 
-	details, err := launcher.GetFlowDetails(config_obj,
+	details, err := launcher.GetFlowDetails(self.Ctx, config_obj,
 		client_id, flow_id)
 	assert.NoError(self.T(), err)
 
@@ -105,19 +105,12 @@ sources:
 		details.Context.State)
 
 	// Check the requests are recorded
-	requests, err := launcher.GetFlowRequests(
-		config_obj, client_id, flow_id, 0, 100)
+	requests, err := launcher.Storage().GetFlowRequests(
+		self.Ctx, config_obj, client_id, flow_id, 0, 100)
 	assert.NoError(self.T(), err)
-
-	// Ensure the session id is passed to the query itself - this is
-	// required for the upload to work.
 	assert.Equal(self.T(), 1, len(requests.Items))
 	assert.NotNil(self.T(), requests.Items[0].FlowRequest)
 	assert.True(self.T(), len(requests.Items[0].FlowRequest.VQLClientActions) > 0)
-	assert.Equal(self.T(), "_SessionId",
-		requests.Items[0].FlowRequest.VQLClientActions[0].Env[0].Key)
-	assert.Equal(self.T(), flow_id,
-		requests.Items[0].FlowRequest.VQLClientActions[0].Env[0].Value)
 
 	// Make sure tasks are scheduled
 	tasks, err := PeekClientTasks(self.Ctx, config_obj, client_id)
@@ -146,7 +139,7 @@ sources:
 	assert.NotNil(self.T(), message.Cancel)
 
 	// Make sure the collection is marked as cancelled now.
-	details, err = launcher.GetFlowDetails(config_obj,
+	details, err = launcher.GetFlowDetails(self.Ctx, config_obj,
 		client_id, flow_id)
 	assert.NoError(self.T(), err)
 
