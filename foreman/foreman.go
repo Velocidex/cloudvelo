@@ -273,7 +273,7 @@ func (self Foreman) CalculateUpdate(
 	}
 
 	for client_info := range clients_chan {
-		self.planForClient(ctx, org_config_obj, client_info, hunts, plan)
+		self.planForClient(ctx, org_config_obj, client_info, running_hunts, plan)
 	}
 
 	return nil

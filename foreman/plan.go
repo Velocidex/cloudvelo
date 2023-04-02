@@ -106,9 +106,19 @@ func (self *Plan) scheduleRequestOnClients(
 	for _, client_id := range clients {
 		request_copy := proto.Clone(request).(*flows_proto.ArtifactCollectorArgs)
 		request_copy.ClientId = client_id
-		_, err := laucher_manager.ScheduleArtifactCollectionFromCollectorArgs(
+		_, err := laucher_manager.WriteArtifactCollectionRecord(
 			ctx, org_config_obj, request_copy,
-			request_copy.CompiledCollectorArgs, func() {})
+			request_copy.CompiledCollectorArgs,
+			func(task *crypto_proto.VeloMessage) {
+				client_manager, err := services.GetClientInfoManager(org_config_obj)
+				if err != nil {
+					return
+				}
+
+				client_manager.QueueMessageForClient(
+					ctx, client_id, task,
+					services.NOTIFY_CLIENT, utils.BackgroundWriter)
+			})
 		if err != nil {
 			return err
 		}

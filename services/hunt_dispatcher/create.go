@@ -7,12 +7,10 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/hunt_dispatcher"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -136,52 +134,4 @@ func (self HuntDispatcher) CreateHunt(
 		}
 	*/
 	return hunt_id, nil
-}
-
-func XXXscheduleClientsForHunt(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	hunt *api_proto.Hunt) error {
-
-	if hunt.StartRequest == nil ||
-		hunt.StartRequest.CompiledCollectorArgs == nil {
-		return errors.New("Invalid hunt request!")
-	}
-
-	// Create a collection for each known client.
-	indexer, err := services.GetIndexer(config_obj)
-	if err != nil {
-		return err
-	}
-
-	// TODO: I am not sure how performant this will be?
-	scope := vql_subsystem.MakeScope()
-
-	// TODO: filter by labels.
-	client_chan, err := indexer.SearchClientsChan(ctx, scope,
-		config_obj, "all", "")
-	if err != nil {
-		return err
-	}
-
-	laucher_manager, err := services.GetLauncher(config_obj)
-	if err != nil {
-		return err
-	}
-
-	for record := range client_chan {
-		request := proto.Clone(
-			hunt.StartRequest).(*flows_proto.ArtifactCollectorArgs)
-
-		// Schedule the collection on each client
-		request.ClientId = record.ClientId
-		_, err := laucher_manager.ScheduleArtifactCollectionFromCollectorArgs(
-			ctx, config_obj, request,
-			hunt.StartRequest.CompiledCollectorArgs, utils.SyncCompleter)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
