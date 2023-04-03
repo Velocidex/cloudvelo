@@ -75,6 +75,7 @@ require (
 	github.com/dustmop/soup v1.1.2-0.20190516214245-38228baa104e // indirect
 	github.com/elastic/go-libaudit v0.4.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
+	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/glaslos/tlsh v0.2.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -97,6 +98,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hillu/go-ntdll v0.0.0-20220801201350-0d23f057ef1f // indirect
+	github.com/hirochachacha/go-smb2 v1.1.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -181,7 +183,6 @@ require (
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
 //replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
-
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs
 // replace www.velocidex.com/golang/go-pe => /home/mic/projects/go-pe
