@@ -111,8 +111,7 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 
 		// Assume the built in artifacts are OK so we dont need to
 		// validate them at runtime.
-		err = repo_manager.LoadBuiltInArtifacts(
-			self.ctx, org_config, false /* validate */)
+		err = repo_manager.LoadBuiltInArtifacts(self.ctx, org_config)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +182,7 @@ func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgCo
 	// Assume the built in artifacts are OK so we dont need to
 	// validate them at runtime.
 	err = velo_repository.LoadBuiltInArtifacts(self.ctx, org_config,
-		repo_manager.(*velo_repository.RepositoryManager), false /* validate */)
+		repo_manager.(*velo_repository.RepositoryManager))
 	if err != nil {
 		return nil, err
 	}

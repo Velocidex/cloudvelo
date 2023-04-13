@@ -20,6 +20,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/services/audit_manager"
 	"www.velocidex.com/golang/velociraptor/services/broadcast"
 	"www.velocidex.com/golang/velociraptor/services/journal"
 )
@@ -45,6 +46,10 @@ type LazyServiceContainer struct {
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
 	return nil, errors.New("LazyServiceContainer.FrontendManager is Not implemented")
+}
+
+func (self *LazyServiceContainer) AuditManager() (services.AuditManager, error) {
+	return &audit_manager.AuditManager{}, nil
 }
 
 func (self *LazyServiceContainer) Notifier() (services.Notifier, error) {

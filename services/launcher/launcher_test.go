@@ -63,7 +63,9 @@ func (self *LauncherTestSuite) TestLauncher() {
 name: TestArtifact
 sources:
 - query: SELECT * FROM info()
-`, true, true)
+`, services.ArtifactOptions{
+		ValidateArtifact:  true,
+		ArtifactIsBuiltIn: true})
 	assert.NoError(self.T(), err)
 
 	acl_manager := acl_managers.NullACLManager{}

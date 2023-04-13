@@ -115,8 +115,11 @@ func (self *RepositoryManager) SetArtifactFile(
 
 	// Ensure that the artifact is correct by parsing it.
 	tmp_repository := self.NewRepository()
-	artifact_definition, err := tmp_repository.LoadYaml(
-		definition, true /* validate */, false /* built_in */)
+	artifact_definition, err := tmp_repository.LoadYaml(definition,
+		services.ArtifactOptions{
+			ValidateArtifact:  true,
+			ArtifactIsBuiltIn: false,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +139,11 @@ func (self *RepositoryManager) SetArtifactFile(
 	}
 
 	// Load the artifact into the currently running repository.
-	return global_repository.LoadYaml(
-		definition, true /* validate */, false /* built_in */)
+	return global_repository.LoadYaml(definition,
+		services.ArtifactOptions{
+			ValidateArtifact:  true,
+			ArtifactIsBuiltIn: false,
+		})
 }
 
 func (self *RepositoryManager) DeleteArtifactFile(
@@ -161,8 +167,12 @@ func (self *RepositoryManager) DeleteArtifactFile(
 
 func (self *RepositoryManager) LoadBuiltInArtifacts(
 	ctx context.Context,
-	config_obj *config_proto.Config,
-	validate bool) error {
+	config_obj *config_proto.Config) error {
+
+	options := services.ArtifactOptions{
+		ValidateArtifact:  false,
+		ArtifactIsBuiltIn: true,
+	}
 
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 	now := time.Now()
@@ -200,7 +210,7 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 			data, err := assets.ReadFile(file)
 			if err != nil {
 				logger.Info("Cant read asset %s: %v", file, err)
-				if validate {
+				if options.ValidateArtifact {
 					return err
 				}
 				continue
@@ -208,10 +218,14 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 
 			// Just read the artifact
 			artifact_definition, err := dummy_repository.LoadYaml(
-				string(data), false /* Validate */, true /* built_in */)
+				string(data), services.ArtifactOptions{
+					ValidateArtifact:  false,
+					ArtifactIsBuiltIn: true,
+				})
+
 			if err != nil {
 				logger.Info("Cant parse asset %s: %s", file, err)
-				if validate {
+				if options.ValidateArtifact {
 					return err
 				}
 				continue
@@ -224,10 +238,10 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 			// Load the built in artifacts as built in. NOTE: Built in
 			// artifacts can not be overwritten!
 			artifact_definition, err = grepository.LoadYaml(
-				string(data), validate /* Validate */, true /* built_in */)
+				string(data), options)
 			if err != nil {
 				logger.Info("Can't parse asset %s: %s", file, err)
-				if validate {
+				if options.ValidateArtifact {
 					return err
 				}
 				continue
@@ -259,6 +273,11 @@ func LoadOverridenArtifacts(
 	config_obj *config_proto.Config,
 	self services.RepositoryManager) error {
 
+	options := services.ArtifactOptions{
+		ValidateArtifact:  true,
+		ArtifactIsBuiltIn: true,
+	}
+
 	global_repository, err := self.GetGlobalRepository(config_obj)
 	if err != nil {
 		return err
@@ -278,8 +297,7 @@ func LoadOverridenArtifacts(
 
 			// Load the built in artifacts as built in. NOTE: Built in
 			// artifacts can not be overwritten!
-			_, err = global_repository.LoadYaml(
-				string(data), true /* Validate */, true /* built_in */)
+			_, err = global_repository.LoadYaml(string(data), options)
 			if err != nil {
 				return err
 			}
