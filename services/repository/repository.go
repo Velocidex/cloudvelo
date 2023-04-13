@@ -141,13 +141,14 @@ func (self *Repository) LoadDirectory(
 	return 0, errors.New("Repository.LoadDirectory Not implemented")
 }
 
-func (self *Repository) LoadYaml(data string, validate, built_in bool) (
+func (self *Repository) LoadYaml(data string, options services.ArtifactOptions) (
 	*artifacts_proto.Artifact, error) {
 
 	// Load into a dummy repo to check for syntax errors etc.
-	dummy_repository := repository.Repository{Data: make(map[string]*artifacts_proto.Artifact)}
-	artifact, err := dummy_repository.LoadYaml(
-		data, validate, built_in)
+	dummy_repository := repository.Repository{
+		Data: make(map[string]*artifacts_proto.Artifact),
+	}
+	artifact, err := dummy_repository.LoadYaml(data, options)
 	if err != nil {
 		return nil, err
 	}
@@ -156,10 +157,10 @@ func (self *Repository) LoadYaml(data string, validate, built_in bool) (
 }
 
 func (self *Repository) LoadProto(
-	artifact *artifacts_proto.Artifact, validate bool) (
+	artifact *artifacts_proto.Artifact, options services.ArtifactOptions) (
 	*artifacts_proto.Artifact, error) {
 	dummy_repository := repository.Repository{Data: make(map[string]*artifacts_proto.Artifact)}
-	artifact, err := dummy_repository.LoadProto(artifact, true)
+	artifact, err := dummy_repository.LoadProto(artifact, options)
 	if err != nil {
 		return nil, err
 	}

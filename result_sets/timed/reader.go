@@ -78,9 +78,14 @@ func (self *TimedResultSetReader) Rows(
 			start = time.Unix(0, 0)
 		}
 
+		// Client event artifacts always come from the monitoring
+		// flow.
+		if record.ClientId != "server" {
+			record.FlowId = "F.Monitoring"
+		}
 		query := json.Format(getTimedRowsQuery,
 			record.ClientId,
-			"F.Monitoring",
+			record.FlowId,
 			record.Artifact,
 			record.Type,
 			start.UnixNano(),
