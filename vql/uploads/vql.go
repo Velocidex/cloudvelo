@@ -42,6 +42,10 @@ func (self *UploadFunction) Call(ctx context.Context,
 		return vfilter.Null{}
 	}
 
+	if arg.Accessor == "" {
+		arg.Accessor = "auto"
+	}
+
 	err = vql_subsystem.CheckFilesystemAccess(scope, arg.Accessor)
 	if err != nil {
 		scope.Log("upload: %v", err)
