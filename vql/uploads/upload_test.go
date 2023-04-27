@@ -20,6 +20,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/constants"
 	"www.velocidex.com/golang/velociraptor/crypto/client"
 	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -148,7 +149,7 @@ func (self *UploaderTestSuite) TestUploader() {
 	scope := manager.BuildScope(builder)
 	defer scope.Close()
 
-	scope.SetContext("_Responder", resp)
+	scope.SetContext(constants.SCOPE_RESPONDER_CONTEXT, resp)
 
 	// Run the query which should upload the file
 	res := (&uploads.UploadFunction{}).Call(ctx, scope,
@@ -222,7 +223,7 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 	scope := manager.BuildScope(builder)
 	defer scope.Close()
 
-	scope.SetContext("_Responder", resp)
+	scope.SetContext(constants.SCOPE_RESPONDER_CONTEXT, resp)
 
 	// Run the query which should upload the file
 	res := (&uploads.UploadFunction{}).Call(ctx, scope,
