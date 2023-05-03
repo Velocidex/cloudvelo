@@ -1,0 +1,41 @@
+name: Alert.Windows.Events.ServiceCreation
+description: |
+  Monitor for creation of new services.
+
+  New services are typically created by installing new software or
+  kernel drivers. Attackers will sometimes install a new service to
+  either insert a malicious kernel driver or as a persistence
+  mechanism.
+
+  This event monitor extracts the service creation events from the
+  event log and records them on the server.
+  
+  --
+  
+  Modified from original to include exceptions regex parameter
+  
+type: CLIENT_EVENT
+
+parameters:
+  - name: systemLogFile
+    default: >-
+      C:/Windows/System32/Winevt/Logs/System.evtx
+  - name: exceptions
+    default: >-
+      Windows Defender\\Definition Updates\\\{F28395E0\-F927\-4EDF\-BBDD\-06C2E1BD9CFD\}
+
+sources:
+ - precondition:
+     SELECT OS from info() where OS = "windows"
+
+   query: |
+        SELECT System.TimeCreated.SystemTime as Timestamp,
+               System.EventID.Value as EventID,
+               EventData.ImagePath as ImagePath,
+               EventData.ServiceName as ServiceName,
+               EventData.ServiceType as Type,
+               System.Security.UserID as UserSID,
+               EventData as _EventData,
+               System as _System
+        FROM watch_evtx(filename=systemLogFile) WHERE EventID = 7045
+        AND NOT ImagePath =~ exceptions
