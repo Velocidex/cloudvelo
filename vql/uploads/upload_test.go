@@ -100,8 +100,8 @@ func (self *UploaderTestSuite) startClientCommunicator(
 		org_config_obj, []byte(org_config_obj.Frontend.Certificate))
 	assert.NoError(self.T(), err)
 
-	err = uploads.InstallVeloCloudUploader(
-		org_config_obj, writeback.ClientId, comm.Manager)
+	err = uploads.InstallVeloCloudUploader(ctx,
+		org_config_obj, nil, writeback.ClientId, comm.Manager)
 	assert.NoError(self.T(), err)
 }
 

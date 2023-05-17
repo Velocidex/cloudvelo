@@ -72,7 +72,7 @@ type HTTPIngestor struct {
 
 	incoming_url string
 
-	client *http.Client
+	client networking.HTTPClient
 }
 
 func normalize_index(id string) string {
@@ -206,7 +206,9 @@ func (self *HTTPIngestor) Process(
 }
 
 func NewHTTPIngestor(config_obj *config.Config) (*HTTPIngestor, error) {
-	http_client, err := networking.GetDefaultHTTPClient(config_obj.Client, "", nil)
+	ctx := context.Background()
+	http_client, err := networking.GetDefaultHTTPClient(
+		ctx, config_obj.Client, nil, "", nil)
 	if err != nil {
 		return nil, err
 	}

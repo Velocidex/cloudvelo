@@ -78,7 +78,7 @@ type UploadCompletionRequest struct {
 type VeloCloudUploader struct {
 	mu sync.Mutex
 
-	client     *http.Client
+	client     networking.HTTPClient
 	ctx        context.Context
 	config_obj *config_proto.Config
 
@@ -475,12 +475,14 @@ func (self *VeloCloudUploader) Close() error {
 
 // Install a new VeloCloudUploader into the factory.
 func InstallVeloCloudUploader(
+	ctx context.Context,
 	config_obj *config_proto.Config,
+	scope vfilter.Scope,
 	client_id string,
 	manager crypto.ICryptoManager) error {
 
 	http_client, err := networking.GetDefaultHTTPClient(
-		config_obj.Client, "", nil)
+		ctx, config_obj.Client, scope, "", nil)
 	if err != nil {
 		return err
 	}

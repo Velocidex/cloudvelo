@@ -20,7 +20,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
-	www.velocidex.com/golang/vfilter v0.0.0-20230413031155-cadd50f14c5d
+	www.velocidex.com/golang/vfilter v0.0.0-20230425012353-b6d0a982ca34
 )
 
 require (
@@ -153,12 +153,12 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.starlark.net v0.0.0-20221010140840-6bf6f0955179 // indirect
-	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
@@ -176,7 +176,7 @@ require (
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
 	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230221030709-f91b68ac3222 // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230508135129-d367f954db15 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20230228112150-ef2eadf34bc3 // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect

@@ -37,6 +37,8 @@ type DownloadRow struct {
 	Sha256       string   `json:"Sha256"`
 	Md5          string   `json:"Md5"`
 	Mtime        uint64   `json:"mtime"`
+	InFlight     bool     `json:"in_flight"`
+	FlowId       string   `json:"flow_id"`
 }
 
 // Render the root level pseudo directory. This provides anchor points
@@ -209,6 +211,9 @@ func (self *VFSService) readDirectoryWithDownloads(
 			}
 
 			downloads = append(downloads, download_record)
+			if download_record.Mtime > stat.DownloadVersion {
+				stat.DownloadVersion = download_record.Mtime
+			}
 		}
 
 	}
@@ -291,6 +296,8 @@ func (self *VFSService) ListDirectoryFiles(
 			Mtime:      download.Mtime,
 			SHA256:     download.Sha256,
 			MD5:        download.Md5,
+			InFlight:   download.InFlight,
+			FlowId:     download.FlowId,
 		})
 	}
 	result.Columns = append([]string{"Download"}, result.Columns...)
