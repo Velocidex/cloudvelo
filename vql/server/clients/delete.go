@@ -61,6 +61,8 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
+		principal := vql_subsystem.GetPrincipal(scope)
+
 		// Delete flows and associated uploaded files
 		launcher, err := services.GetLauncher(config_obj)
 		if err != nil {
@@ -78,7 +80,8 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 		for _, f := range flows.Items {
 			scope.Log("client_delete: deleting flow: %s", f.SessionId)
 			_, err = launcher.Storage().DeleteFlow(
-				ctx, config_obj, arg.ClientId, f.SessionId, arg.ReallyDoIt)
+				ctx, config_obj, arg.ClientId, f.SessionId,
+				principal, arg.ReallyDoIt)
 			if err != nil {
 				scope.Log("client_delete:delete_flow: %s", err)
 				return

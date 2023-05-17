@@ -27,6 +27,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/accessors"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/constants"
 	"www.velocidex.com/golang/velociraptor/crypto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/http_comms"
@@ -77,7 +78,7 @@ type UploadCompletionRequest struct {
 type VeloCloudUploader struct {
 	mu sync.Mutex
 
-	client     *http.Client
+	client     networking.HTTPClient
 	ctx        context.Context
 	config_obj *config_proto.Config
 
@@ -184,9 +185,12 @@ func (self *VeloCloudUploader) New(
 
 	// We need a responder as we will be sending FileBuffer messages
 	// directly.
-	responder_any, pres := scope.GetContext("_Responder")
+	responder_any, pres := scope.GetContext(constants.SCOPE_RESPONDER_CONTEXT)
 	if !pres {
-		return nil, errors.New("Responder not found")
+		responder_any, pres = scope.Resolve(constants.SCOPE_RESPONDER)
+		if !pres {
+			return nil, errors.New("Responder not found")
+		}
 	}
 
 	responder, ok := responder_any.(responder.Responder)
@@ -471,12 +475,14 @@ func (self *VeloCloudUploader) Close() error {
 
 // Install a new VeloCloudUploader into the factory.
 func InstallVeloCloudUploader(
+	ctx context.Context,
 	config_obj *config_proto.Config,
+	scope vfilter.Scope,
 	client_id string,
 	manager crypto.ICryptoManager) error {
 
 	http_client, err := networking.GetDefaultHTTPClient(
-		config_obj.Client, "", nil)
+		ctx, config_obj.Client, scope, "", nil)
 	if err != nil {
 		return err
 	}

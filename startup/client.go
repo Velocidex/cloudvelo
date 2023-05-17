@@ -73,7 +73,7 @@ func StartClientServices(
 	}
 
 	err = uploads.InstallVeloCloudUploader(
-		config_obj, writeback.ClientId, comm.Manager)
+		ctx, config_obj, nil, writeback.ClientId, comm.Manager)
 	if err != nil {
 		return nil, err
 	}

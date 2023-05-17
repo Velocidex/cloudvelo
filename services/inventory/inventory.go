@@ -22,12 +22,12 @@ func (self Dummy) Get() *artifacts_proto.ThirdParty {
 
 func (self Dummy) ProbeToolInfo(
 	ctx context.Context, config_obj *config_proto.Config,
-	name string) (*artifacts_proto.Tool, error) {
+	name, version string) (*artifacts_proto.Tool, error) {
 	return nil, notImplementedError
 }
 
 func (self Dummy) GetToolInfo(ctx context.Context, config_obj *config_proto.Config,
-	tool string) (*artifacts_proto.Tool, error) {
+	tool, version string) (*artifacts_proto.Tool, error) {
 	return nil, notImplementedError
 }
 

@@ -22,6 +22,7 @@ func (self *FlowStorageManager) DeleteFlow(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string, flow_id string,
+	principal string,
 	really_do_it bool) ([]*services.DeleteFlowResponse, error) {
 
 	launcher, err := services.GetLauncher(config_obj)
