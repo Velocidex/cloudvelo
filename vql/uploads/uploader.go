@@ -462,9 +462,13 @@ func (self *VeloCloudUploader) Close() error {
 
 	serialized, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		self.response = &uploads.UploadResponse{Error: err.Error()}
-		return fmt.Errorf("Unable to put part: %v: %v\n",
+		err := fmt.Errorf("Unable to put part: %v: %v\n",
 			resp.Status, string(serialized))
+
+		self.response = &uploads.UploadResponse{
+			Error: err.Error(),
+		}
+		return err
 	}
 
 	// Send the final status update to the server.

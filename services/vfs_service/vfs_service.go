@@ -61,6 +61,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
@@ -108,7 +109,7 @@ func (self *VFSService) WriteDownloadInfo(
 		client_components...)
 
 	download_record := &DownloadRow{
-		Mtime:        uint64(cvelo_utils.Clock.Now().Unix()),
+		Mtime:        uint64(cvelo_utils.Clock.Now().UnixNano()),
 		Components:   client_components,
 		FSComponents: file_components,
 		InFlight:     record.InFlight,
@@ -127,8 +128,12 @@ func (self *VFSService) WriteDownloadInfo(
 
 	// Write synchronously so the GUI updates the download file right
 	// away.
-	return cvelo_services.SetElasticIndex(ctx, config_obj.OrgId, "vfs",
+	err := cvelo_services.SetElasticIndex(ctx, config_obj.OrgId, "vfs",
 		"download_"+file_id, stats)
+
+	utils.GetTime().Sleep(time.Second)
+
+	return err
 }
 
 func (self *VFSService) StatDirectory(
