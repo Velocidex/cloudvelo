@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -249,6 +250,51 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 			count += 1
 		}
 	}
+
+	return nil
+}
+
+func (self *RepositoryManager) OverrideBuiltInArtifact(
+	config_obj *config_proto.Config,
+	artifact_name string,
+	artifact_data []byte) error {
+
+	// remove existing built in function
+	self.mu.Lock()
+	grepository := self.built_in_repository
+	self.mu.Unlock()
+
+	options := services.ArtifactOptions{
+		ValidateArtifact:  false,
+		ArtifactIsBuiltIn: true,
+	}
+
+	// verify new artifact data
+	dummy_repository := repository.Repository{
+		Data: make(map[string]*artifacts_proto.Artifact),
+	}
+
+	// Just read the artifact
+	_, err := dummy_repository.LoadYaml(
+		string(artifact_data), options)
+
+	if err != nil {
+		return fmt.Errorf("unable to parse asset %s: %w", artifact_name, err)
+	}
+
+	// remove the existing artifact
+	self.mu.Lock()
+	grepository.Del(artifact_name)
+	self.mu.Unlock()
+
+	// Load the valid artifact
+	_, err = grepository.LoadYaml(string(artifact_data), options)
+	if err != nil {
+		return fmt.Errorf("unable to parse asset %s: %w", artifact_name, err)
+	}
+
+	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger.Info("Replaced `%s` built in artifact successfully.", artifact_name)
 
 	return nil
 }
