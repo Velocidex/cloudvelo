@@ -64,6 +64,10 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 		service:    service_manager,
 	}
 
+	self.mu.Lock()
+	self.orgs[record.OrgId] = org_context
+	self.mu.Unlock()
+
 	if self.cloud_config != nil {
 		// Set up the indexes for the new org.
 		file_store_obj, err := filestore.NewS3Filestore(self.ctx,
