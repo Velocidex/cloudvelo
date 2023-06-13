@@ -144,6 +144,11 @@ func (self *Repository) LoadDirectory(
 func (self *Repository) LoadYaml(data string, options services.ArtifactOptions) (
 	*artifacts_proto.Artifact, error) {
 
+	// built in artifacts go into the built in set
+	if options.ArtifactIsBuiltIn && self.parent != nil {
+		return self.parent.LoadYaml(data, options)
+	}
+
 	// Load into a dummy repo to check for syntax errors etc.
 	dummy_repository := repository.Repository{
 		Data: make(map[string]*artifacts_proto.Artifact),

@@ -1,5 +1,34 @@
 package repository
 
+/*
+  How are repositories arranged?
+
+  - The velociraptor repository is an in-memory repository which
+    caches all the built in artifacts.
+
+  - The cloud repository reads artifact definitions from the cloud
+    backend. Each org in cloud velo has a cloud repository.
+
+  Cloud repositories set parents for lookup delegation - if an
+  artifact is accessed in a cloud org's repository and it is not
+  found, then it gets delegated to the parent repository.
+
+  top level: Velociraptor Repository - in memory contains built ins.
+
+  Cloud Root Org Repository: A Cloud Repository with the top level set
+     as the parent.
+
+  Cloud Org: A Cloud Repository with the root org's repository set as
+  the parent.
+
+
+  // If we call LoadYaml() on an artifact and set the options as
+  ArtifactIsBuiltIn, then the cloud repository will delegate to its
+  parent. This ensures that Built in artifacts can be overridden and
+  bubble up into the in memory repository for setting.
+
+*/
+
 import (
 	"context"
 	"errors"
@@ -24,9 +53,6 @@ import (
 type RepositoryManager struct {
 	mu                sync.Mutex
 	global_repository services.Repository
-
-	// An in-memory repository of the build in set.
-	built_in_repository services.Repository
 
 	config_obj *config_proto.Config
 	ctx        context.Context
@@ -82,16 +108,21 @@ func NewRepositoryManager(
 	// automatically and is immutable.
 	if utils.IsRootOrg(config_obj.OrgId) {
 		root_global_repo := NewRepository(ctx, config_obj)
+
+		// Create an in memory repository to hold all built in
+		// artifacts.
 		built_in_repository := &repository.Repository{
 			Data: make(map[string]*artifacts_proto.Artifact),
 		}
+
+		// Create a cloud repository for the root org. Set the parent
+		// of this repository to be the in memory repo.
 		root_global_repo.SetParent(built_in_repository, config_obj)
 
 		return &RepositoryManager{
-			global_repository:   root_global_repo,
-			built_in_repository: built_in_repository,
-			config_obj:          config_obj,
-			ctx:                 ctx,
+			global_repository: root_global_repo,
+			config_obj:        config_obj,
+			ctx:               ctx,
 		}, nil
 	}
 
@@ -183,24 +214,16 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 
 	assets.Init()
 
-	overriden_artifacts, err := getOverridenArtifacts()
-	if err != nil {
-		return err
-	}
-
-	dummy_repository := repository.Repository{
-		Data: make(map[string]*artifacts_proto.Artifact),
-	}
-
 	files, err := assets.WalkDirs("", false)
 	if err != nil {
 		return err
 	}
 
 	// Load all the built in artifacts into this in-memory repository
-	self.mu.Lock()
-	grepository := self.built_in_repository
-	self.mu.Unlock()
+	grepository, err := self.GetGlobalRepository(config_obj)
+	if err != nil {
+		return err
+	}
 
 	count := 0
 
@@ -216,28 +239,9 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 				continue
 			}
 
-			// Just read the artifact
-			artifact_definition, err := dummy_repository.LoadYaml(
-				string(data), services.ArtifactOptions{
-					ValidateArtifact:  false,
-					ArtifactIsBuiltIn: true,
-				})
-
-			if err != nil {
-				logger.Info("Cant parse asset %s: %s", file, err)
-				if options.ValidateArtifact {
-					return err
-				}
-				continue
-			}
-
-			if utils.InString(overriden_artifacts, artifact_definition.Name) {
-				continue
-			}
-
-			// Load the built in artifacts as built in. NOTE: Built in
+			// Load the built in artifacts as a built in. NOTE: Built in
 			// artifacts can not be overwritten!
-			artifact_definition, err = grepository.LoadYaml(
+			_, err = grepository.LoadYaml(
 				string(data), options)
 			if err != nil {
 				logger.Info("Can't parse asset %s: %s", file, err)
@@ -251,22 +255,6 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	}
 
 	return nil
-}
-
-func getOverridenArtifacts() ([]string, error) {
-	results := []string{}
-	files, err := artifact_definitions.FS.ReadDir(".")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".yaml") {
-			name := strings.TrimSuffix(file.Name(), ".yaml")
-			results = append(results, name)
-		}
-	}
-	return results, nil
 }
 
 func LoadOverridenArtifacts(
