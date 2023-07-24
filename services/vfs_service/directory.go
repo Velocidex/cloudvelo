@@ -188,7 +188,7 @@ func (self *VFSService) readDirectoryWithDownloads(
 	if err != nil {
 		return nil, nil, err
 	}
-
+	downloads_index := make(map[string]int)
 	for _, hit := range hits {
 		record := &VFSRecord{}
 		err = json.Unmarshal(hit, record)
@@ -209,8 +209,18 @@ func (self *VFSService) readDirectoryWithDownloads(
 			if err != nil {
 				continue
 			}
+			filename := download_record.Components[len(download_record.Components)-1]
+			download_idx, ok := downloads_index[filename]
 
-			downloads = append(downloads, download_record)
+			if ok {
+				if download_record.Mtime > downloads[download_idx].Mtime {
+					downloads[download_idx] = download_record
+				}
+			} else {
+				downloads_index[filename] = len(downloads)
+				downloads = append(downloads, download_record)
+			}
+
 			if download_record.Mtime > stat.DownloadVersion {
 				stat.DownloadVersion = download_record.Mtime
 			}
