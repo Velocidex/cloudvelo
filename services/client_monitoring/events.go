@@ -10,6 +10,8 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 )
 
+const OPENSEARCH_MAX_BUCKETS = 10000
+
 func (self *ClientMonitoringManager) ListAvailableEventResults(
 	ctx context.Context,
 	in *api_proto.ListAvailableEventResultsRequest) (
@@ -39,7 +41,8 @@ const (
   "aggs": {
     "genres": {
       "terms": {
-        "field": "artifact"
+        "field": "artifact",
+        "size": %q
       }
     }
   }
@@ -61,7 +64,8 @@ const (
   "aggs": {
     "genres": {
       "terms": {
-        "field": "artifact"
+        "field": "artifact",
+        "size": %q
       }
     }
   }
@@ -82,13 +86,13 @@ func listAvailableEventArtifacts(
 		// artifacts runner, it is still possible for server artifacts
 		// to be written by various services (e.g. Audit manager).
 		query = json.Format(getAvailableServerArtifactsQuery,
-			"server", "results")
+			"server", "results", OPENSEARCH_MAX_BUCKETS)
 
 	} else {
 		// Even if client events are not generated there are always
 		// some query logs sent so we can aggregate by unique log
 		// messages.
-		query = json.Format(getAvailableArtifactsQuery, in.ClientId, "logs")
+		query = json.Format(getAvailableArtifactsQuery, in.ClientId, "logs", OPENSEARCH_MAX_BUCKETS)
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
@@ -126,7 +130,8 @@ const getAvailableEventTimesQuery = `
   "aggs": {
     "genres": {
       "terms": {
-        "field": "date"
+        "field": "date",
+        "size": %q
       }
     }
   }
@@ -150,7 +155,8 @@ const getAvailableServerEventTimesQuery = `
   "aggs": {
     "genres": {
       "terms": {
-        "field": "date"
+        "field": "date",
+        "size": %q
       }
     }
   }
@@ -165,11 +171,11 @@ func listAvailableEventTimestamps(
 
 	var query string
 	if in.ClientId == "" || in.ClientId == "server" {
-		query = json.Format(getAvailableServerEventTimesQuery, in.Artifact)
+		query = json.Format(getAvailableServerEventTimesQuery, in.Artifact, OPENSEARCH_MAX_BUCKETS)
 
 	} else {
 		query = json.Format(getAvailableEventTimesQuery, in.ClientId,
-			"results", in.Artifact)
+			"results", in.Artifact, OPENSEARCH_MAX_BUCKETS)
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
