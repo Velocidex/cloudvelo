@@ -65,7 +65,7 @@ func UploadSparse(
 		}
 	}
 
-	// We need to buffer writes untilt they reach 5mb before we can
+	// We need to buffer writes until they reach 5mb before we can
 	// send them. This is managed by the BufferedWriter object which
 	// wraps the uploader.
 	buffer := NewBufferWriter(uploader)
