@@ -252,7 +252,7 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	return l_bulk_indexer.Add(context.Background(),
 		opensearchutil.BulkIndexerItem{
 			Index:      GetIndex(org_id, index),
-			Action:     "index",
+			Action:     "create",
 			DocumentID: id,
 			Body:       strings.NewReader(serialized),
 		})
