@@ -41,6 +41,7 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	record.StartRow = self.start_row
 	record.EndRow = self.start_row + int64(total_rows)
 	record.Timestamp = utils.Clock.Now().Unix()
+	record.Datastream_Timestamp = utils.Clock.Now().Unix()
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 
