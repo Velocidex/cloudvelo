@@ -1,6 +1,7 @@
 package simple
 
 import (
+	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 )
 
@@ -39,36 +40,40 @@ func NewSimpleResultSetRecord(
 			// Single artifact no source
 			if len(components) == 5 {
 				return &SimpleResultSetRecord{
-					ClientId: client_id,
-					FlowId:   components[4],
-					Artifact: components[3],
-					Type:     "results",
+					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					ClientId:             client_id,
+					FlowId:               components[4],
+					Artifact:             components[3],
+					Type:                 "results",
 				}
 
 				// Artifact with source name
 			} else if len(components) == 6 {
 				return &SimpleResultSetRecord{
-					ClientId: client_id,
-					FlowId:   components[4],
-					Artifact: components[3] + "/" + components[5],
-					Type:     "results",
+					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					ClientId:             client_id,
+					FlowId:               components[4],
+					Artifact:             components[3] + "/" + components[5],
+					Type:                 "results",
 				}
 			}
 			// Collection logs
 		} else if components[2] == "collections" {
 			if components[4] == "logs" {
 				return &SimpleResultSetRecord{
-					ClientId: client_id,
-					FlowId:   components[3],
-					Type:     "logs",
+					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					ClientId:             client_id,
+					FlowId:               components[3],
+					Type:                 "logs",
 				}
 			}
 
 			if components[4] == "uploads" {
 				return &SimpleResultSetRecord{
-					ClientId: client_id,
-					FlowId:   components[3],
-					Type:     "uploads",
+					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					ClientId:             client_id,
+					FlowId:               components[3],
+					Type:                 "uploads",
 				}
 			}
 		}
