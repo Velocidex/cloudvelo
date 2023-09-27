@@ -35,10 +35,10 @@ jobs:
       run: |
           # install LocalStack cli and awslocal
           pip3 install pyOpenSSL --upgrade
-          pip3 install localstack awscli-local[ver1]
+          pip3 install localstack==2.2.0 awscli-local[ver1]
 
           # Make sure to pull the latest version of the image
-          docker pull localstack/localstack:2.3.0
+          docker pull localstack/localstack:2.2.0
 
           # Start LocalStack in the background
           localstack start -d
