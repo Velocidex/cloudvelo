@@ -34,8 +34,8 @@ jobs:
 
       run: |
           # install LocalStack cli and awslocal
-          pip3 install pyOpenSSL --upgrade
-          pip3 install localstack==2.2.0 localstack-core==2.2.0 localstack-client==2.2.0 localstack-core==2.2.0 localstack-ext==2.2.0 awscli-local[ver1]
+          pip3 install cffi==1.15.1 cryptography==41.0.4 pyOpenSSL==23.2.0 pycparser==2.21
+          pip3 install awscli==1.29.54 awscli-local==0.21 boto3==1.28.54 botocore==1.31.54 cachetools==5.0.0 dill==0.3.2 dnslib==0.9.23 dnspython==2.4.2 docutils==0.16 ecdsa==0.18.0 jmespath==1.0.1 localstack==2.2.0 localstack-client==2.3 localstack-core==2.2.0 localstack-ext==2.2.0 markdown-it-py==3.0.0 mdurl==0.1.2 pbr==5.11.1 plux==1.4.0 psutil==5.9.5 pyaes==1.6.1 pygments==2.16.1 python-dateutil==2.8.2 python-dotenv==1.0.0 python-jose==3.3.0 rich==13.5.3 rsa==4.7.2 s3transfer==0.6.2 semver==3.0.1 stevedore==5.1.0 tabulate==0.9.0 tailer==0.4.1
 
           # Make sure to pull the latest version of the image
           docker pull localstack/localstack:2.2.0
