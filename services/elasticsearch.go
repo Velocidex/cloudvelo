@@ -240,7 +240,7 @@ func UpdateByQuery(
 	return makeElasticError(data)
 }
 
-func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
+func SetElasticIndexAsync(org_id, index, id, action string, record interface{}) error {
 	defer Debug("SetElasticIndexAsync %v %v", index, id)()
 	mu.Lock()
 	l_bulk_indexer := bulk_indexer
@@ -252,9 +252,18 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	return l_bulk_indexer.Add(context.Background(),
 		opensearchutil.BulkIndexerItem{
 			Index:      GetIndex(org_id, index),
-			Action:     "create",
+			Action:     action,
 			DocumentID: id,
 			Body:       strings.NewReader(serialized),
+			OnFailure: func(ctx context.Context,
+				item opensearchutil.BulkIndexerItem,
+				res opensearchutil.BulkIndexerResponseItem, err error) {
+				if err != nil {
+					logger := logging.GetLogger(l_bulk_indexer.config_obj,
+						&logging.FrontendComponent)
+					logger.Error("BulkIndexer: %v", err)
+				}
+			},
 		})
 }
 
