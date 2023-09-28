@@ -247,7 +247,7 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	mu.Unlock()
 
 	serialized := json.MustMarshalString(record)
-	action := "update"
+	action := "index"
 	if index == "results" {
 		action = "create"
 	}
