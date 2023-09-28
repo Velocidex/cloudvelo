@@ -248,7 +248,7 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 
 	serialized := json.MustMarshalString(record)
 	action := "update"
-	if strings.HasSuffix(index, "_results") {
+	if index == "results" {
 		action = "create"
 	}
 	// Add with background context which might outlive our caller.
