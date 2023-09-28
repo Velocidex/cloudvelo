@@ -247,12 +247,15 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	mu.Unlock()
 
 	serialized := json.MustMarshalString(record)
-
+	action := "update"
+	if strings.HasSuffix(index, "result") {
+		action = "create"
+	}
 	// Add with background context which might outlive our caller.
 	return l_bulk_indexer.Add(context.Background(),
 		opensearchutil.BulkIndexerItem{
 			Index:      GetIndex(org_id, index),
-			Action:     "create",
+			Action:     action,
 			DocumentID: id,
 			Body:       strings.NewReader(serialized),
 		})
