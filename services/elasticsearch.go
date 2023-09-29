@@ -114,7 +114,9 @@ func GetIndex(org_id, index string) string {
 
 func DeleteDocument(
 	ctx context.Context, org_id, index string, id string, sync bool) error {
-
+	if index == "results" {
+		return nil
+	}
 	defer Instrument("DeleteDocument")()
 
 	defer Debug("DeleteDocument %v", id)()
@@ -569,6 +571,9 @@ func QueryChan(
 func DeleteByQuery(
 	ctx context.Context, org_id, index, query string) error {
 
+	if index == "results" {
+		return nil
+	}
 	defer Instrument("DeleteByQuery")()
 
 	client, err := GetElasticClient()
