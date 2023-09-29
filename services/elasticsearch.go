@@ -282,9 +282,18 @@ func _SetElasticIndex(
 		return err
 	}
 
+	action := "index"
+	if index == "results" {
+		if id != "" {
+			return errors.New("unable to specify document ID when trying to write to results index")
+		}
+		action = "create"
+	}
+
 	es_req := opensearchapi.IndexRequest{
 		Index:      GetIndex(org_id, index),
 		DocumentID: id,
+		OpType:     action,
 		Body:       bytes.NewReader(serialized),
 		Refresh:    "true",
 	}
