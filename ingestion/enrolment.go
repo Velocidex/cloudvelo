@@ -49,6 +49,7 @@ func (self Ingestor) HandleInterrogation(
 
 	services.SetElasticIndexAsync(
 		config_obj.OrgId, "clients", message.Source+"_interrogate",
+		services.BulkUpdateIndex,
 		&api.ClientRecord{
 			ClientId:        message.Source,
 			Type:            "interrogation",

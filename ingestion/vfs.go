@@ -67,7 +67,8 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 		}
 
 		err = cvelo_services.SetElasticIndexAsync(
-			config_obj.OrgId, "vfs", id, record)
+			config_obj.OrgId, "vfs", id,
+			cvelo_services.BulkUpdateIndex, record)
 
 		if err != nil {
 			return err
@@ -134,8 +135,10 @@ func (self Ingestor) HandleSystemVfsUpload(
 				Downloads: []string{json.MustMarshalString(row)},
 			}
 
-			cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "vfs",
-				"download_"+file_id, stats)
+			cvelo_services.SetElasticIndexAsync(
+				config_obj.OrgId, "vfs",
+				"download_"+file_id,
+				cvelo_services.BulkUpdateIndex, stats)
 		}
 	}
 	return nil

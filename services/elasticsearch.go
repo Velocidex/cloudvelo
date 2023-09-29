@@ -32,11 +32,17 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+type BulkUpdateType string
+
 const (
 	AsyncDelete = false
 	SyncDelete  = true
 
 	NoSortField = ""
+
+	// The types of Async updates that are allowed.
+	BulkUpdateIndex  = "index"  // Create or update existing record.
+	BulkUpdateCreate = "create" // Create new record if no existing record.
 )
 
 var (
@@ -240,8 +246,11 @@ func UpdateByQuery(
 	return makeElasticError(data)
 }
 
-func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
+func SetElasticIndexAsync(org_id, index, id string,
+	action BulkUpdateType, record interface{}) error {
+
 	defer Debug("SetElasticIndexAsync %v %v", index, id)()
+
 	mu.Lock()
 	l_bulk_indexer := bulk_indexer
 	mu.Unlock()
@@ -252,9 +261,17 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	return l_bulk_indexer.Add(context.Background(),
 		opensearchutil.BulkIndexerItem{
 			Index:      GetIndex(org_id, index),
-			Action:     "create",
+			Action:     string(action),
 			DocumentID: id,
 			Body:       strings.NewReader(serialized),
+			OnFailure: func(ctx context.Context,
+				item opensearchutil.BulkIndexerItem,
+				res opensearchutil.BulkIndexerResponseItem, err error) {
+				logger := logging.GetLogger(l_bulk_indexer.config_obj,
+					&logging.FrontendComponent)
+				logger.Error("BulkIndexer Error during: %v",
+					json.MustMarshalString(record))
+			},
 		})
 }
 
@@ -1010,9 +1027,9 @@ func StartBulkIndexService(
 			Client:        elastic_client,
 			FlushInterval: time.Second * 2,
 			OnFlushStart: func(ctx context.Context) context.Context {
-				//logger := logging.GetLogger(
-				// config_obj.VeloConf(), &logging.FrontendComponent)
-				//logger.Debug("Flushing bulk indexer.")
+				logger := logging.GetLogger(
+					config_obj.VeloConf(), &logging.FrontendComponent)
+				logger.Debug("Flushing bulk indexer.")
 				return ctx
 			},
 			OnError: func(ctx context.Context, err error) {
