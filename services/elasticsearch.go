@@ -249,6 +249,9 @@ func SetElasticIndexAsync(org_id, index, id string, record interface{}) error {
 	serialized := json.MustMarshalString(record)
 	action := "index"
 	if index == "results" {
+		if id != "" {
+			return errors.New("unable to specify document ID when trying to write to results index")
+		}
 		action = "create"
 	}
 	// Add with background context which might outlive our caller.
