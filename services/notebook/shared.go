@@ -39,7 +39,7 @@ const (
 func (self *NotebookManager) GetSharedNotebooks(
 	ctx context.Context, user string, offset, count uint64) (
 	[]*api_proto.NotebookMetadata, error) {
-	hits, err := cvelo_services.QueryElasticRaw(
+	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId, "notebooks",
 		json.Format(query, user, user, count, offset))
 	if err != nil {

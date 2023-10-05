@@ -6,12 +6,12 @@ import (
 
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
-	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_utils "www.velocidex.com/golang/velociraptor/crypto/utils"
 	"www.velocidex.com/golang/velociraptor/executor"
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/services/writeback"
 )
 
 // StartClientServices starts the various services needed by the
@@ -41,7 +41,8 @@ func StartClientServices(
 
 	executor.SetTempfile(config_obj)
 
-	writeback, err := config.GetWriteback(config_obj.Client)
+	writeback_service := writeback.GetWritebackService()
+	writeback, err := writeback_service.GetWriteback(config_obj)
 	if err != nil {
 		return nil, err
 	}

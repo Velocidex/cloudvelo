@@ -96,7 +96,7 @@ func (self ElasticDatastore) ListChildren(
 	urn api.DSPathSpec) ([]api.DSPathSpec, error) {
 
 	dir := urn.AsDatastoreDirectory(config_obj)
-	hits, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
 		"datastore", json.Format(list_children_query, dir))
 	if err != nil {
 		return nil, err

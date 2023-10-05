@@ -60,13 +60,13 @@ func (self *Indexer) searchRecents(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	principal string, term string, from, limit uint64) (
-	[]*api.ClientRecord, error) {
+	[]*api.ClientRecord, int, error) {
 
-	hits, err := cvelo_services.QueryElasticRaw(
+	hits, total, err := cvelo_services.QueryElasticRaw(
 		ctx, config_obj.OrgId, "user_mru", json.Format(
 			clientsMRUQuery, principal, from, limit))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	client_ids := []string{}
@@ -81,7 +81,12 @@ func (self *Indexer) searchRecents(
 		client_ids = append(client_ids, item.ClientId)
 	}
 
-	return api.GetMultipleClients(ctx, config_obj, client_ids)
+	records, err := api.GetMultipleClients(ctx, config_obj, client_ids)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return records, total, err
 }
 
 const (
@@ -144,7 +149,7 @@ func (self *Indexer) getAllClients(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) ([]*api.ClientRecord, int, error) {
 
 	// If the user wants to sort we search by filename - this is
 	// currently the only field we can sort on.
@@ -168,7 +173,7 @@ func (self *Indexer) searchClientsByLabel(
 	config_obj *config_proto.Config,
 	operator, label string,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) ([]*api.ClientRecord, int, error) {
 
 	terms := []string{json.Format(fieldSearchQuery, "labels", label)}
 	return self.searchWithTerms(ctx, config_obj,
@@ -180,7 +185,7 @@ func (self *Indexer) searchClientsByHost(
 	config_obj *config_proto.Config,
 	operator, hostname string,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) ([]*api.ClientRecord, int, error) {
 
 	if in.NameOnly {
 		return self.searchWithPrefixedNames(ctx, config_obj,
@@ -207,7 +212,7 @@ func (self *Indexer) searchClientsByMac(
 	config_obj *config_proto.Config,
 	operator, mac string,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) ([]*api.ClientRecord, int, error) {
 
 	terms := []string{json.Format(fieldSearchQuery, "mac_addresses", mac)}
 	return self.searchWithTerms(ctx, config_obj,
@@ -219,7 +224,7 @@ func (self *Indexer) searchClientsByOs(
 	config_obj *config_proto.Config,
 	operator, mac string,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) ([]*api.ClientRecord, int, error) {
 
 	terms := []string{json.Format(fieldSearchQuery, "system", mac)}
 	return self.searchWithTerms(ctx, config_obj,
@@ -232,7 +237,7 @@ func (self *Indexer) searchWithPrefixedNames(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	field, operator, term string,
-	offset, limit uint64) ([]*api.ClientRecord, error) {
+	offset, limit uint64) ([]*api.ClientRecord, int, error) {
 
 	prefix, filter := splitSearchTermIntoPrefixAndFilter(term)
 	query := json.Format(
@@ -240,10 +245,10 @@ func (self *Indexer) searchWithPrefixedNames(
 		json.Format(fieldSearchQuery, field, prefix),
 		json.Format(limitQueryPart, offset, limit+1))
 
-	hits, err := cvelo_services.QueryElasticRaw(
+	hits, total, err := cvelo_services.QueryElasticRaw(
 		ctx, config_obj.OrgId, "clients", query)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	result := []*api.ClientRecord{}
@@ -258,7 +263,7 @@ func (self *Indexer) searchWithPrefixedNames(
 			result = append(result, record)
 		}
 	}
-	return result, nil
+	return result, total, nil
 }
 
 func filterClientInfo(client_info *api.ClientRecord,
@@ -271,7 +276,7 @@ func (self *Indexer) searchWithTerms(
 	config_obj *config_proto.Config,
 	filter api_proto.SearchClientsRequest_Filters,
 	terms []string,
-	offset, limit uint64) ([]*api.ClientRecord, error) {
+	offset, limit uint64) ([]*api.ClientRecord, int, error) {
 	sorter := json.Format(sortQueryPart, "client_id", "asc")
 	return self.searchWithSortTerms(ctx, config_obj,
 		sorter, filter, terms, offset, limit)
@@ -283,7 +288,7 @@ func (self *Indexer) searchWithSortTerms(
 	sorter string,
 	filter api_proto.SearchClientsRequest_Filters,
 	terms []string,
-	offset, limit uint64) ([]*api.ClientRecord, error) {
+	offset, limit uint64) (records []*api.ClientRecord, total int, err error) {
 
 	// Show clients that pinged more recently than 10 min ago
 	if filter == api_proto.SearchClientsRequest_ONLINE {
@@ -301,13 +306,18 @@ func (self *Indexer) searchWithSortTerms(
 		strings.Join(terms, ","),
 		json.Format(limitQueryPart, offset, limit+1))
 
-	hits, err := cvelo_services.QueryElasticIds(
+	hits, total, err := cvelo_services.QueryElasticIds(
 		ctx, config_obj.OrgId, "clients", query)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return searchClientsFromHits(ctx, config_obj, hits, "", nil)
+	client_records, err := searchClientsFromHits(ctx, config_obj, hits, "", nil)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return client_records, total, nil
 }
 
 func (self *Indexer) SearchClients(
@@ -321,8 +331,10 @@ func (self *Indexer) SearchClients(
 		return self.searchClientNameOnly(ctx, config_obj, in)
 	}
 
-	result := &api_proto.SearchClientsResponse{}
-	records, err := self.SearchClientRecords(ctx, config_obj, in, principal)
+	result := &api_proto.SearchClientsResponse{
+		SearchTerm: in,
+	}
+	records, total, err := self.SearchClientRecords(ctx, config_obj, in, principal)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +342,7 @@ func (self *Indexer) SearchClients(
 	for _, r := range records {
 		result.Items = append(result.Items, _makeApiClient(r))
 	}
-
+	result.Total = uint64(total)
 	return result, nil
 }
 
@@ -338,7 +350,7 @@ func (self *Indexer) SearchClientRecords(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	in *api_proto.SearchClientsRequest,
-	principal string) ([]*api.ClientRecord, error) {
+	principal string) ([]*api.ClientRecord, int, error) {
 
 	limit := uint64(50)
 	if in.Limit > 0 {
@@ -383,9 +395,13 @@ func (self *Indexer) searchClientsByClientId(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	operator, client_id string,
-	in *api_proto.SearchClientsRequest) ([]*api.ClientRecord, error) {
+	in *api_proto.SearchClientsRequest) ([]*api.ClientRecord, int, error) {
 
-	return api.GetMultipleClients(ctx, config_obj, []string{client_id})
+	records, err := api.GetMultipleClients(ctx, config_obj, []string{client_id})
+	if err != nil {
+		return nil, 0, err
+	}
+	return records, 1, nil
 }
 
 // Free form search term, try to fill in as many suggestions as
@@ -393,13 +409,13 @@ func (self *Indexer) searchClientsByClientId(
 func (self *Indexer) searchVerbs(ctx context.Context,
 	config_obj *config_proto.Config,
 	in *api_proto.SearchClientsRequest,
-	limit uint64) ([]*api.ClientRecord, error) {
+	limit uint64) (items []*api.ClientRecord, total int, err error) {
 
-	items := []*api.ClientRecord{}
+	var res []*api.ClientRecord
 
 	// Not a verb maybe a hostname
 	if uint64(len(items)) < in.Limit {
-		res, err := self.searchClientsByHost(
+		res, total, err = self.searchClientsByHost(
 			ctx, config_obj, "host", in.Query, in, in.Limit)
 		if err == nil {
 			items = append(items, res...)
@@ -408,14 +424,14 @@ func (self *Indexer) searchVerbs(ctx context.Context,
 
 	// Maybe a label
 	if uint64(len(items)) < in.Limit {
-		res, err := self.searchClientsByLabel(
+		res, total, err = self.searchClientsByLabel(
 			ctx, config_obj, "label", in.Query, in, in.Limit)
 		if err == nil {
 			items = append(items, res...)
 		}
 	}
 
-	return items, nil
+	return items, total, nil
 }
 
 func searchClientsFromHits(

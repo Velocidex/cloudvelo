@@ -142,7 +142,7 @@ func (self *OrgManager) makeNewConfigObj(
 }
 
 func (self *OrgManager) Scan() error {
-	hits, err := cvelo_services.QueryElasticRaw(
+	hits, _, err := cvelo_services.QueryElasticRaw(
 		self.ctx, services.ROOT_ORG_ID,
 		"orgs", `{"query": {"match_all" : {}}}`)
 	if err != nil {

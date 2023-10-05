@@ -11,11 +11,15 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
-type FlowStorageManager struct{}
+type FlowStorageManager struct {
+	launcher.FlowStorageManager
+}
 
 func (self *FlowStorageManager) WriteFlow(
 	ctx context.Context,
@@ -65,8 +69,10 @@ func (self *FlowStorageManager) WriteTask(
 func (self *FlowStorageManager) ListFlows(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	client_id string) (result []string, err error) {
-	return nil, nil
+	client_id string,
+	options result_sets.ResultSetOptions,
+	offset int64, length int64) ([]*services.FlowSummary, int64, error) {
+	return nil, 0, nil
 }
 
 const getFlowDetailsQuery = `
@@ -94,7 +100,7 @@ func (self *FlowStorageManager) LoadCollectionContext(
 		return &flows_proto.ArtifactCollectorContext{}, nil
 	}
 
-	hits, err := cvelo_services.QueryElasticRaw(ctx,
+	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
 		config_obj.OrgId, "collections",
 		json.Format(getFlowDetailsQuery, client_id, flow_id))
 	if err != nil {

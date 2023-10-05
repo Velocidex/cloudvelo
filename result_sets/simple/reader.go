@@ -93,7 +93,7 @@ func (self *SimpleResultSetReader) getPacket(row int64) (
 	}
 
 	org_id := filestore.GetOrgId(self.file_store_factory)
-	hits, err := cvelo_services.QueryElasticRaw(ctx, org_id, "results", query)
+	hits, _, err := cvelo_services.QueryElasticRaw(ctx, org_id, "results", query)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func getLastRecord(org_id string,
 			base_record.Type,
 			artifact_clause)
 	}
-	hits, err := cvelo_services.QueryElasticRaw(ctx, org_id,
+	hits, _, err := cvelo_services.QueryElasticRaw(ctx, org_id,
 		"results", query)
 	if err != nil {
 		return nil, err

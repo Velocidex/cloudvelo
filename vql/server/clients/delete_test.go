@@ -30,9 +30,9 @@ type DeleteTestSuite struct {
 func (self *DeleteTestSuite) TestDeleteClient() {
 	config_obj := self.ConfigObj.VeloConf()
 
-	Clock := &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
+	Clock := utils.NewMockClock(time.Unix(1661391000, 0))
+	cancel := utils.MockTime(Clock)
+	defer cancel()
 
 	clients := []api.ClientRecord{
 		// This client is currently connected

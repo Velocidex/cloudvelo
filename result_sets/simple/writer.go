@@ -2,6 +2,7 @@ package simple
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/Velocidex/ordereddict"
@@ -31,6 +32,12 @@ type ElasticSimpleResultSetWriter struct {
 
 	// If this is set writes will be syncrounous
 	sync bool
+}
+
+// Not currently implemented but in future will be used to update
+// result sets in the GUI
+func (self *ElasticSimpleResultSetWriter) Update(uint64, *ordereddict.Dict) error {
+	return errors.New("Updating result sets is not implemented yet.")
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(

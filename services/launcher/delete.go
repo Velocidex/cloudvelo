@@ -154,7 +154,8 @@ func (self *reporter) delete_index(type_, index, key, prefix string) {
 		return
 	}
 
-	hits, err := cvelo_services.QueryElasticRaw(self.ctx, self.config_obj.OrgId, index,
+	hits, _, err := cvelo_services.QueryElasticRaw(
+		self.ctx, self.config_obj.OrgId, index,
 		json.Format(deletionQuery, key, prefix))
 	if err != nil {
 		self.responses = append(self.responses, &services.DeleteFlowResponse{

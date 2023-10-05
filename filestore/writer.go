@@ -88,6 +88,10 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 	return len(data), nil
 }
 
+func (self *S3Writer) Update(data []byte, offset int64) error {
+	return errors.New("Updating filestore objects is not implemented yet")
+}
+
 func (self *S3Writer) writeBuf() (size int, err error) {
 	data := self.buf[:]
 	self.buf = nil
