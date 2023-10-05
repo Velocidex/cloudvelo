@@ -127,7 +127,9 @@ func (self HuntDispatcher) MutateHunt(
 	return errors.New("HuntDispatcher.HuntMutation Not implemented")
 }
 
-func (self HuntDispatcher) Refresh(config_obj *config_proto.Config) error {
+func (self HuntDispatcher) Refresh(
+	ctx context.Context,
+	config_obj *config_proto.Config) error {
 	return nil
 }
 
@@ -146,7 +148,7 @@ func (self HuntDispatcher) ListHunts(
 	in *api_proto.ListHuntsRequest) (
 	*api_proto.ListHuntsResponse, error) {
 
-	hits, err := cvelo_services.QueryElasticRaw(
+	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId,
 		"hunts", json.Format(getAllHuntsQuery, in.Offset, in.Count))
 	if err != nil {

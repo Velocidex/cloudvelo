@@ -183,7 +183,7 @@ func (self *VFSService) readDirectoryWithDownloads(
 	components = append([]string{client_id}, components...)
 	id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
-	hits, err := cvelo_services.QueryElasticRaw(ctx,
+	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
 		config_obj.OrgId, "vfs", json.Format(queryAllVFSAttributes, id))
 	if err != nil {
 		return nil, nil, err

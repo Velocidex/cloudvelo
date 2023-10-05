@@ -63,7 +63,7 @@ type IngestionTestSuite struct {
 
 func (self *IngestionTestSuite) ingestGoldenMessages(
 	ctx context.Context, ingestor *Ingestor, prefix string) {
-	closer := utils.MockTime(&utils.MockClock{MockNow: time.Unix(10, 10)})
+	closer := utils.MockTime(utils.NewMockClock(time.Unix(10, 10)))
 	defer closer()
 
 	files, err := testdata.FS.ReadDir(prefix)
@@ -113,7 +113,7 @@ func (self *IngestionTestSuite) TestEnrollment() {
 	self.golden.Set("ClientRecord", result[0])
 
 	// Record results in monitoring data.
-	records, err := cvelo_services.QueryElasticRaw(self.ctx,
+	records, _, err := cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
 	assert.Equal(self.T(), 1, len(records))
@@ -124,9 +124,7 @@ func (self *IngestionTestSuite) TestEnrollment() {
 
 func (self *IngestionTestSuite) TestListDirectory() {
 	// To keep things stable we mock the clock to be constant.
-	cvelo_utils.Clock = &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
+	cvelo_utils.Clock = utils.NewMockClock(time.Unix(1661391000, 0))
 
 	client_id := "C.77ad4285690698d9"
 	flow_id := "F.CEV6I8LHAT83O"
@@ -141,13 +139,13 @@ func (self *IngestionTestSuite) TestListDirectory() {
 			}))
 
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "System.VFS.ListDirectory")
-	records, err := cvelo_services.QueryElasticRaw(self.ctx,
+	records, _, err := cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "collections",
 		json.Format(getCollectionQuery, client_id, flow_id))
 	assert.NoError(self.T(), err)
 	self.golden.Set("System.VFS.ListDirectory", records)
 
-	records, err = cvelo_services.QueryElasticRaw(self.ctx,
+	records, _, err = cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
 	sort_records(records)
@@ -155,7 +153,7 @@ func (self *IngestionTestSuite) TestListDirectory() {
 
 	// Check the VFS entry for the top directory now - There should be
 	// no downloads yet but a full directory listing.
-	records, err = cvelo_services.QueryElasticRaw(self.ctx,
+	records, _, err = cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "vfs", getAllItemsQuery)
 	assert.NoError(self.T(), err)
 	sort_records(records)
@@ -244,7 +242,7 @@ func (self *IngestionTestSuite) TestClientEventMonitoring() {
 	assert.NoError(self.T(), err)
 
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "Generic.Client.Stats")
-	records, err := cvelo_services.QueryElasticRaw(self.ctx,
+	records, _, err := cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", getAllItemsQuery)
 	assert.NoError(self.T(), err)
 	sort_records(records)

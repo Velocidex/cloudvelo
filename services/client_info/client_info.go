@@ -11,6 +11,7 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
+	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 )
 
 var (
@@ -44,6 +45,55 @@ func (self *ClientInfoBase) ValidateClientId(client_id string) error {
 		return client_id_not_valid_error
 	}
 	return nil
+}
+
+// TODO: This implementation is a susceptible to a race but it does not
+// matter because the cloud does not have server events so client
+// records are not updated that much.
+func (self *ClientInfoBase) Modify(ctx context.Context, client_id string,
+	modifier func(client_info *services.ClientInfo) (new_record *services.ClientInfo, err error)) error {
+	record, err := self.Get(ctx, client_id)
+	if err != nil {
+		return err
+	}
+
+	new_record, err := modifier(record)
+	if err != nil {
+		return err
+	}
+
+	// Callback can indicate no change is needed by returning a nil
+	// for client_info.
+	if new_record == nil {
+		return nil
+	}
+
+	return self.Set(ctx, new_record)
+}
+
+func (self *ClientInfoBase) ListClients(ctx context.Context) <-chan string {
+	output_chan := make(chan string)
+
+	go func() {
+		defer close(output_chan)
+
+		indexer, err := services.GetIndexer(self.config_obj)
+		if err != nil {
+			return
+		}
+
+		scope := vql_subsystem.MakeScope()
+		record_chan, err := indexer.SearchClientsChan(ctx, scope, self.config_obj, "all", "")
+		if err != nil {
+			return
+		}
+
+		for record := range record_chan {
+			output_chan <- record.ClientId
+		}
+	}()
+
+	return output_chan
 }
 
 func (self *ClientInfoBase) Set(

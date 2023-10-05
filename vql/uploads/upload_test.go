@@ -18,7 +18,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
-	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/constants"
 	"www.velocidex.com/golang/velociraptor/crypto/client"
@@ -31,6 +30,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/services/writeback"
 	velo_uploads "www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
@@ -46,6 +46,13 @@ type UploaderTestSuite struct {
 	*testsuite.CloudTestSuite
 
 	golden *ordereddict.Dict
+}
+
+func (self *UploaderTestSuite) SetupTest() {
+	self.CloudTestSuite.SetupTest()
+
+	writeback_service := writeback.GetWritebackService()
+	writeback_service.LoadWriteback(self.ConfigObj.VeloConf())
 }
 
 // Remove the key from the filestore and make sure it is cleared.
@@ -85,7 +92,8 @@ func (self *UploaderTestSuite) startClientCommunicator(
 	ctx context.Context, wg *sync.WaitGroup,
 	org_config_obj *config_proto.Config) {
 	// Create the components for the client
-	writeback, err := config.GetWriteback(org_config_obj.Client)
+	writeback_service := writeback.GetWritebackService()
+	writeback, err := writeback_service.GetWriteback(org_config_obj)
 	assert.NoError(self.T(), err)
 
 	exe, err := executor.NewClientExecutor(ctx, writeback.ClientId, org_config_obj)
@@ -106,9 +114,7 @@ func (self *UploaderTestSuite) startClientCommunicator(
 }
 
 func (self *UploaderTestSuite) TestUploader() {
-	cvelo_utils.Clock = &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
+	cvelo_utils.Clock = utils.NewMockClock(time.Unix(1661391000, 0))
 
 	ctx := self.Sm.Ctx
 	wg := self.Sm.Wg
@@ -180,9 +186,7 @@ func (self *UploaderTestSuite) TestUploader() {
 }
 
 func (self *UploaderTestSuite) TestSparseUploader() {
-	cvelo_utils.Clock = &utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	}
+	cvelo_utils.Clock = utils.NewMockClock(time.Unix(1661391000, 0))
 
 	ctx := self.Sm.Ctx
 	wg := self.Sm.Wg

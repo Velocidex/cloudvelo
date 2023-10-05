@@ -26,6 +26,9 @@ var (
 
 	config_path = app.Flag("config", "The configuration file.").
 			Short('c').String()
+
+	embedded_config_path = app.Flag("embedded_config", "Extract the embedded configuration from this file.").String()
+
 	verbose_flag = app.Flag(
 		"verbose", "Enabled verbose logging.").Short('v').
 		Default("false").Bool()
@@ -97,7 +100,7 @@ func main() {
 	// with autoexec.
 	if len(args) == 0 {
 		config_obj, err := new(config.Loader).WithVerbose(*verbose_flag).
-			WithEmbedded().LoadAndValidate()
+			WithEmbedded(*embedded_config_path).LoadAndValidate()
 		if err == nil && config_obj.Autoexec != nil && config_obj.Autoexec.Argv != nil {
 			for _, arg := range config_obj.Autoexec.Argv {
 				args = append(args, os.ExpandEnv(arg))

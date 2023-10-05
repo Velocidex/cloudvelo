@@ -319,6 +319,10 @@ func _SetElasticIndex(
 	return makeElasticError(data)
 }
 
+type _ElasticTotal struct {
+	Value int `json:"value"`
+}
+
 type _ElasticHit struct {
 	Index  string          `json:"_index"`
 	Source json.RawMessage `json:"_source"`
@@ -326,7 +330,8 @@ type _ElasticHit struct {
 }
 
 type _ElasticHits struct {
-	Hits []_ElasticHit `json:"hits"`
+	Hits  []_ElasticHit `json:"hits"`
+	Total _ElasticTotal `json:"total"`
 }
 
 type _AggBucket struct {
@@ -509,7 +514,7 @@ func QueryChan(
 	}
 	part_query += query[1:]
 
-	part, err := QueryElasticRaw(ctx, org_id, index, part_query)
+	part, _, err := QueryElasticRaw(ctx, org_id, index, part_query)
 	if err != nil {
 		return nil, err
 	}
@@ -555,7 +560,7 @@ func QueryChan(
 {"sort":[{%q: "asc"}], "size":%q,"search_after": [%q],`,
 				sort_field, page_size, search_after) + query[1:]
 
-			part, err = QueryElasticRaw(ctx, org_id, index, part_query)
+			part, _, err = QueryElasticRaw(ctx, org_id, index, part_query)
 			if err != nil {
 				logger := logging.GetLogger(config_obj,
 					&logging.FrontendComponent)
@@ -664,14 +669,14 @@ func to_string(a interface{}) string {
 
 func QueryElasticRaw(
 	ctx context.Context,
-	org_id, index, query string) ([]json.RawMessage, error) {
+	org_id, index, query string) ([]json.RawMessage, int, error) {
 
 	defer Instrument("QueryElasticRaw")()
 	defer Debug("QueryElasticRaw %v", index)()
 
 	es, err := GetElasticClient()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	res, err := es.Search(
 		es.Search.WithContext(ctx),
@@ -680,24 +685,24 @@ func QueryElasticRaw(
 		es.Search.WithPretty(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
 	var results []json.RawMessage
@@ -705,7 +710,7 @@ func QueryElasticRaw(
 		results = append(results, hit.Source)
 	}
 
-	return results, nil
+	return results, parsed.Hits.Total.Value, nil
 }
 
 // Return only Ids of matching documents.
@@ -713,12 +718,12 @@ func QueryElasticRaw(
 // "_source": false
 func QueryElasticIds(
 	ctx context.Context,
-	org_id, index, query string) ([]string, error) {
+	org_id, index, query string) (ids []string, total int, err error) {
 
 	defer Instrument("QueryElasticIds")()
 	es, err := GetElasticClient()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	res, err := es.Search(
 		es.Search.WithContext(ctx),
@@ -727,24 +732,24 @@ func QueryElasticIds(
 		es.Search.WithPretty(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
 	parsed := &_ElasticResponse{}
 	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
 	var results []string
@@ -752,7 +757,7 @@ func QueryElasticIds(
 		results = append(results, hit.Id)
 	}
 
-	return results, nil
+	return results, parsed.Hits.Total.Value, nil
 }
 
 type Result struct {

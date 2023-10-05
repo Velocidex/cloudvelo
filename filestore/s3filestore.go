@@ -65,7 +65,7 @@ func (self S3Filestore) WriteFileWithCompletion(
 }
 
 func (self S3Filestore) StatFile(filename api.FSPathSpec) (api.FileInfo, error) {
-	return nil, errors.New("S3Filestore.StatFile Not implemented")
+	return nil, errors.New("S3Filestore.StatFile is not implemented")
 }
 
 func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, error) {
@@ -116,7 +116,7 @@ func (self S3Filestore) Delete(filename api.FSPathSpec) error {
 }
 
 func (self S3Filestore) Move(src, dest api.FSPathSpec) error {
-	return errors.New("S3Filestore.Move Not implemented")
+	return errors.New("S3Filestore.Move is not implemented")
 }
 
 // Clean up any filestore connections

@@ -15,6 +15,7 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 	"www.velocidex.com/golang/velociraptor/vtesting"
@@ -85,13 +86,13 @@ sources:
 	// Wait here for the async flow to be written.
 	vtesting.WaitUntil(5*time.Second, self.T(), func() bool {
 		flows, _ := launcher.GetFlows(self.Ctx,
-			config_obj, client_id, true, nil, 0, 100)
+			config_obj, client_id, result_sets.ResultSetOptions{}, 0, 100)
 		return len(flows.Items) > 0
 	})
 
 	// Get Flows API
 	flows, err := launcher.GetFlows(self.Ctx,
-		config_obj, client_id, true, nil, 0, 100)
+		config_obj, client_id, result_sets.ResultSetOptions{}, 0, 100)
 	assert.NoError(self.T(), err)
 
 	assert.Equal(self.T(), 1, len(flows.Items))

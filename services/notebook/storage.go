@@ -2,6 +2,7 @@ package notebook
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -162,6 +163,10 @@ func (self *NotebookStoreImpl) GetAvailableTimelines(notebook_id string) []strin
 func (self *NotebookStoreImpl) GetAvailableDownloadFiles(
 	notebook_id string) (*api_proto.AvailableDownloads, error) {
 	return &api_proto.AvailableDownloads{}, nil
+}
+
+func (self *NotebookStoreImpl) RemoveAttachment(ctx context.Context, notebook_id string, components []string) error {
+	return errors.New("Not implemented")
 }
 
 func (self *NotebookStoreImpl) GetAvailableUploadFiles(notebook_id string) (

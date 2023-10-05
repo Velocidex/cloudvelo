@@ -59,7 +59,8 @@ func (self *UserManager) SetUser(
 
 func (self *UserManager) ListUsers(ctx context.Context) (
 	[]*api_proto.VelociraptorUser, error) {
-	hits, err := cvelo_services.QueryElasticRaw(self.ctx, services.ROOT_ORG_ID,
+	hits, _, err := cvelo_services.QueryElasticRaw(
+		self.ctx, services.ROOT_ORG_ID,
 		"users", `{"query": {"match_all": {}}}`)
 	if err != nil {
 		return nil, err

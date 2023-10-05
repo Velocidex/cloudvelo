@@ -77,7 +77,7 @@ func (self *Indexer) searchWithTermsChan(
 
 		// Page the query in parts. First part specifies the size.
 		part_query := `{"size":1000,` + query[1:]
-		hits, err := cvelo_services.QueryElasticIds(
+		hits, _, err := cvelo_services.QueryElasticIds(
 			ctx, config_obj.OrgId, "clients", part_query)
 		if err != nil {
 			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
@@ -109,7 +109,7 @@ func (self *Indexer) searchWithTermsChan(
 			}
 
 			// Get the next batch
-			hits, err = cvelo_services.QueryElasticIds(
+			hits, _, err = cvelo_services.QueryElasticIds(
 				ctx, config_obj.OrgId, "clients",
 				json.Format(`{"search_after":[%q],`, last_client_id)+part_query[1:])
 			if err != nil {

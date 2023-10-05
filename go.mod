@@ -3,9 +3,9 @@ module www.velocidex.com/golang/cloudvelo
 go 1.18
 
 require (
-	github.com/Velocidex/ordereddict v0.0.0-20221110130714-6a7cb85851cd
+	github.com/Velocidex/ordereddict v0.0.0-20230909174157-2aa49cc5d11d
 	github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49
-	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20211116035050-ddd93fed62f5
+	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20230724083715-1eb048b1f6d6
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/alecthomas/assert v1.0.0
 	github.com/aws/aws-sdk-go v1.44.118
@@ -16,11 +16,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/sebdah/goldie v1.0.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.6.4-rc1.0.20220526103217-28ed86085653
-	www.velocidex.com/golang/vfilter v0.0.0-20230425012353-b6d0a982ca34
+	www.velocidex.com/golang/vfilter v0.0.0-20230730233014-4610600570e4
 )
 
 require (
@@ -36,7 +36,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 // indirect
 	github.com/Depado/bfchroma v1.3.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
@@ -45,6 +45,7 @@ require (
 	github.com/Velocidex/etw v0.0.0-20210723072214-4d0cffd1ff22 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
+	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
 	github.com/Velocidex/go-magic v0.0.0-20211018155418-c5dc48282f28 // indirect
 	github.com/Velocidex/go-yara v1.1.10-0.20221202090138-c7dde4c43aa4 // indirect
 	github.com/Velocidex/grok v0.0.1 // indirect
@@ -88,6 +89,7 @@ require (
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
@@ -100,7 +102,9 @@ require (
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hillu/go-ntdll v0.0.0-20220801201350-0d23f057ef1f // indirect
 	github.com/hirochachacha/go-smb2 v1.1.0 // indirect
@@ -124,7 +128,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.10 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/microcosm-cc/bluemonday v1.0.22 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.23 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
@@ -148,6 +152,7 @@ require (
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
@@ -155,13 +160,13 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
-	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.126.0 // indirect
@@ -179,19 +184,18 @@ require (
 	howett.net/plist v1.0.0 // indirect
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
-	www.velocidex.com/golang/go-ese v0.1.1-0.20220107095505-c38622559671 // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230508135129-d367f954db15 // indirect
+	www.velocidex.com/golang/go-ese v0.1.1-0.20230821114411-ecb5494187ed // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230922133004-33eadbbaf1f2 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20230228112150-ef2eadf34bc3 // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect
 	www.velocidex.com/golang/regparser v0.0.0-20221020153526-bbc758cbd18b // indirect
-	www.velocidex.com/golang/vtypes v0.0.0-20220816192452-6a27ae078f12 // indirect
+	www.velocidex.com/golang/vtypes v0.0.0-20230821104433-297db7c471d8 // indirect
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
 
-//replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
-
+// replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs
 // replace www.velocidex.com/golang/go-pe => /home/mic/projects/go-pe

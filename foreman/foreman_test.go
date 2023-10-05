@@ -79,9 +79,7 @@ func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientRecor
 }
 
 func (self *ForemanTestSuite) TestClientMonitoring() {
-	cancel := utils.MockTime(&utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	})
+	cancel := utils.MockTime(utils.NewMockClock(time.Unix(1661391000, 0)))
 	defer cancel()
 
 	client_monitoring.Clock = utils.GetTime()
@@ -249,9 +247,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	assert.Equal(self.T(), 0, len(new_plan.MonitoringTablesToClients))
 
 	// Some time has passed....
-	cancel = utils.MockTime(&utils.MockClock{
-		MockNow: time.Unix(1661391005, 0),
-	})
+	cancel = utils.MockTime(utils.NewMockClock(time.Unix(1661391005, 0)))
 	defer cancel()
 
 	// Label a client - this should force an update.
@@ -357,9 +353,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 }
 
 func (self *ForemanTestSuite) TestHuntsAllClients() {
-	cancel := utils.MockTime(&utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	})
+	cancel := utils.MockTime(utils.NewMockClock(time.Unix(1661391000, 0)))
 	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
@@ -541,9 +535,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 
 func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 	// Test that the hunt expires - move time forward by 25 hours.
-	cancel := utils.MockTime(&utils.MockClock{
-		MockNow: time.Unix(1661391000+25*60*60, 0),
-	})
+	cancel := utils.MockTime(utils.NewMockClock(time.Unix(1661391000+25*60*60, 0)))
 	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
@@ -649,9 +641,7 @@ func (self *ForemanTestSuite) setupOSHunts() {
 }
 
 func (self *ForemanTestSuite) TestHuntsByOS() {
-	cancel := utils.MockTime(&utils.MockClock{
-		MockNow: time.Unix(1661391000, 0),
-	})
+	cancel := utils.MockTime(utils.NewMockClock(time.Unix(1661391000, 0)))
 	defer cancel()
 
 	config_obj := self.ConfigObj.VeloConf()
