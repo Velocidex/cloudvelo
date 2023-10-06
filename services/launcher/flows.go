@@ -70,6 +70,7 @@ func (self Launcher) GetFlows(
 		lookup_ids = append(lookup_ids, id)
 		lookup_ids = append(lookup_ids, id+"_tasks")
 		lookup_ids = append(lookup_ids, id+"_completed")
+		lookup_ids = append(lookup_ids, id+"_stats_completed")
 		lookup_ids = append(lookup_ids, id+"_stats")
 	}
 
