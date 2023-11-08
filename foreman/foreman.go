@@ -351,9 +351,9 @@ func (self Foreman) UpdatePlan(
 
 func (self Foreman) RunOnce(
 	ctx context.Context,
-	org_config_obj *config_proto.Config) error {
+	config_obj *config_proto.Config) error {
 
-	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 
 	org_manager, err := services.GetOrgManager()
 	if err != nil {
@@ -364,7 +364,11 @@ func (self Foreman) RunOnce(
 	orgCountGauge.Set(float64(len(orgs)))
 
 	for _, org := range orgs {
-		org_config_obj.OrgId = org.Id
+		org_config_obj, err := org_manager.GetOrgConfig(org.OrgId)
+		if err != nil {
+			continue
+		}
+
 		if logger != nil {
 			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
 		}
