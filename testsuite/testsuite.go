@@ -46,7 +46,9 @@ func (self *CloudTestSuite) LoadConfig() *config.Config {
 
 	loader := config.ConfigLoader{
 		VelociraptorLoader: new(velo_config.Loader).
-			WithRequiredFrontend().WithVerbose(true),
+			WithRequiredFrontend().
+			WithVerbose(true).
+			WithEnvLiteralLoader("VELOCONFIG"),
 		ConfigText: SERVER_CONFIG,
 		JSONPatch:  patch,
 	}

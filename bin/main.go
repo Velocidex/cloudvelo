@@ -143,5 +143,6 @@ func makeDefaultConfigLoader() *config.Loader {
 		WithVerbose(*verbose_flag).
 		WithTempdir(*tempdir_flag).
 		WithCustomValidator("debug", initDebugServer).
-		WithLogFile(*logging_flag)
+		WithLogFile(*logging_flag).
+		WithEnvLiteralLoader("VELOCONFIG")
 }
