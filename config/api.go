@@ -127,9 +127,7 @@ func (self *ConfigLoader) validateVeloConfig(config_obj *Config) error {
 	}
 
 	os.Setenv("VELOCONFIG", string(serialized))
-	velo_config, err := self.VelociraptorLoader.
-		WithEnvLiteralLoader("VELOCONFIG").
-		LoadAndValidate()
+	velo_config, err := self.VelociraptorLoader.LoadAndValidate()
 	if err != nil {
 		return err
 	}
