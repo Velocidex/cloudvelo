@@ -431,6 +431,15 @@ func (self *Indexer) searchVerbs(ctx context.Context,
 		}
 	}
 
+	// Maybe a clientId
+	if uint64(len(items)) < in.Limit {
+		res, total, err = self.searchClientsByClientId(
+			ctx, config_obj, "client", in.Query, in)
+		if err == nil {
+			items = append(items, res...)
+		}
+	}
+
 	return items, total, nil
 }
 
