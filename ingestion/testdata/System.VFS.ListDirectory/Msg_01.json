@@ -4,7 +4,7 @@
  "request_id": 980,
  "source": "C.77ad4285690698d9",
  "auth_state": 1,
- "doc_type": "vfs",
+ "doc_type": "collection",
  "LogMessage": {
   "number_of_rows": 5,
   "jsonl": "{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\"}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Starting query execution.\\n\"}\n{\"client_time\":1673423174,\"level\":\"DEFAULT\",\"message\":\"Skipping query due to preconditions\\n\"}\n{\"client_time\":1673423174,\"level\":\"INFO\",\"message\":\"Collection is done after 5.283543ms\\n\"}\n{\"client_time\":1673423174,\"level\":\"DEBUG\",\"message\":\"Query Stats: {\\\"RowsScanned\\\":1,\\\"PluginsCalled\\\":1,\\\"FunctionsCalled\\\":1,\\\"ProtocolSearch\\\":0,\\\"ScopeCopy\\\":4}\\n\"}\n",
