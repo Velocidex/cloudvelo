@@ -38,19 +38,21 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"tasks", "", &ClientTask{
-			ClientId:  client_id,
-			FlowId:    req.SessionId,
-			Timestamp: time.Now().UnixNano(),
-			JSONData:  string(serialized),
+		"results", "", &ClientTask{
+			ClientId:      client_id,
+			FlowId:        req.SessionId,
+			Timestamp:     time.Now().UnixNano(),
+			JSONData:      string(serialized),
+			Doc_Timestamp: time.Now().UnixNano(),
 		})
 }
 
 type ClientTask struct {
-	ClientId  string `json:"client_id"`
-	FlowId    string `json:"flow_id"`
-	Timestamp int64  `json:"timestamp"`
-	JSONData  string `json:"data"`
+	ClientId      string `json:"client_id"`
+	FlowId        string `json:"flow_id"`
+	Timestamp     int64  `json:"timestamp"`
+	Doc_Timestamp int64  `json:"@timestamp"`
+	JSONData      string `json:"data"`
 }
 
 // Get the client's tasks and remove them from the queue.
