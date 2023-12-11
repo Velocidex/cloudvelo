@@ -40,11 +40,12 @@ func (self Ingestor) maybeHandleHuntResponse(
 			FlowId:    message.SessionId,
 			Timestamp: utils.Clock.Now().Unix(),
 			Status:    "started",
+			Type:      "hunt_flow",
 		}
 		doc_id := api.GetDocumentIdForCollection(
 			message.Source, message.SessionId, "")
 		return services.SetElasticIndex(ctx,
-			config_obj.OrgId, "hunt_flows", doc_id, hunt_flow_entry)
+			config_obj.OrgId, "hunts", doc_id, hunt_flow_entry)
 	}
 
 	return nil

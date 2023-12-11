@@ -9,15 +9,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Velocidex/ordereddict"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/Velocidex/ordereddict"
-	"github.com/aws/aws-sdk-go/aws/session"
 
 	opensearch "github.com/opensearch-project/opensearch-go/v2"
 	opensearchapi "github.com/opensearch-project/opensearch-go/v2/opensearchapi"
@@ -55,6 +54,11 @@ var (
 
 	bulk_indexer *BulkIndexer
 )
+
+type _IdQueryResult struct {
+	ID        string `json:"id"`
+	client_id string `json:"client_id"`
+}
 
 // The logger is normally installed in the start up sequence with
 // SetDebugLogger() below.
@@ -141,6 +145,32 @@ func DeleteDocument(
 	if sync {
 		res, err = opensearchapi.IndicesRefreshRequest{
 			Index: []string{GetIndex(org_id, index)},
+		}.Do(ctx, client)
+		defer res.Body.Close()
+	}
+
+	return err
+}
+
+func DeleteDocumentByQuery(
+	ctx context.Context, org_id, index string, query string, sync bool) error {
+
+	defer Instrument("DeleteDocument")()
+	expanded_index := GetIndex(org_id, index)
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	res, err := opensearchapi.DeleteByQueryRequest{Query: query, Index: []string{expanded_index}}.Do(ctx, client)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if sync {
+		res, err = opensearchapi.IndicesRefreshRequest{
+			Index: []string{expanded_index},
 		}.Do(ctx, client)
 		defer res.Body.Close()
 	}
@@ -355,6 +385,59 @@ type _ElasticResponse struct {
 }
 
 // Gets a single elastic record by id.
+func GetElasticRecordByQuery(
+	ctx context.Context, org_id, index_suffix, query string) (json.RawMessage, error) {
+	defer Debug("GetElasticRecordByQuery %v %v", index_suffix, query)()
+	defer Instrument("GetElasticRecordByQuery")()
+
+	client, err := GetElasticClient()
+	if err != nil {
+		return nil, err
+	}
+	index := GetIndex(org_id, index_suffix)
+	res, err := opensearchapi.SearchRequest{
+		Index: []string{index},
+		Body:  strings.NewReader(query),
+	}.Do(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// All is well we don't need to parse the results
+	if !res.IsError() {
+		hit := &_ElasticResponse{}
+		err := json.Unmarshal(data, hit)
+		if hit.Hits.Total.Value > 0 {
+			return hit.Hits.Hits[0].Source, err
+		} else {
+			return nil, err
+		}
+	}
+
+	response := ordereddict.NewDict()
+	err = response.UnmarshalJSON(data)
+	if err != nil {
+		return nil, makeReadElasticError(data)
+	}
+
+	found_any, pres := response.Get("found")
+	if pres {
+		found, ok := found_any.(bool)
+		if ok && !found {
+			return nil, os.ErrNotExist
+		}
+	}
+
+	return nil, makeReadElasticError(data)
+}
+
+// Gets a single elastic record by id.
 func GetElasticRecord(
 	ctx context.Context, org_id, index, id string) (json.RawMessage, error) {
 	defer Debug("GetElasticRecord %v %v", index, id)()
@@ -453,7 +536,7 @@ func GetMultipleElasticRecords(
 		return nil, err
 	}
 
-	// All is well we dont need to parse the results
+	// All is well we don't need to parse the results
 	if !res.IsError() {
 		hit := &docs{}
 		err := json.Unmarshal(data, hit)
@@ -710,6 +793,56 @@ func QueryElasticRaw(
 		results = append(results, hit.Source)
 	}
 
+	return results, parsed.Hits.Total.Value, nil
+}
+
+// Return only Ids of matching documents.
+// You probably want to add the following to the query:
+// "_source": false
+func QueryElasticIdFields(
+	ctx context.Context,
+	org_id, index, query string) (ids []string, total int, err error) {
+
+	defer Instrument("QueryElasticIds")()
+	es, err := GetElasticClient()
+	if err != nil {
+		return nil, 0, err
+	}
+	res, err := es.Search(
+		es.Search.WithContext(ctx),
+		es.Search.WithIndex(GetIndex(org_id, index)),
+		es.Search.WithBody(strings.NewReader(query)),
+		es.Search.WithPretty(),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// There was an error so we need to relay it
+	if res.IsError() {
+		return nil, 0, makeReadElasticError(data)
+	}
+
+	parsed := &_ElasticResponse{}
+	err = json.Unmarshal(data, &parsed)
+	if err != nil {
+		return nil, 0, makeReadElasticError(data)
+	}
+
+	var results []string
+	for _, hit := range parsed.Hits.Hits {
+		result := &_IdQueryResult{}
+		err := json.Unmarshal(hit.Source, result)
+		if err == nil && result.ID != "" {
+			results = append(results, result.ID)
+		}
+	}
 	return results, parsed.Hits.Total.Value, nil
 }
 

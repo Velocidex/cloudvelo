@@ -26,6 +26,8 @@ type VFSRecord struct {
 	Components []string `json:"components"`
 	Downloads  []string `json:"downloads"`
 	JSONData   string   `json:"data"`
+	DocType    string   `json:"doc_type"`
+	DocId      string   `json:"doc_id"`
 }
 
 type DownloadRow struct {
@@ -41,9 +43,57 @@ type DownloadRow struct {
 	FlowId       string   `json:"flow_id"`
 }
 
+const (
+	vfsSidePanelRenderQuery = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {"id": %q}
+                },
+                {
+                    "match": {
+                        "doc_type": "vfs"
+                    }
+                }
+            ]
+        }
+    },
+    "sort": [
+      {
+        "@timestamp": {
+          "order": "desc"
+        }
+      }
+    ], 
+    "size": 1
+}
+`
+	queryAllVFSAttributes = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {"id": %q}
+                },
+                {
+                    "match": {
+                        "doc_type": "vfs"
+                    }
+                }
+            ]
+        }
+    },
+    "size": 10000
+}
+`
+)
+
 // Render the root level pseudo directory. This provides anchor points
 // for the other drivers in the navigation.
-func renderRootVFS(client_id string) *api_proto.VFSListResponse {
+func renderRootVFS() *api_proto.VFSListResponse {
 	return &api_proto.VFSListResponse{
 		Response: `
    [
@@ -67,8 +117,8 @@ func renderDBVFS(
 
 	id := services.MakeId(utils.JoinComponents(components, "/"))
 	record := &VFSRecord{}
-	serialized, err := services.GetElasticRecord(ctx,
-		config_obj.OrgId, "vfs", id)
+	serialized, err := services.GetElasticRecordByQuery(ctx,
+		config_obj.OrgId, "results", json.Format(vfsSidePanelRenderQuery, id))
 	if err != nil {
 		// Empty responses mean the directory is empty.
 		return result, nil
@@ -162,17 +212,6 @@ func renderDBVFS(
 	return result, nil
 }
 
-const (
-	queryAllVFSAttributes = `
-{
- "query": {
-   "match": {"id": %q}
- },
- "size": 10000
-}
-`
-)
-
 func (self *VFSService) readDirectoryWithDownloads(
 	ctx context.Context,
 	config_obj *config_proto.Config, client_id string, components []string) (
@@ -184,7 +223,7 @@ func (self *VFSService) readDirectoryWithDownloads(
 	id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
 	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "vfs", json.Format(queryAllVFSAttributes, id))
+		config_obj.OrgId, "results", json.Format(queryAllVFSAttributes, id))
 	if err != nil {
 		return nil, nil, err
 	}

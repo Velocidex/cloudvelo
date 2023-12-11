@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	getHuntsFlowsQuery = `
-{ "from": %q,
+	getHuntsFlowsQuery = `{ "from": %q,
   "query": {
     "bool": {
       "must": [
-         {"match": {"hunt_id" : %q}}
+         {"match": {"hunt_id" : %q}},
+         {"match": {"doc_type" : "hunt_flow"}}
       ]}
   }
 }
@@ -30,6 +30,7 @@ type HuntFlowEntry struct {
 	ClientId  string `json:"client_id"`
 	FlowId    string `json:"flow_id"`
 	Status    string `json:"status"`
+	Type      string `json:"type"`
 }
 
 func (self HuntDispatcher) GetFlows(
@@ -47,10 +48,9 @@ func (self HuntDispatcher) GetFlows(
 			return
 		}
 
+		query := json.Format(getHuntsFlowsQuery, start, hunt_id)
 		hits, err := cvelo_services.QueryChan(
-			ctx, config_obj, 1000, self.config_obj.OrgId, "hunt_flows",
-			json.Format(getHuntsFlowsQuery, start, hunt_id),
-			"timestamp")
+			ctx, config_obj, 1000, self.config_obj.OrgId, "results", query, "timestamp")
 		if err != nil {
 			scope.Log("GetFlows for hunt %v: %v", hunt_id, err)
 			return

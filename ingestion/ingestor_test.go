@@ -29,11 +29,24 @@ import (
 
 const (
 	getAllItemsQuery = `
-{"query": {"match_all" : {}}, "size": 1000}
+{"query": {"match_all" : {}}, "size": 1000}`
+
+	getAllItemsQueryForType = `
+"query": {
+	"bool": {
+	  "must": [
+		{
+		  "match": {
+			"doc_type": %q
+		  }
+		}
+	  ]
+	}
+}
 `
 	getCollectionQuery = `
 {
-  "size": 1000,
+  "size": 10000,
   "sort": [
   {
     "type": {"order": "asc"}
@@ -43,6 +56,7 @@ const (
        "must": [
          {"match": {"client_id" : %q}},
          {"match": {"session_id" : %q}}
+         {"match": {"doc_type" : %q}}
       ]}
   }
 }
@@ -131,17 +145,17 @@ func (self *IngestionTestSuite) TestListDirectory() {
 
 	// Test VFS.ListDirectory special handling.
 	err := cvelo_services.SetElasticIndex(self.ctx,
-		"test", "collections", flow_id, api.ArtifactCollectorRecordFromProto(
+		"test", "results", flow_id, api.ArtifactCollectorRecordFromProto(
 			&flows_proto.ArtifactCollectorContext{
 				ClientId:   client_id,
 				SessionId:  flow_id,
 				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
-			}))
+			}, flow_id))
 
 	self.ingestGoldenMessages(self.ctx, self.ingestor, "System.VFS.ListDirectory")
 	records, _, err := cvelo_services.QueryElasticRaw(self.ctx,
-		"test", "collections",
-		json.Format(getCollectionQuery, client_id, flow_id))
+		"test", "results",
+		json.Format(getCollectionQuery, client_id, flow_id, "collection"))
 	assert.NoError(self.T(), err)
 	self.golden.Set("System.VFS.ListDirectory", records)
 
@@ -153,8 +167,9 @@ func (self *IngestionTestSuite) TestListDirectory() {
 
 	// Check the VFS entry for the top directory now - There should be
 	// no downloads yet but a full directory listing.
+	query := json.Format(getAllItemsQueryForType, "vfs")
 	records, _, err = cvelo_services.QueryElasticRaw(self.ctx,
-		"test", "vfs", getAllItemsQuery)
+		"test", "results", query)
 	assert.NoError(self.T(), err)
 	sort_records(records)
 	self.golden.Set("System.VFS.ListDirectory vfs", records)
@@ -185,12 +200,12 @@ func (self *IngestionTestSuite) TestVFSDownload() {
 
 	// Add a VFS.DownloadFile collection and replay messages.
 	err := cvelo_services.SetElasticIndex(self.ctx, "test",
-		"collections", list_flow_id, api.ArtifactCollectorRecordFromProto(
+		"results", "", api.ArtifactCollectorRecordFromProto(
 			&flows_proto.ArtifactCollectorContext{
 				ClientId:   client_id,
 				SessionId:  list_flow_id,
 				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
-			}))
+			}, list_flow_id))
 
 	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.ListDirectory")
 
@@ -201,13 +216,13 @@ func (self *IngestionTestSuite) TestVFSDownload() {
 
 	// Test VFS.ListDirectory special handling.
 	err = cvelo_services.SetElasticIndex(self.ctx,
-		"test", "collections", download_flow_id,
+		"test", "results", "",
 		api.ArtifactCollectorRecordFromProto(
 			&flows_proto.ArtifactCollectorContext{
 				ClientId:   client_id,
 				SessionId:  download_flow_id,
 				CreateTime: uint64(cvelo_utils.Clock.Now().UnixNano()),
-			}))
+			}, download_flow_id))
 
 	self.ingestGoldenMessages(self.Ctx, self.ingestor, "System.VFS.DownloadFile")
 
@@ -287,8 +302,7 @@ func (self *IngestionTestSuite) TearDownTest() {
 func TestIngestor(t *testing.T) {
 	suite.Run(t, &IngestionTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients", "client_keys",
-				"results", "vfs", "collections", "hunt_flows"},
+			Indexes: []string{"clients", "results", "hunts"},
 		},
 	})
 }

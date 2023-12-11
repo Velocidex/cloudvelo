@@ -29,7 +29,9 @@ type DatastoreRecord struct {
 	FlowId   string `json:"flow_id"`
 	Artifact string `json:"artifact"`
 	Type     string `json:"type"`
+	DocType  string `json:"doc_type"`
 	JSONData string `json:"data"`
+	ID       string `json:"id"`
 }
 
 func DSPathSpecToRecord(path api.DSPathSpec) (*DatastoreRecord, error) {

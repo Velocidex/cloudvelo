@@ -3,6 +3,7 @@ package launcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -21,7 +22,28 @@ var (
 )
 
 // Get all the flow IDs for this client.
-const getFlowsQuery = `
+const (
+	prefixQuery         = `{"prefix": {"id": "%v"}}`
+	regexQuery          = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
+	getCollectionsQuery = `{
+  "query": {
+    "bool": {
+      "filter": [%v],
+      "should": [%v],
+      "must": [
+        {
+          "match": {
+            "doc_type": "collection"
+          }
+        }
+      ]
+    }
+  },
+  "size": 10000
+}
+`
+
+	getFlowsQuery = `
 {
   "sort": [{
     "session_id": {"order": "desc"}
@@ -30,14 +52,16 @@ const getFlowsQuery = `
      "bool": {
        "must": [
            {"match": {"client_id" : %q}},
-           {"match": {"type": "main"}}
+           {"match": {"type": "main"}},
+           {"match": {"doc_type": "collection"}}
        ]}
   },
-  "_source": false,
+  "_source": true,
   "from": %q,
   "size": %q
 }
 `
+)
 
 func (self Launcher) GetFlows(
 	ctx context.Context,
@@ -46,15 +70,14 @@ func (self Launcher) GetFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) (*api_proto.ApiFlowResponse, error) {
 
-	ids, total, err := cvelo_services.QueryElasticIds(ctx,
-		self.config_obj.OrgId, "collections",
+	ids, total, err := cvelo_services.QueryElasticIdFields(ctx,
+		self.config_obj.OrgId, "results",
 		json.Format(getFlowsQuery, client_id, offset, length))
 	if err != nil {
 		return nil, err
 	}
 
 	var flow_ids []string
-	var lookup_ids []string
 
 	// The ArtifactCollectorContext object is made up of several parts:
 	// 1. The first part is the created context the GUI has created.
@@ -67,15 +90,10 @@ func (self Launcher) GetFlows(
 	for _, id := range ids {
 		flow_id := strings.Split(id, "_")[0]
 		flow_ids = append(flow_ids, flow_id)
-		lookup_ids = append(lookup_ids, id)
-		lookup_ids = append(lookup_ids, id+"_tasks")
-		lookup_ids = append(lookup_ids, id+"_completed")
-		lookup_ids = append(lookup_ids, id+"_stats_completed")
-		lookup_ids = append(lookup_ids, id+"_stats")
 	}
-
-	records, err := cvelo_services.GetMultipleElasticRecords(ctx,
-		config_obj.OrgId, "collections", lookup_ids)
+	records := []json.RawMessage{}
+	records, _, err = cvelo_services.QueryElasticRaw(ctx,
+		config_obj.OrgId, "results", fmt.Sprintf(getCollectionsQuery, processIds(prefixQuery, ids), processIds(regexQuery, ids)))
 	if err != nil {
 		return nil, err
 	}
@@ -174,4 +192,15 @@ func mergeRecords(
 	}
 
 	return collection_context
+}
+
+func processIds(queryTemplate string, ids []string) string {
+	query := ""
+	for i, id := range ids {
+		query += fmt.Sprintf(queryTemplate, id)
+		if i < len(ids)-1 {
+			query += ","
+		}
+	}
+	return query
 }

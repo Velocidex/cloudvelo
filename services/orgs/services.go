@@ -7,7 +7,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
-	"www.velocidex.com/golang/cloudvelo/schema"
 	"www.velocidex.com/golang/cloudvelo/services/repository"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -86,14 +85,6 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 		// Register our result set implementations
 		result_sets.RegisterResultSetFactory(simple.ResultSetFactory{})
 		result_sets.RegisterTimedResultSetFactory(timed.TimedFactory{})
-
-		// TODO: This needs to be very quick.
-		err = schema.Initialize(self.ctx,
-			self.config_obj,
-			org_id, schema.NO_FILTER, schema.DO_NOT_RESET_INDEX)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// Create a repository manager for the org.

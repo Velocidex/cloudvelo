@@ -61,8 +61,7 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
-		indexes := []string{"collections", "datastore", "results",
-			"hunt_flows", "clients", "vfs", "tasks", "ping"}
+		indexes := []string{"collections", "results", "hunts", "clients", "tasks"}
 		for _, index := range indexes {
 			if arg.ReallyDoIt {
 				err = removeClientDocs(ctx, config_obj, index, arg.ClientId)
