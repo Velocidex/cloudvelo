@@ -31,17 +31,19 @@ const (
 	getAllItemsQuery = `
 {"query": {"match_all" : {}}, "size": 1000}`
 
-	getAllItemsQueryForType = `
-"query": {
-	"bool": {
-	  "must": [
-		{
-		  "match": {
-			"doc_type": %q
-		  }
-		}
-	  ]
-	}
+	getAllItemsQueryForType = `{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "doc_type": "vfs"
+                    }
+                }
+            ]
+        }
+    },
+    "size": 10000
 }
 `
 	getCollectionQuery = `
@@ -167,7 +169,7 @@ func (self *IngestionTestSuite) TestListDirectory() {
 
 	// Check the VFS entry for the top directory now - There should be
 	// no downloads yet but a full directory listing.
-	query := json.Format(getAllItemsQueryForType, "vfs")
+	query := getAllItemsQueryForType
 	records, _, err = cvelo_services.QueryElasticRaw(self.ctx,
 		"test", "results", query)
 	assert.NoError(self.T(), err)

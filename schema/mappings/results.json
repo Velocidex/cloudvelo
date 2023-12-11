@@ -2,18 +2,72 @@
     "mappings": {
         "dynamic": false,
         "properties": {
-            "client_id":    { "type": "keyword" },
-            "type":         { "type": "keyword" },
-            "artifact":     { "type": "keyword" },
-            "flow_id":      { "type": "keyword" },
-            "data":         { "type": "binary"  },
-            "start_row":    { "type": "long" },
-            "end_row":      { "type": "long" },
-            "total_rows":   { "type": "long" },
-            "timestamp":    { "type": "long" },
-            "@timestamp":    { "type": "long" },
-            "date":         { "type": "long" },
-            "vfs_path":     { "type": "keyword" }
+            "session_id": {
+                "type": "keyword"
+            },
+            "raw": {
+                "type": "binary"
+            },
+            "tasks": {
+                "type": "binary"
+            },
+            "id": {
+                "type": "keyword"
+            },
+            "hunt_id": {
+                "type": "keyword"
+            },
+            "client_id": {
+                "type": "keyword"
+            },
+            "components": {
+                "type": "keyword"
+            },
+            "downloads": {
+                "type": "binary"
+            },
+            "type": {
+                "type": "keyword"
+            },
+            "doc_type": {
+                "type": "keyword"
+            },
+            "artifact": {
+                "type": "keyword"
+            },
+            "flow_id": {
+                "type": "keyword"
+            },
+            "data": {
+                "type": "binary"
+            },
+            "start_row": {
+                "type": "long"
+            },
+            "end_row": {
+                "type": "long"
+            },
+            "total_rows": {
+                "type": "long"
+            },
+            "timestamp": {
+                "type": "long"
+            },
+            "date": {
+                "type": "long"
+            },
+            "vfs_path": {
+                "type": "keyword"
+            },
+            "title": {
+                "type": "keyword"
+            },
+            "correlationId": {
+                "type": "keyword"
+            },
+            "is_dispatched": {
+                "type": "boolean"
+            }
         }
     }
 }
