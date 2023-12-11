@@ -55,7 +55,7 @@ const (
      "bool": {
        "must": [
          {"match": {"client_id" : %q}},
-         {"match": {"session_id" : %q}}
+         {"match": {"session_id" : %q}},
          {"match": {"doc_type" : %q}}
       ]}
   }
