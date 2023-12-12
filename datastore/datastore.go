@@ -72,7 +72,9 @@ func (self ElasticDatastore) GetSubject(
 		return err
 	}
 
-	record := &DatastoreRecord{}
+	record := &DatastoreRecord{
+		Timestamp: utils.GetTime().Now().UnixNano(),
+	}
 	err = json.Unmarshal(data, &record)
 	if err != nil {
 		return err

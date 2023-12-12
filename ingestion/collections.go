@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -120,6 +119,6 @@ func getFSPathSpec(
 }
 
 func getDayName() string {
-	now := cvelo_utils.Clock.Now().UTC()
+	now := utils.GetTime().Now().UTC()
 	return fmt.Sprintf("%d-%02d-%02d", now.Year(), now.Month(), now.Day())
 }

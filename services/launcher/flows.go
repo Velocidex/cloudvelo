@@ -92,8 +92,10 @@ func (self Launcher) GetFlows(
 		flow_ids = append(flow_ids, flow_id)
 	}
 	records := []json.RawMessage{}
+	query := fmt.Sprintf(getCollectionsQuery,
+		processIds(prefixQuery, ids), processIds(regexQuery, ids))
 	records, _, err = cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "results", fmt.Sprintf(getCollectionsQuery, processIds(prefixQuery, ids), processIds(regexQuery, ids)))
+		config_obj.OrgId, "results", query)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +137,10 @@ func (self Launcher) GetFlows(
 
 // Are any queries currenrly running.
 func is_running(context *flows_proto.ArtifactCollectorContext) bool {
+	if context.State == flows_proto.ArtifactCollectorContext_ERROR {
+		return false
+	}
+
 	for _, s := range context.QueryStats {
 		if s.Status == crypto_proto.VeloStatus_PROGRESS {
 			return true
@@ -189,6 +195,13 @@ func mergeRecords(
 			is_running(collection_context) && !is_running(stats_context) {
 			collection_context.QueryStats = stats_context.QueryStats
 		}
+	}
+
+	// If the final message is errored or cancelled we update this
+	// message.
+	if stats_context.State == flows_proto.ArtifactCollectorContext_ERROR {
+		collection_context.State = stats_context.State
+		collection_context.Status = stats_context.Status
 	}
 
 	return collection_context

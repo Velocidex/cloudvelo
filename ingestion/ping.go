@@ -6,9 +6,9 @@ import (
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 func (self Ingestor) HandlePing(
@@ -21,7 +21,7 @@ func (self Ingestor) HandlePing(
 		&api.ClientRecord{
 			ClientId: message.Source,
 			Type:     "ping",
-			Ping:     uint64(utils.Clock.Now().UnixNano()),
+			Ping:     uint64(utils.GetTime().Now().UnixNano()),
 		})
 	if err == nil ||
 		strings.Contains(err.Error(), "document_missing_exception") {

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"www.velocidex.com/golang/cloudvelo/result_sets/timed"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -36,7 +35,7 @@ func (self Ingestor) HandleMonitoringLogs(
 	log_path_manager := artifact_paths.NewArtifactLogPathManagerWithMode(
 		config_obj, message.Source, message.SessionId, artifact_name,
 		paths.MODE_CLIENT_EVENT)
-	log_path_manager.Clock = cvelo_utils.Clock
+	log_path_manager.Clock = utils.GetTime()
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(
@@ -81,7 +80,7 @@ func (self Ingestor) HandleMonitoringResponses(
 		config_obj, message.Source,
 		message.SessionId, message.VQLResponse.Query.Name,
 		paths.MODE_CLIENT_EVENT)
-	path_manager.Clock = cvelo_utils.Clock
+	path_manager.Clock = utils.GetTime()
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := timed.NewTimedResultSetWriter(

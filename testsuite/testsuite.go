@@ -14,6 +14,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	velo_config "www.velocidex.com/golang/velociraptor/config"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vtesting/assert"
 )
 
@@ -30,6 +31,8 @@ type CloudTestSuite struct {
 	cancel func()
 
 	writeback_file string
+
+	time_closer func()
 }
 
 // Allow an external file to override the config. This allows us to
@@ -78,6 +81,9 @@ func (self *CloudTestSuite) SetupSuite() {
 
 func (self *CloudTestSuite) TearDownSuite() {
 	os.Remove(self.writeback_file)
+	if self.time_closer != nil {
+		self.time_closer()
+	}
 }
 
 func (self *CloudTestSuite) TearDownTest() {
@@ -86,6 +92,8 @@ func (self *CloudTestSuite) TearDownTest() {
 }
 
 func (self *CloudTestSuite) SetupTest() {
+	self.time_closer = utils.MockTime(&utils.IncClock{NowTime: 1661391000})
+
 	self.Ctx, self.cancel = context.WithTimeout(context.Background(),
 		time.Second*60)
 

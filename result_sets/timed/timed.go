@@ -7,11 +7,11 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This is the record we store in the elastic datastore. Timed Results
@@ -36,7 +36,7 @@ func NewTimedResultSetRecord(
 		vfs_path = filename.AsClientPath()
 	}
 
-	now := utils.Clock.Now()
+	now := utils.GetTime().Now()
 	day := now.Truncate(24 * time.Hour).Unix()
 
 	switch t := path_manager.(type) {
@@ -59,15 +59,15 @@ func NewTimedResultSetRecord(
 			Artifact:             t.FullArtifactName,
 			Type:                 "logs",
 			VFSPath:              vfs_path,
-			Timestamp:            utils.Clock.Now().UnixNano(),
-			Datastream_Timestamp: utils.Clock.Now().UnixNano(),
+			Timestamp:            utils.GetTime().Now().UnixNano(),
+			Datastream_Timestamp: utils.GetTime().Now().UnixNano(),
 			Date:                 day,
 		}
 
 	default:
 		return &TimedResultSetRecord{
-			Timestamp:            utils.Clock.Now().UnixNano(),
-			Datastream_Timestamp: utils.Clock.Now().UnixNano(),
+			Timestamp:            utils.GetTime().Now().UnixNano(),
+			Datastream_Timestamp: utils.GetTime().Now().UnixNano(),
 			Date:                 day,
 			VFSPath:              vfs_path,
 		}

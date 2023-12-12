@@ -129,6 +129,9 @@ sources:
 	assert.NoError(self.T(), err)
 	assert.Equal(self.T(), flow_id, cancel_response.FlowId)
 
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
 	// Check the tasks queue - we just add a cancel message but do not
 	// remove the old message.
 	tasks, err = PeekClientTasks(self.Ctx, config_obj, client_id)
@@ -146,7 +149,7 @@ sources:
 		client_id, flow_id)
 	assert.NoError(self.T(), err)
 
-	// Make sure the flow is in the running state
+	// Make sure the flow is in the running error
 	assert.Equal(self.T(),
 		flows_proto.ArtifactCollectorContext_ERROR,
 		details.Context.State)
@@ -155,7 +158,7 @@ sources:
 func TestLauncher(t *testing.T) {
 	suite.Run(t, &LauncherTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"tasks", "collections"},
+			Indexes: []string{"tasks", "collections", "results"},
 		},
 	})
 }

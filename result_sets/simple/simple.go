@@ -1,8 +1,8 @@
 package simple
 
 import (
-	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This is the record we store in the elastic datastore. Simple
@@ -39,7 +39,7 @@ func NewSimpleResultSetRecord(
 			// Single artifact no source
 			if len(components) == 5 {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					Datastream_Timestamp: utils.GetTime().Now().Unix(),
 					ClientId:             client_id,
 					FlowId:               components[4],
 					Artifact:             components[3],
@@ -49,7 +49,7 @@ func NewSimpleResultSetRecord(
 				// Artifact with source name
 			} else if len(components) == 6 {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					Datastream_Timestamp: utils.GetTime().Now().Unix(),
 					ClientId:             client_id,
 					FlowId:               components[4],
 					Artifact:             components[3] + "/" + components[5],
@@ -60,7 +60,7 @@ func NewSimpleResultSetRecord(
 		} else if components[2] == "collections" {
 			if components[4] == "logs" {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					Datastream_Timestamp: utils.GetTime().Now().Unix(),
 					ClientId:             client_id,
 					FlowId:               components[3],
 					Type:                 "logs",
@@ -69,7 +69,7 @@ func NewSimpleResultSetRecord(
 
 			if components[4] == "uploads" {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
+					Datastream_Timestamp: utils.GetTime().Now().Unix(),
 					ClientId:             client_id,
 					FlowId:               components[3],
 					Type:                 "uploads",

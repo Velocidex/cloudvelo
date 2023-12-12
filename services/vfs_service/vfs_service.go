@@ -64,7 +64,6 @@ import (
 	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
@@ -109,7 +108,7 @@ func (self *VFSService) WriteDownloadInfo(
 		client_components...)
 
 	download_record := &DownloadRow{
-		Mtime:        uint64(cvelo_utils.Clock.Now().UnixNano()),
+		Mtime:        uint64(utils.GetTime().Now().UnixNano()),
 		Components:   client_components,
 		FSComponents: file_components,
 		InFlight:     record.InFlight,

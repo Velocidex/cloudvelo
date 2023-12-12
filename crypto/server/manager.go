@@ -8,13 +8,13 @@ import (
 	"sync"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/crypto/client"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/crypto/server"
 	crypto_utils "www.velocidex.com/golang/velociraptor/crypto/utils"
 	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type ServerCryptoManager struct {
@@ -90,7 +90,7 @@ func (self *serverPublicKeyResolver) SetPublicKey(
 
 	pem := &crypto_proto.PublicKey{
 		Pem:        crypto_utils.PublicKeyToPem(key),
-		EnrollTime: uint64(utils.Clock.Now().Unix()),
+		EnrollTime: uint64(utils.GetTime().Now().Unix()),
 	}
 	return cvelo_services.SetElasticIndex(
 		self.ctx, config_obj.OrgId, "client_keys", client_id, pem)

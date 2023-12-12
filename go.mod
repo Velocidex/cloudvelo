@@ -10,26 +10,26 @@ require (
 	github.com/alecthomas/assert v1.0.0
 	github.com/aws/aws-sdk-go v1.44.118
 	github.com/evanphx/json-patch v4.5.0+incompatible
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/magefile/mage v1.14.0
 	github.com/opensearch-project/opensearch-go/v2 v2.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/sebdah/goldie v1.0.0
-	github.com/stretchr/testify v1.8.2
-	google.golang.org/protobuf v1.30.0
+	github.com/stretchr/testify v1.8.4
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.7.0
-	www.velocidex.com/golang/vfilter v0.0.0-20230730233014-4610600570e4
+	www.velocidex.com/golang/vfilter v0.0.0-20231014062339-d62b5a5877d2
 )
 
 require (
-	cloud.google.com/go v0.110.2 // indirect
-	cloud.google.com/go/compute v1.19.3 // indirect
+	cloud.google.com/go v0.110.8 // indirect
+	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.13.0 // indirect
-	cloud.google.com/go/pubsub v1.30.0 // indirect
-	cloud.google.com/go/storage v1.29.0 // indirect
+	cloud.google.com/go/iam v1.1.2 // indirect
+	cloud.google.com/go/pubsub v1.33.0 // indirect
+	cloud.google.com/go/storage v1.33.0 // indirect
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.1 // indirect
@@ -38,11 +38,11 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
-	github.com/PuerkitoBio/goquery v1.8.0 // indirect
+	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/ahocorasick v0.0.0-20180712114356-e1c353eeaaee // indirect
 	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
-	github.com/Velocidex/etw v0.0.0-20210723072214-4d0cffd1ff22 // indirect
+	github.com/Velocidex/etw v0.0.0-20231115144702-0b885b292f0f // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
@@ -56,12 +56,12 @@ require (
 	github.com/alecthomas/chroma v0.7.3 // indirect
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/participle v0.7.1 // indirect
-	github.com/alecthomas/repr v0.2.1-0.20230322203820-fba37eeb3a59 // indirect
+	github.com/alecthomas/repr v0.3.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
@@ -84,23 +84,23 @@ require (
 	github.com/glaslos/tlsh v0.2.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
+	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.0.1 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/s2a-go v0.1.4 // indirect
+	github.com/google/btree v1.1.2 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.10.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
+	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/gorilla/csrf v1.6.2 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
-	github.com/lib/pq v1.2.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/lpar/gzipped v1.1.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
@@ -134,8 +134,8 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/oschwald/maxminddb-golang v1.8.0 // indirect
-	github.com/paulmach/orb v0.1.5 // indirect
-	github.com/pkg/sftp v1.13.1 // indirect
+	github.com/paulmach/orb v0.10.0 // indirect
+	github.com/pkg/sftp v1.13.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
@@ -144,9 +144,9 @@ require (
 	github.com/qri-io/starlib v0.5.0 // indirect
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	github.com/robertkrimen/otto v0.0.0-20210614181706-373ff5438452 // indirect
+	github.com/robertkrimen/otto v0.2.1 // indirect
 	github.com/russellhaering/goxmldsig v1.3.0 // indirect
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.11 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
@@ -158,23 +158,24 @@ require (
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/valyala/fastjson v1.6.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
+	go.starlark.net v0.0.0-20230925163745-10651d5192ab // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/oauth2 v0.13.0 // indirect
+	golang.org/x/sync v0.4.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.126.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/grpc v1.56.3 // indirect
+	google.golang.org/api v0.146.0 // indirect
+	google.golang.org/appengine v1.6.8 // indirect
+	google.golang.org/genproto v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/grpc v1.58.3 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
@@ -190,7 +191,7 @@ require (
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect
 	www.velocidex.com/golang/regparser v0.0.0-20221020153526-bbc758cbd18b // indirect
-	www.velocidex.com/golang/vtypes v0.0.0-20230821104433-297db7c471d8 // indirect
+	www.velocidex.com/golang/vtypes v0.0.0-20231115033415-7856327477d2 // indirect
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor

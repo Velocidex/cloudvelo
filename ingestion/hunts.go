@@ -8,7 +8,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
@@ -38,7 +37,7 @@ func (self Ingestor) maybeHandleHuntResponse(
 			HuntId:    hunt_id,
 			ClientId:  message.Source,
 			FlowId:    message.SessionId,
-			Timestamp: utils.Clock.Now().Unix(),
+			Timestamp: velo_utils.GetTime().Now().Unix(),
 			Status:    "started",
 			Type:      "hunt_flow",
 		}

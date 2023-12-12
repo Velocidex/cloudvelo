@@ -6,7 +6,6 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -15,6 +14,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/utils"
+	velo_utils "www.velocidex.com/golang/velociraptor/utils"
 )
 
 // Uploads are being sent separately to the server handler by the
@@ -65,8 +65,8 @@ func (self Ingestor) HandleUploads(
 	// Write a reference to the main file
 	rs_writer.Write(
 		ordereddict.NewDict().
-			Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
-			Set("started", cvelo_utils.Clock.Now()).
+			Set("Timestamp", velo_utils.GetTime().Now().Unix()).
+			Set("started", velo_utils.GetTime().Now()).
 			Set("vfs_path", response.Pathspec.Path).
 			Set("_Components", components).
 			Set("_Type", "").
@@ -79,8 +79,8 @@ func (self Ingestor) HandleUploads(
 	if response.IsSparse {
 		rs_writer.Write(
 			ordereddict.NewDict().
-				Set("Timestamp", cvelo_utils.Clock.Now().Unix()).
-				Set("started", cvelo_utils.Clock.Now()).
+				Set("Timestamp", velo_utils.GetTime().Now().Unix()).
+				Set("started", velo_utils.GetTime().Now()).
 				Set("vfs_path", response.Pathspec.Path+".idx").
 				Set("_Components", components).
 				Set("_Type", "idx").
