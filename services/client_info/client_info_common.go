@@ -38,7 +38,7 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"results", "", &ClientTask{
+		"tasks", "", &ClientTask{
 			ClientId:  client_id,
 			FlowId:    req.SessionId,
 			Timestamp: time.Now().UnixNano(),

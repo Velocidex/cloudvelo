@@ -56,14 +56,13 @@ func (self *FlowStorageManager) WriteTask(
 	}
 
 	record := api.ArtifactCollectorRecord{
-		DataStreamTimestamp: utils.GetTime().Now().UnixNano(),
-		Type:                "task",
-		Timestamp:           utils.GetTime().Now().UnixNano(),
-		SessionId:           msg.SessionId,
-		ClientId:            client_id,
-		Tasks:               json.MustMarshalString(messages),
-		Doc_Type:            "task",
-		ID:                  doc_id,
+		Type:      "task",
+		Timestamp: utils.GetTime().Now().UnixNano(),
+		SessionId: msg.SessionId,
+		ClientId:  client_id,
+		Tasks:     json.MustMarshalString(messages),
+		Doc_Type:  "task",
+		ID:        doc_id,
 	}
 	return cvelo_services.SetElasticIndex(ctx,
 		config_obj.OrgId, "results", "", record)

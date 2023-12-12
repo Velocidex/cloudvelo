@@ -42,34 +42,31 @@ func NewTimedResultSetRecord(
 	switch t := path_manager.(type) {
 	case *artifacts.ArtifactPathManager:
 		return &TimedResultSetRecord{
-			ClientId:             t.ClientId,
-			FlowId:               t.FlowId,
-			Artifact:             t.FullArtifactName,
-			Type:                 "results",
-			VFSPath:              vfs_path,
-			Timestamp:            now.UnixNano(),
-			Datastream_Timestamp: now.UnixNano(),
-			Date:                 day,
+			ClientId:  t.ClientId,
+			FlowId:    t.FlowId,
+			Artifact:  t.FullArtifactName,
+			Type:      "results",
+			VFSPath:   vfs_path,
+			Timestamp: now.UnixNano(),
+			Date:      day,
 		}
 
 	case *artifacts.ArtifactLogPathManager:
 		return &TimedResultSetRecord{
-			ClientId:             t.ClientId,
-			FlowId:               t.FlowId,
-			Artifact:             t.FullArtifactName,
-			Type:                 "logs",
-			VFSPath:              vfs_path,
-			Timestamp:            utils.GetTime().Now().UnixNano(),
-			Datastream_Timestamp: utils.GetTime().Now().UnixNano(),
-			Date:                 day,
+			ClientId:  t.ClientId,
+			FlowId:    t.FlowId,
+			Artifact:  t.FullArtifactName,
+			Type:      "logs",
+			VFSPath:   vfs_path,
+			Timestamp: utils.GetTime().Now().UnixNano(),
+			Date:      day,
 		}
 
 	default:
 		return &TimedResultSetRecord{
-			Timestamp:            utils.GetTime().Now().UnixNano(),
-			Datastream_Timestamp: utils.GetTime().Now().UnixNano(),
-			Date:                 day,
-			VFSPath:              vfs_path,
+			Timestamp: utils.GetTime().Now().UnixNano(),
+			Date:      day,
+			VFSPath:   vfs_path,
 		}
 	}
 }
