@@ -8,17 +8,16 @@ import (
 // This is the record we store in the elastic datastore. Simple
 // Results sets are written from collections and contain a table rows.
 type SimpleResultSetRecord struct {
-	ClientId             string `json:"client_id"`
-	FlowId               string `json:"flow_id"`
-	Artifact             string `json:"artifact"`
-	Type                 string `json:"type"`
-	StartRow             int64  `json:"start_row"`
-	EndRow               int64  `json:"end_row"`
-	VFSPath              string `json:"vfs_path"`
-	JSONData             string `json:"data"`
-	TotalRows            uint64 `json:"total_rows"`
-	Timestamp            int64  `json:"timestamp"`
-	Datastream_Timestamp int64  `json:"@timestamp"`
+	ClientId  string `json:"client_id"`
+	FlowId    string `json:"flow_id"`
+	Artifact  string `json:"artifact"`
+	Type      string `json:"type"`
+	StartRow  int64  `json:"start_row"`
+	EndRow    int64  `json:"end_row"`
+	VFSPath   string `json:"vfs_path"`
+	JSONData  string `json:"data"`
+	TotalRows uint64 `json:"total_rows"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Examine the pathspec and construct a new Elastic record. Because

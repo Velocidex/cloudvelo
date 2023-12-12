@@ -62,7 +62,7 @@ const (
     },
     "sort": [
       {
-        "@timestamp": {
+        "timestamp": {
           "order": "desc"
         }
       }

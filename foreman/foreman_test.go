@@ -289,7 +289,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			// Expire in 24 hours. Expires is set in uS
+			// Expire in 24 hours. Expires is set in US
 			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 		},
 

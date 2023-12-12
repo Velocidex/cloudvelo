@@ -17,15 +17,14 @@ import (
 // This is the record we store in the elastic datastore. Timed Results
 // are usually written from event artifacts.
 type TimedResultSetRecord struct {
-	ClientId             string `json:"client_id"`
-	FlowId               string `json:"flow_id"`
-	Artifact             string `json:"artifact"`
-	Type                 string `json:"type"`
-	Timestamp            int64  `json:"timestamp"`
-	Datastream_Timestamp int64  `json:"@timestamp"`
-	Date                 int64  `json:"date"` // Timestamp rounded down to the UTC day
-	VFSPath              string `json:"vfs_path"`
-	JSONData             string `json:"data"`
+	ClientId  string `json:"client_id"`
+	FlowId    string `json:"flow_id"`
+	Artifact  string `json:"artifact"`
+	Type      string `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+	Date      int64  `json:"date"` // Timestamp rounded down to the UTC day
+	VFSPath   string `json:"vfs_path"`
+	JSONData  string `json:"data"`
 }
 
 // Examine the pathspec and construct a new Elastic record.

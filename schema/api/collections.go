@@ -12,15 +12,14 @@ import (
 
 // We use the database to manipulate exposed fields.
 type ArtifactCollectorRecord struct {
-	DataStreamTimestamp int64  `json:"@timestamp"`
-	ClientId            string `json:"client_id"`
-	SessionId           string `json:"session_id"`
-	Raw                 string `json:"context,omitempty"`
-	Tasks               string `json:"tasks,omitempty"`
-	Type                string `json:"type"`
-	Timestamp           int64  `json:"timestamp"`
-	Doc_Type            string `json:"doc_type"`
-	ID                  string `json:"id"`
+	ClientId  string `json:"client_id"`
+	SessionId string `json:"session_id"`
+	Raw       string `json:"context,omitempty"`
+	Tasks     string `json:"tasks,omitempty"`
+	Type      string `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+	Doc_Type  string `json:"doc_type"`
+	ID        string `json:"id"`
 }
 
 func (self *ArtifactCollectorRecord) ToProto() (
@@ -50,7 +49,6 @@ func ArtifactCollectorRecordFromProto(
 	self.SessionId = in.SessionId
 	self.Doc_Type = "collection"
 	self.ID = id
-	self.DataStreamTimestamp = timestamp
 	self.Timestamp = timestamp
 	self.Raw = json.MustMarshalString(in)
 
