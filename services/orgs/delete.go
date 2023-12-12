@@ -24,7 +24,7 @@ var (
 
 // Remove the org and all its data.
 func (self *OrgManager) DeleteOrg(
-	ctx context.Context, org_id string) error {
+	ctx context.Context, principal, org_id string) error {
 
 	if utils.IsRootOrg(org_id) {
 		return errors.New("Can not remove root org.")
@@ -35,7 +35,7 @@ func (self *OrgManager) DeleteOrg(
 		logger.Info("Deleted organization: %v", org_id)
 	}
 
-	err := orgs.RemoveOrgFromUsers(ctx, org_id)
+	err := orgs.RemoveOrgFromUsers(ctx, principal, org_id)
 	if err != nil {
 		return err
 	}

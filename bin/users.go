@@ -6,6 +6,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/users"
 	"www.velocidex.com/golang/cloudvelo/startup"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
+	"www.velocidex.com/golang/velociraptor/constants"
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
@@ -47,7 +48,8 @@ func doOrgUserAdd() error {
 	}
 
 	user_manager := services.GetUserManager()
-	record, err := user_manager.GetUserWithHashes(ctx, *orgs_user_add_user)
+	record, err := user_manager.GetUserWithHashes(
+		ctx, constants.PinnedServerName, *orgs_user_add_user)
 	if err != nil {
 		return err
 	}
