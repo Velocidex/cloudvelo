@@ -1,0 +1,88 @@
+{
+    "index_patterns": [
+        "*results"
+    ],
+    "data_stream": {
+        "timestamp_field": {
+            "name": "timestamp"
+        }
+    },
+    "priority": 100,
+    "template": {
+        "settings": {
+            "number_of_shards": 2,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "session_id": {
+                    "type": "keyword"
+                },
+                "raw": {
+                    "type": "binary"
+                },
+                "tasks": {
+                    "type": "binary"
+                },
+                "id": {
+                    "type": "keyword"
+                },
+                "hunt_id": {
+                    "type": "keyword"
+                },
+                "client_id": {
+                    "type": "keyword"
+                },
+                "components": {
+                    "type": "keyword"
+                },
+                "downloads": {
+                    "type": "binary"
+                },
+                "type": {
+                    "type": "keyword"
+                },
+                "doc_type": {
+                    "type": "keyword"
+                },
+                "artifact": {
+                    "type": "keyword"
+                },
+                "flow_id": {
+                    "type": "keyword"
+                },
+                "data": {
+                    "type": "binary"
+                },
+                "start_row": {
+                    "type": "long"
+                },
+                "end_row": {
+                    "type": "long"
+                },
+                "total_rows": {
+                    "type": "long"
+                },
+                "timestamp": {
+                    "type": "long"
+                },
+                "date": {
+                    "type": "long"
+                },
+                "vfs_path": {
+                    "type": "keyword"
+                },
+                "title": {
+                    "type": "keyword"
+                },
+                "correlationId": {
+                    "type": "keyword"
+                },
+                "is_dispatched": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

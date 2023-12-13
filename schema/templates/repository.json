@@ -1,0 +1,22 @@
+{
+    "index_patterns": [
+        "*repository"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "name": {
+                    "type": "keyword"
+                },
+                "definition": {
+                    "type": "binary"
+                }
+            }
+        }
+    }
+}

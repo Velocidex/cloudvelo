@@ -24,7 +24,7 @@ var (
 )
 
 type DatastoreRecord struct {
-	Timestamp int64  `json:"@timestamp,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 	ClientId  string `json:"client_id"`
 	VFSPath   string `json:"vfs_path"`
 	FlowId    string `json:"flow_id"`

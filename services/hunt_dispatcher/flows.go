@@ -19,7 +19,8 @@ const (
          {"match": {"hunt_id" : %q}},
          {"match": {"doc_type" : "hunt_flow"}}
       ]}
-  }
+  },
+  "size": 10000
 }
 `
 )
@@ -31,6 +32,7 @@ type HuntFlowEntry struct {
 	FlowId    string `json:"flow_id"`
 	Status    string `json:"status"`
 	Type      string `json:"type"`
+	DocType   string `json:"doc_type"`
 }
 
 func (self HuntDispatcher) GetFlows(

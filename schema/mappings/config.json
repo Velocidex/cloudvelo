@@ -1,9 +1,0 @@
-{
-    "mappings": {
-        "dynamic": false,
-        "properties": {
-            "type":    { "type": "keyword" },
-            "data":     { "type": "binary" }
-        }
-    }
-}

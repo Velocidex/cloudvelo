@@ -1,0 +1,67 @@
+{
+    "index_patterns": [
+        "*clients"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "client_id": {
+                    "type": "keyword"
+                },
+                "hostname": {
+                    "type": "keyword"
+                },
+                "release": {
+                    "type": "keyword"
+                },
+                "architecture": {
+                    "type": "keyword"
+                },
+                "build_time": {
+                    "type": "keyword"
+                },
+                "system": {
+                    "type": "keyword"
+                },
+                "ping": {
+                    "type": "long"
+                },
+                "first_seen_at": {
+                    "type": "long"
+                },
+                "labels": {
+                    "type": "keyword"
+                },
+                "lower_labels": {
+                    "type": "keyword"
+                },
+                "last_interrogate": {
+                    "type": "keyword"
+                },
+                "labels_timestamp": {
+                    "type": "long"
+                },
+                "mac_addresses": {
+                    "type": "keyword"
+                },
+                "last_hunt_timestamp": {
+                    "type": "long"
+                },
+                "assigned_hunts": {
+                    "type": "keyword"
+                },
+                "type": {
+                    "type": "keyword"
+                },
+                "last_event_table_version": {
+                    "type": "long"
+                }
+            }
+        }
+    }
+}

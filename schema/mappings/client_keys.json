@@ -1,9 +1,0 @@
-{
-    "mappings": {
-        "dynamic": false,
-        "properties": {
-            "pem":          { "type": "binary" },
-            "enroll_time":    { "type": "long" }
-        }
-    }
-}

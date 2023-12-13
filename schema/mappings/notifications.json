@@ -1,9 +1,0 @@
-{
-    "mappings": {
-        "dynamic": false,
-        "properties": {
-            "key":        { "type": "keyword" },
-            "timestamp":  { "type": "long" }
-        }
-    }
-}

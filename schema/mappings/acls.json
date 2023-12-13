@@ -1,8 +1,0 @@
-{
-    "mappings": {
-        "dynamic": false,
-        "properties": {
-             "acl":      { "type": "binary" }
-        }
-    }
-}

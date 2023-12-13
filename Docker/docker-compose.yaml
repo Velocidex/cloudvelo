@@ -7,21 +7,14 @@
 #   can start various Velociraptor services manually (See Makefile in
 #   top level).
 
-version: '2'
+version: '3.9'
 services:
   opensearch:
-    image: opensearchproject/opensearch:1.1.0
-    profiles:
-      - base
-      - all
+    image: opensearchproject/opensearch:2
     container_name: opensearch
+    hostname: opensearch
     environment:
-      - discovery.type=single-node
-      - "DISABLE_SECURITY_PLUGIN=true"
-      - "action.auto_create_index=false" # Stop creating indexes automatically so we can catch errors.
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
-    networks:
-      - velociraptor-network
     ulimits:
       memlock:
         soft: -1
@@ -30,15 +23,36 @@ services:
         soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
         hard: 65536
     volumes:
+      - ./opensearch-config/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
       - opensearch-data:/usr/share/opensearch/data
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200/_index_template" ]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     ports:
       - 9200:9200
+      - 9300:9300
+      - 9600:9600 # required for Performance Analyzer
     networks:
       - velociraptor-network
+
+  # The frontend is the node that receives connections from clients.
+  init:
+    container_name: init
+    image: init:latest
+    build:
+      context: ../schema/
+      dockerfile: ../schema/docker/Dockerfile
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - velociraptor-network
+
   localstack:
-    profiles:
-      - all
-      - base
     image: localstack/localstack:latest
     container_name: localstack
     ports:
@@ -59,14 +73,14 @@ services:
 
   # The frontend is the node that receives connections from clients.
   velociraptor-frontend:
-    profiles:
-      - all
     restart: on-failure
     container_name: velociraptor-frontend
     image: cvelociraptor
-#    depends_on:
-#      - opensearch
-#      - localstack
+    depends_on:
+      opensearch:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
@@ -76,11 +90,12 @@ services:
       - velociraptor-network
 
   velociraptor-foreman:
-    profiles:
-      - all
     restart: on-failure
     container_name: velociraptor-foreman
     image: cvelociraptor
+    depends_on:
+      opensearch:
+        condition: service_healthy
     volumes:
       - ./config:/config/:ro
 #    entrypoint: /cvelociraptor --config /config/server.config.yaml foreman -v --debug
@@ -90,13 +105,12 @@ services:
 
   # The frontend is the node that receives connections from clients.
   velociraptor-gui:
-    profiles:
-      - all
     restart: on-failure
     container_name: velociraptor-gui
     image: cvelociraptor
-#    depends_on:
-#      - opensearch
+    depends_on:
+      opensearch:
+        condition: service_healthy
     ports:
       - target: 8889
         published: 8889
@@ -111,11 +125,12 @@ services:
 
   # The client connects to the
   velociraptor-client:
-    profiles:
-      - all
     restart: on-failure
     container_name: velociraptor-client
     image: cvelociraptor
+    depends_on:
+      opensearch:
+        condition: service_healthy
     entrypoint: /cvelociraptor --config /config/client.config.yaml client -v
     volumes:
       - ./config:/config/:ro

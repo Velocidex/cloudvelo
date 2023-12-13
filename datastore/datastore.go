@@ -94,14 +94,14 @@ func (self ElasticDatastore) SetSubject(
 	}
 
 	record := &DatastoreRecord{
-		ID:       services.MakeId(path.AsClientPath()),
-		Type:     "Generic",
-		VFSPath:  path.AsClientPath(),
-		JSONData: string(serialized),
-		DocType:  "datastore",
+		ID:        services.MakeId(path.AsClientPath()),
+		Type:      "Generic",
+		VFSPath:   path.AsClientPath(),
+		JSONData:  string(serialized),
+		DocType:   "datastore",
+		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(
-		self.ctx, config_obj.OrgId, "datastore", "", record)
+	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "results", "", record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(

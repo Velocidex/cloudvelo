@@ -1,0 +1,22 @@
+{
+    "index_patterns": [
+        "*user_options"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "username": {
+                    "type": "keyword"
+                },
+                "gui_options": {
+                    "type": "binary"
+                }
+            }
+        }
+    }
+}
