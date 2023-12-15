@@ -149,10 +149,33 @@ sources:
 		client_id, flow_id)
 	assert.NoError(self.T(), err)
 
-	// Make sure the flow is in the running error
+	// Make sure the flow is in the error state
 	assert.Equal(self.T(),
 		flows_proto.ArtifactCollectorContext_ERROR,
 		details.Context.State)
+
+	// Create a second collection
+	launcher.SetFlowIdForTests(set_flow_id + "second")
+	flow_id, err = launcher.ScheduleArtifactCollection(
+		self.Ctx, config_obj, acl_manager,
+		repository, &flows_proto.ArtifactCollectorArgs{
+			ClientId:  client_id,
+			Artifacts: []string{"TestArtifact"},
+		}, nil)
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	flows, err = launcher.GetFlows(self.Ctx,
+		config_obj, client_id, result_sets.ResultSetOptions{}, 0, 100)
+	assert.NoError(self.T(), err)
+
+	assert.Equal(self.T(), uint64(2), flows.Total)
+	assert.Equal(self.T(), 2, len(flows.Items))
+
+	// Make sure the latest flow is first
+	assert.Equal(self.T(), "F.1234second", flows.Items[0].SessionId)
 }
 
 func TestLauncher(t *testing.T) {

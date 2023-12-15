@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"sort"
 
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -23,17 +23,20 @@ var (
 
 // Get all the flow IDs for this client.
 const (
-	prefixQuery         = `{"prefix": {"id": "%v"}}`
-	regexQuery          = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
+	prefixQuery = `{"prefix": {"id": "%v"}}`
+	regexQuery  = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
+
 	getCollectionsQuery = `{
   "query": {
     "bool": {
-      "filter": [%v],
-      "should": [%v],
       "must": [
         {
           "match": {
             "doc_type": "collection"
+          }
+        }, {
+          "match": {
+            "client_id": %q
           }
         }
       ]
@@ -70,36 +73,16 @@ func (self Launcher) GetFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) (*api_proto.ApiFlowResponse, error) {
 
-	ids, total, err := cvelo_services.QueryElasticIdFields(ctx,
-		self.config_obj.OrgId, "results",
-		json.Format(getFlowsQuery, client_id, offset, length))
-	if err != nil {
-		return nil, err
-	}
-
-	var flow_ids []string
-
-	// The ArtifactCollectorContext object is made up of several parts:
-	// 1. The first part is the created context the GUI has created.
-	// 2. The second part is the statistics written by the client's
-	//    flow tracker.
-	//
-	// We need to merge them together and return a combined protobuf.
 	lookup := make(map[string]*flows_proto.ArtifactCollectorContext)
 
-	for _, id := range ids {
-		flow_id := strings.Split(id, "_")[0]
-		flow_ids = append(flow_ids, flow_id)
-	}
-	records := []json.RawMessage{}
-	query := fmt.Sprintf(getCollectionsQuery,
-		processIds(prefixQuery, ids), processIds(regexQuery, ids))
-	records, _, err = cvelo_services.QueryElasticRaw(ctx,
+	query := fmt.Sprintf(getCollectionsQuery, client_id)
+	records, _, err := cvelo_services.QueryElasticRaw(ctx,
 		config_obj.OrgId, "results", query)
 	if err != nil {
 		return nil, err
 	}
 
+	// Read all the records and merge them into unique records.
 	for _, record := range records {
 		item := &cvelo_schema_api.ArtifactCollectorRecord{}
 		err = json.Unmarshal(record, &item)
@@ -122,16 +105,16 @@ func (self Launcher) GetFlows(
 
 	// Return the results in the required order
 	result := &api_proto.ApiFlowResponse{
-		Total: uint64(total),
+		Total: uint64(len(lookup)),
 	}
-	for _, flow_id := range flow_ids {
-		record, pres := lookup[flow_id]
-		if !pres {
-			continue
-		}
+	for _, record := range lookup {
 		launcher.UpdateFlowStats(record)
 		result.Items = append(result.Items, record)
 	}
+
+	sort.Slice(result.Items, func(i, j int) bool {
+		return result.Items[i].SessionId > result.Items[j].SessionId
+	})
 	return result, nil
 }
 

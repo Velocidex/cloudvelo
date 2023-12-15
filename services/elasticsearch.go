@@ -696,7 +696,8 @@ func QueryChan(
 
 	part, _, err := QueryElasticRaw(ctx, org_id, index, part_query)
 	if err != nil {
-		return nil, err
+		close(output_chan)
+		return output_chan, err
 	}
 
 	var search_after interface{}
@@ -1139,8 +1140,6 @@ func makeElasticError(data []byte) error {
 	return fmt.Errorf("Elastic Error: %v", response)
 }
 
-// For read operations, an index not found error is not considered an
-// error - we just return no results.
 func makeReadElasticError(data []byte) error {
 	response := ordereddict.NewDict()
 	err := response.UnmarshalJSON(data)
@@ -1150,6 +1149,9 @@ func makeReadElasticError(data []byte) error {
 
 	err_type := utils.GetString(response, "error.type")
 	if err_type == "index_not_found_exception" {
+		// Now that indexes are created from the templates, a missing
+		// index means that it was not written to yet.
+		//return os.ErrNotExist
 		return nil
 	}
 

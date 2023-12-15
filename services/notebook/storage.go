@@ -3,6 +3,7 @@ package notebook
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -72,10 +73,12 @@ func (self *NotebookStoreImpl) GetNotebook(notebook_id string) (
 		return nil, err
 	}
 
+	// Somethig is wrong with this notebook, just report it as not
+	// existing.
 	entry := &NotebookRecord{}
 	err = json.Unmarshal(serialized, entry)
-	if err != nil {
-		return nil, err
+	if err != nil || entry.NotebookId != notebook_id {
+		return nil, os.ErrNotExist
 	}
 
 	result := &api_proto.NotebookMetadata{}

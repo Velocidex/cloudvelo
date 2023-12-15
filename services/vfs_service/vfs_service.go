@@ -121,16 +121,17 @@ func (self *VFSService) WriteDownloadInfo(
 		utils.JoinComponents(file_components, "/"))
 	stats := &VFSRecord{
 		Id:        dir_id,
-		DocId:     file_id,
+		DocId:     "download_" + file_id,
 		DocType:   "vfs",
 		ClientId:  client_id,
 		Downloads: []string{json.MustMarshalString(download_record)},
+		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
 
 	// Write synchronously so the GUI updates the download file right
 	// away.
-	err := cvelo_services.SetElasticIndex(ctx, config_obj.OrgId, "results",
-		"", stats)
+	err := cvelo_services.SetElasticIndex(
+		ctx, config_obj.OrgId, "results", "", stats)
 
 	utils.GetTime().Sleep(time.Second)
 

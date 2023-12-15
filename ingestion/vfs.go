@@ -134,6 +134,8 @@ func (self Ingestor) HandleSystemVfsUpload(
 				utils.JoinComponents(file_components, "/"))
 			stats := &cvelo_vfs_service.VFSRecord{
 				Id:        dir_id,
+				ClientId:  message.Source,
+				FlowId:    message.SessionId,
 				DocId:     "download_" + file_id,
 				DocType:   "vfs",
 				Downloads: []string{json.MustMarshalString(row)},
