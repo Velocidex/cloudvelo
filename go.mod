@@ -8,11 +8,11 @@ require (
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20230724083715-1eb048b1f6d6
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/alecthomas/assert v1.0.0
-	github.com/aws/aws-sdk-go v1.44.118
+	github.com/aws/aws-sdk-go v1.48.13
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/google/uuid v1.3.1
 	github.com/magefile/mage v1.14.0
-	github.com/opensearch-project/opensearch-go/v2 v2.1.0
+	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/sebdah/goldie v1.0.0

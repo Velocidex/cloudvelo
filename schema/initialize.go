@@ -2,12 +2,14 @@ package schema
 
 import (
 	"context"
+	"embed"
 	_ "embed"
-	"fmt"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	"github.com/pkg/errors"
-	"os"
-	"strings"
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
@@ -20,7 +22,13 @@ const (
 	NO_FILTER = ""
 )
 
-// Just remove the index but do not create one
+var TRUE = true
+
+//go:embed policies/*.json
+//go:embed templates/*.json
+var fs embed.FS
+
+// Just remove the indexes for the org but do not create ones
 func Delete(ctx context.Context,
 	config_obj *config_proto.Config, org_id, filter string) error {
 
@@ -36,6 +44,31 @@ func Delete(ctx context.Context,
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
+	// Now roll over any data stream indexes to make sure they are
+	// deleted.
+	files, err := fs.ReadDir("templates")
+	if err != nil {
+		return err
+	}
+
+	for _, filename := range files {
+		name := strings.Split(filename.Name(), ".")[0]
+		data, err := fs.ReadFile(path.Join("templates", filename.Name()))
+		if err != nil {
+			return err
+		}
+
+		if strings.Contains(string(data), "data_stream") {
+			_, err = opensearchapi.IndicesDeleteDataStreamRequest{
+				Name: services.GetIndex(org_id, name),
+			}.Do(ctx, client)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -71,28 +104,38 @@ func DeleteAllOrgs(ctx context.Context,
 	return nil
 }
 
-// Initialize and ensure elastic indexes exist.
-func Initialize(ctx context.Context,
-	config_obj *config_proto.Config,
-	org_id, filter string, reset bool) error {
-	if !reset {
-		return nil
-	}
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+func InstallIndexTemplates(
+	ctx context.Context,
+	config_obj *config_proto.Config) error {
 
-	client, err := services.GetElasticClient()
+	files, err := fs.ReadDir("templates")
 	if err != nil {
 		return err
 	}
+	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 
-	// Delete previously created index.
-	res, err := opensearchapi.IndicesDeleteRequest{
-		Index: []string{org_id + "*"},
-	}.Do(ctx, client)
-	if err != nil {
-		logger.Error("Initialize: %v", err)
-		return nil
+	for _, filename := range files {
+		name := strings.Split(filename.Name(), ".")[0]
+
+		// Check if the template is defined.
+		err := services.DoesTemplateExist(ctx, name)
+		if err == nil {
+			continue
+		}
+
+		data, err := fs.ReadFile(path.Join("templates", filename.Name()))
+		if err != nil {
+			return err
+		}
+
+		logger.Info("Creating index template %v\n", name)
+		err = services.PutTemplate(ctx, name, string(data))
+		if err != nil {
+			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+			logger.Error("While creating index template %v: %v",
+				name, err)
+		}
 	}
-	fmt.Printf("Deleted index %v: %v\n", org_id+"*", res)
+
 	return nil
 }

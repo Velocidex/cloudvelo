@@ -10,6 +10,9 @@
 version: '3.9'
 services:
   opensearch:
+    profiles:
+      - base
+      - all
     image: opensearchproject/opensearch:2
     container_name: opensearch
     hostname: opensearch
@@ -39,20 +42,10 @@ services:
     networks:
       - velociraptor-network
 
-  # The frontend is the node that receives connections from clients.
-  init:
-    container_name: init
-    image: init:latest
-    build:
-      context: ../schema/
-      dockerfile: ../schema/docker/Dockerfile
-    depends_on:
-      opensearch:
-        condition: service_healthy
-    networks:
-      - velociraptor-network
-
   localstack:
+    profiles:
+      - all
+
     image: localstack/localstack:latest
     container_name: localstack
     ports:
@@ -73,6 +66,9 @@ services:
 
   # The frontend is the node that receives connections from clients.
   velociraptor-frontend:
+    profiles:
+      - all
+
     restart: on-failure
     container_name: velociraptor-frontend
     image: cvelociraptor
@@ -90,6 +86,9 @@ services:
       - velociraptor-network
 
   velociraptor-foreman:
+    profiles:
+      - all
+
     restart: on-failure
     container_name: velociraptor-foreman
     image: cvelociraptor
@@ -105,6 +104,9 @@ services:
 
   # The frontend is the node that receives connections from clients.
   velociraptor-gui:
+    profiles:
+      - all
+
     restart: on-failure
     container_name: velociraptor-gui
     image: cvelociraptor
@@ -125,6 +127,9 @@ services:
 
   # The client connects to the
   velociraptor-client:
+    profiles:
+      - all
+
     restart: on-failure
     container_name: velociraptor-client
     image: cvelociraptor

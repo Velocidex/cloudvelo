@@ -38,11 +38,10 @@ func doResetElastic() error {
 		return err
 	}
 
-	if *elastic_command_recreate {
-		return schema.Initialize(ctx,
-			config_obj.VeloConf(),
-			*elastic_command_reset_org_id,
-			*elastic_command_reset_filter, true)
+	// Make sure the database is properly configured
+	err = schema.InstallIndexTemplates(ctx, config_obj.VeloConf())
+	if err != nil {
+		return err
 	}
 
 	if *elastic_command_reset_org_id == "" {

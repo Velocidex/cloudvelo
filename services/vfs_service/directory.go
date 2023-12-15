@@ -28,6 +28,7 @@ type VFSRecord struct {
 	JSONData   string   `json:"data"`
 	DocType    string   `json:"doc_type"`
 	DocId      string   `json:"doc_id"`
+	Timestamp  int64    `json:"timestamp"`
 }
 
 type DownloadRow struct {
@@ -66,7 +67,7 @@ const (
           "order": "desc"
         }
       }
-    ], 
+    ],
     "size": 1
 }
 `

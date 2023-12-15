@@ -56,7 +56,8 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 			self.ctx, self.org_id, "results", "", record)
 	} else {
 		services.SetElasticIndexAsync(
-			self.org_id, "results", "", "create", record)
+			self.org_id, "results", "",
+			cvelo_services.BulkUpdateCreate, record)
 	}
 }
 

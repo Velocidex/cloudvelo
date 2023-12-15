@@ -12,6 +12,7 @@ import (
 	cvelo_datastore "www.velocidex.com/golang/cloudvelo/datastore"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/result_sets/simple"
+	"www.velocidex.com/golang/cloudvelo/schema"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/users"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -236,6 +237,13 @@ func (self *OrgManager) Start(
 	}
 
 	err = cvelo_services.StartBulkIndexService(self.ctx, self.wg, config_obj)
+	if err != nil {
+		return err
+	}
+
+	// Ensure database is properly initialized
+	// Make sure the database is properly configured
+	err = schema.InstallIndexTemplates(ctx, config_obj.VeloConf())
 	if err != nil {
 		return err
 	}

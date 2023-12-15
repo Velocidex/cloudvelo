@@ -3,15 +3,6 @@
   {
    "client_id": "C.77ad4285690698d9",
    "session_id": "F.CEV6I8LHAT83O",
-   "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CEV6I8LHAT83O\",\"create_time\":1661391001000000000}",
-   "type": "",
-   "timestamp": 1661391002000000000,
-   "doc_type": "collection",
-   "id": "F.CEV6I8LHAT83O"
-  },
-  {
-   "client_id": "C.77ad4285690698d9",
-   "session_id": "F.CEV6I8LHAT83O",
    "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CEV6I8LHAT83O\",\"active_time\":1673423174265325,\"total_collected_rows\":2,\"total_logs\":14,\"query_stats\":[{\"duration\":6370402,\"Artifact\":\"System.VFS.ListDirectory\",\"query_id\":3,\"total_queries\":3},{\"duration\":519121078,\"names_with_response\":[\"System.VFS.ListDirectory/Listing\"],\"Artifact\":\"System.VFS.ListDirectory/Listing\",\"result_rows\":1,\"query_id\":1,\"total_queries\":3},{\"duration\":518759663,\"names_with_response\":[\"System.VFS.ListDirectory/Stats\"],\"Artifact\":\"System.VFS.ListDirectory/Stats\",\"result_rows\":1,\"query_id\":2,\"total_queries\":3}]}",
    "type": "stats",
    "timestamp": 1661385600000000000,
@@ -78,15 +69,6 @@
    "id": "F.CEV6I8LHAT83O_C.77ad4285690698d9_completed"
   },
   {
-   "client_id": "C.77ad4285690698d9",
-   "session_id": "F.CEV6I8LHAT83O",
-   "context": "{\"client_id\":\"C.77ad4285690698d9\",\"session_id\":\"F.CEV6I8LHAT83O\",\"create_time\":1661391001000000000}",
-   "type": "",
-   "timestamp": 1661391002000000000,
-   "doc_type": "collection",
-   "id": "F.CEV6I8LHAT83O"
-  },
-  {
    "id": "1cbcacc4b30a75913df3a051a73742ca2bca1963",
    "client_id": "C.77ad4285690698d9",
    "components": [
@@ -97,7 +79,8 @@
    "downloads": [],
    "data": "{\"timestamp\":1661385600000000000,\"total_rows\":1,\"client_id\":\"C.77ad4285690698d9\",\"flow_id\":\"F.CEV6I8LHAT83O\",\"artifact\":\"System.VFS.ListDirectory/Listing\",\"end_idx\":1}",
    "doc_type": "vfs",
-   "doc_id": "1cbcacc4b30a75913df3a051a73742ca2bca1963"
+   "doc_id": "1cbcacc4b30a75913df3a051a73742ca2bca1963",
+   "timestamp": 1661385600000000000
   }
  ],
  "System.VFS.ListDirectory vfs": [
@@ -112,14 +95,14 @@
    "downloads": [],
    "data": "{\"timestamp\":1661385600000000000,\"total_rows\":1,\"client_id\":\"C.77ad4285690698d9\",\"flow_id\":\"F.CEV6I8LHAT83O\",\"artifact\":\"System.VFS.ListDirectory/Listing\",\"end_idx\":1}",
    "doc_type": "vfs",
-   "doc_id": "1cbcacc4b30a75913df3a051a73742ca2bca1963"
+   "doc_id": "1cbcacc4b30a75913df3a051a73742ca2bca1963",
+   "timestamp": 1661385600000000000
   }
  ],
  "System.VFS.ListDirectory FlowDetail": {
   "context": {
    "client_id": "C.77ad4285690698d9",
    "session_id": "F.CEV6I8LHAT83O",
-   "create_time": 1661391001000000000,
    "total_collected_rows": 2,
    "total_requests": 3,
    "execution_duration": 519121078,

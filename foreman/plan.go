@@ -280,8 +280,9 @@ func (self *Plan) closePlan(ctx context.Context,
 	org_config_obj *config_proto.Config) error {
 
 	for client_id, record := range self.clientAssignedHunts {
-		cvelo_services.SetElasticIndexAsync(org_config_obj.OrgId, "clients",
-			client_id+"_hunts", cvelo_services.BulkUpdateIndex, record)
+		cvelo_services.SetElasticIndexAsync(
+			org_config_obj.OrgId, "clients", client_id+"_hunts",
+			cvelo_services.BulkUpdateIndex, record)
 	}
 	return nil
 }

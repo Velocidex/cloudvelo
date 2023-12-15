@@ -106,21 +106,18 @@ func (self *CloudTestSuite) SetupTest() {
 	if test_org == "" {
 		test_org = "test"
 	}
+
+	// Delete the previous indexes for the org.
+	err = schema.Delete(self.Ctx, config_obj, test_org, schema.NO_FILTER)
+	assert.NoError(self.T(), err)
+
 	_, err = org_manager.CreateNewOrg("test", test_org)
 	assert.NoError(self.T(), err)
 
 	self.Sm = sm
 	self.ConfigObj.OrgId = test_org
 
-	if len(self.Indexes) == 0 {
-		err = schema.Initialize(self.Ctx, config_obj, test_org,
-			schema.NO_FILTER, schema.RESET_INDEX)
-		assert.NoError(self.T(), err)
-	} else {
-		for _, i := range self.Indexes {
-			err = schema.Initialize(self.Ctx, config_obj, test_org,
-				i, schema.RESET_INDEX)
-			assert.NoError(self.T(), err)
-		}
-	}
+	// Make sure the index templates are initialized if needed.
+	err = schema.InstallIndexTemplates(self.Ctx, config_obj)
+	assert.NoError(self.T(), err)
 }

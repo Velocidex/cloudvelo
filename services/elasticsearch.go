@@ -9,14 +9,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Velocidex/ordereddict"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Velocidex/ordereddict"
+	"github.com/aws/aws-sdk-go/aws/session"
 
 	opensearch "github.com/opensearch-project/opensearch-go/v2"
 	opensearchapi "github.com/opensearch-project/opensearch-go/v2/opensearchapi"
@@ -241,6 +242,68 @@ func _UpdateIndex(
 	return makeElasticError(data)
 }
 
+func DoesTemplateExist(ctx context.Context, name string) error {
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	resp, err := opensearchapi.IndicesExistsIndexTemplateRequest{
+		Name: name,
+	}.Do(ctx, client)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !resp.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
+}
+
+func PutTemplate(
+	ctx context.Context, name, template string) error {
+
+	defer Instrument("PutTemplate")()
+
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	resp, err := opensearchapi.IndicesPutIndexTemplateRequest{
+		Name:   name,
+		Create: &TRUE,
+		Body:   strings.NewReader(template),
+	}.Do(ctx, client)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !resp.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
+}
+
 func UpdateByQuery(
 	ctx context.Context, org_id, index string, query string) error {
 
@@ -299,7 +362,7 @@ func SetElasticIndexAsync(org_id, index, id string,
 				res opensearchutil.BulkIndexerResponseItem, err error) {
 				logger := logging.GetLogger(l_bulk_indexer.config_obj,
 					&logging.FrontendComponent)
-				logger.Error("BulkIndexer Error during: %v",
+				logger.Error("BulkIndexer Error %v during: %v", res.Error.Reason,
 					json.MustMarshalString(record))
 			},
 		})
@@ -313,6 +376,40 @@ func SetElasticIndex(ctx context.Context,
 	return retry(func() error {
 		return _SetElasticIndex(ctx, org_id, index, id, record)
 	})
+}
+
+func _CreateElasticIndex(
+	ctx context.Context, org_id, index, id string, record interface{}) error {
+	serialized := json.MustMarshalIndent(record)
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	es_req := opensearchapi.CreateRequest{
+		Index:      GetIndex(org_id, index),
+		DocumentID: id,
+		Body:       bytes.NewReader(serialized),
+		Refresh:    "true",
+	}
+
+	res, err := es_req.Do(ctx, client)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !res.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
 }
 
 func _SetElasticIndex(
