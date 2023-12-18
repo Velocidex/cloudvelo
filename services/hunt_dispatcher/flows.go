@@ -19,8 +19,7 @@ const (
          {"match": {"hunt_id" : %q}},
          {"match": {"doc_type" : "hunt_flow"}}
       ]}
-  },
-  "size": 10000
+  }
 }
 `
 )
