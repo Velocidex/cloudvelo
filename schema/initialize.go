@@ -4,12 +4,9 @@ import (
 	"context"
 	"embed"
 	_ "embed"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
-	"sync"
 
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	"github.com/pkg/errors"
@@ -25,10 +22,13 @@ const (
 	NO_FILTER = ""
 )
 
-//go:embed mappings/*.json
+var TRUE = true
+
+//go:embed policies/*.json
+//go:embed templates/*.json
 var fs embed.FS
 
-// Just remove the index but do not create one
+// Just remove the indexes for the org but do not create ones
 func Delete(ctx context.Context,
 	config_obj *config_proto.Config, org_id, filter string) error {
 
@@ -37,29 +37,38 @@ func Delete(ctx context.Context,
 		return err
 	}
 
-	files, err := fs.ReadDir("mappings")
+	// Delete previously created index.
+	_, err = opensearchapi.IndicesDeleteRequest{
+		Index: []string{org_id + "*"},
+	}.Do(ctx, client)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	// Now roll over any data stream indexes to make sure they are
+	// deleted.
+	files, err := fs.ReadDir("templates")
 	if err != nil {
 		return err
 	}
+
 	for _, filename := range files {
-		index_name := strings.Split(filename.Name(), ".")[0]
-
-		if filter != "" && !strings.HasPrefix(index_name, filter) {
-			continue
-		}
-
-		full_index_name := services.GetIndex(org_id, index_name)
-		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
-		logger.Info("Deleting index %v", full_index_name)
-
-		// Delete previously created index.
-		_, err := opensearchapi.IndicesDeleteRequest{
-			Index: []string{full_index_name},
-		}.Do(ctx, client)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		name := strings.Split(filename.Name(), ".")[0]
+		data, err := fs.ReadFile(path.Join("templates", filename.Name()))
+		if err != nil {
 			return err
 		}
+
+		if strings.Contains(string(data), "data_stream") {
+			_, err = opensearchapi.IndicesDeleteDataStreamRequest{
+				Name: services.GetIndex(org_id, name),
+			}.Do(ctx, client)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -95,76 +104,38 @@ func DeleteAllOrgs(ctx context.Context,
 	return nil
 }
 
-// Initialize and ensure elastic indexes exist.
-func Initialize(ctx context.Context,
-	config_obj *config_proto.Config,
-	org_id, filter string, reset bool) error {
+func InstallIndexTemplates(
+	ctx context.Context,
+	config_obj *config_proto.Config) error {
 
+	files, err := fs.ReadDir("templates")
+	if err != nil {
+		return err
+	}
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 
-	client, err := services.GetElasticClient()
-	if err != nil {
-		return err
-	}
-
-	files, err := fs.ReadDir("mappings")
-	if err != nil {
-		return err
-	}
-
-	wg := &sync.WaitGroup{}
-
 	for _, filename := range files {
-		wg.Add(1)
-		go func(filename string) {
-			defer wg.Done()
+		name := strings.Split(filename.Name(), ".")[0]
 
-			data, err := fs.ReadFile(path.Join("mappings", filename))
-			if err != nil {
-				return
-			}
+		// Check if the template is defined.
+		err := services.DoesTemplateExist(ctx, name)
+		if err == nil {
+			continue
+		}
 
-			index_name := strings.Split(filename, ".")[0]
+		data, err := fs.ReadFile(path.Join("templates", filename.Name()))
+		if err != nil {
+			return err
+		}
 
-			if filter != "" && !strings.HasPrefix(index_name, filter) {
-				return
-			}
-
-			full_index_name := services.GetIndex(org_id, index_name)
-
-			response, err := client.Indices.Exists([]string{full_index_name})
-			if err != nil {
-				logger.Error("Initialize: %v", err)
-				return
-			}
-
-			if response.StatusCode != 404 && reset {
-				// Delete previously created index.
-				res, err := opensearchapi.IndicesDeleteRequest{
-					Index: []string{full_index_name},
-				}.Do(ctx, client)
-				if err != nil {
-					logger.Error("Initialize: %v", err)
-					return
-				}
-				fmt.Printf("Deleted index %v: %v\n", full_index_name, res)
-			}
-
-			response, err = opensearchapi.IndicesCreateRequest{
-				Index: full_index_name,
-				Body:  strings.NewReader(string(data)),
-			}.Do(ctx, client)
-			if err != nil {
-				logger.Error("Initialize: %v", err)
-				return
-			}
-			response_data, _ := ioutil.ReadAll(response.Body)
-			if !strings.Contains(string(response_data), "resource_already_exists_exception") {
-				fmt.Printf("Created index: %v\n", string(response_data))
-			}
-		}(filename.Name())
+		logger.Info("Creating index template %v\n", name)
+		err = services.PutTemplate(ctx, name, string(data))
+		if err != nil {
+			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+			logger.Error("While creating index template %v: %v",
+				name, err)
+		}
 	}
 
-	wg.Wait()
 	return nil
 }

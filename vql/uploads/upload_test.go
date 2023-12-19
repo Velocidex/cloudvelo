@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -16,7 +15,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/server"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/constants"
@@ -32,7 +30,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/writeback"
 	velo_uploads "www.velocidex.com/golang/velociraptor/uploads"
-	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 	"www.velocidex.com/golang/velociraptor/vtesting/assert"
 
@@ -114,8 +111,6 @@ func (self *UploaderTestSuite) startClientCommunicator(
 }
 
 func (self *UploaderTestSuite) TestUploader() {
-	cvelo_utils.Clock = utils.NewMockClock(time.Unix(1661391000, 0))
-
 	ctx := self.Sm.Ctx
 	wg := self.Sm.Wg
 
@@ -186,8 +181,6 @@ func (self *UploaderTestSuite) TestUploader() {
 }
 
 func (self *UploaderTestSuite) TestSparseUploader() {
-	cvelo_utils.Clock = utils.NewMockClock(time.Unix(1661391000, 0))
-
 	ctx := self.Sm.Ctx
 	wg := self.Sm.Wg
 

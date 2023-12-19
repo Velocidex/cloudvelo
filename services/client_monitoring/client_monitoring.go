@@ -140,7 +140,9 @@ func (self ClientMonitoringManager) GetClientMonitoringState() *flows_proto.Clie
 	entry := &ConfigEntry{}
 	err = json.Unmarshal(serialized, entry)
 	if err != nil {
-		return self.makeDefaultClientMonitoringLabel()
+		table := self.makeDefaultClientMonitoringLabel()
+		self.SetClientMonitoringState(ctx, self.config_obj, "", table)
+		return table
 	}
 
 	result := &flows_proto.ClientEventTable{}

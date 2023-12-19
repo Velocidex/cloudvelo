@@ -1,0 +1,22 @@
+{
+    "index_patterns": [
+        "*notifications"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "key": {
+                    "type": "keyword"
+                },
+                "timestamp": {
+                    "type": "long"
+                }
+            }
+        }
+    }
+}

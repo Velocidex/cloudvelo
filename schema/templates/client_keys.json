@@ -1,0 +1,22 @@
+{
+    "index_patterns": [
+        "*client_keys"
+    ],
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 1
+        },
+        "mappings": {
+            "dynamic": false,
+            "properties": {
+                "pem": {
+                    "type": "binary"
+                },
+                "enroll_time": {
+                    "type": "long"
+                }
+            }
+        }
+    }
+}

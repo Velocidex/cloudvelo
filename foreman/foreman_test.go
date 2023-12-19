@@ -2,6 +2,7 @@ package foreman
 
 import (
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -70,17 +71,20 @@ func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientRecor
 	assert.NoError(self.T(), err)
 
 	config_obj := self.ConfigObj.VeloConf()
-	result, err := api.GetMultipleClients(self.Ctx, config_obj, []string{client_id})
-	if err != nil || len(result) == 0 {
+	result, err := getMinimalClientInfo(self.Ctx, config_obj, client_id)
+	if err != nil {
 		return nil
 	}
 
-	return result[0]
+	return result
 }
 
 func (self *ForemanTestSuite) TestClientMonitoring() {
 	cancel := utils.MockTime(utils.NewMockClock(time.Unix(1661391000, 0)))
 	defer cancel()
+
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
 
 	client_monitoring.Clock = utils.GetTime()
 
@@ -192,7 +196,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	foreman_service := NewForeman()
 	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
 
-	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, plan)
+	err = foreman_service.CalculateUpdate(self.Ctx, wg, config_obj, nil, plan)
 	assert.NoError(self.T(), err)
 
 	// There should be 4 distinct event tables: all, all+label1,
@@ -240,7 +244,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	foreman_service = NewForeman()
 	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
 
-	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, new_plan)
+	err = foreman_service.CalculateUpdate(self.Ctx, wg, config_obj, nil, new_plan)
 	assert.NoError(self.T(), err)
 
 	// No updates required.
@@ -265,7 +269,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	foreman_service = NewForeman()
 	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
 
-	err = foreman_service.CalculateUpdate(self.Ctx, config_obj, nil, new_plan)
+	err = foreman_service.CalculateUpdate(self.Ctx, wg, config_obj, nil, new_plan)
 	assert.NoError(self.T(), err)
 
 	// Only one client will be updated
@@ -289,7 +293,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 			CreateTime:   uint64(utils.GetTime().Now().UnixNano() / 1000),
 			StartTime:    uint64(utils.GetTime().Now().UnixNano() / 1000),
 			State:        api_proto.Hunt_RUNNING,
-			// Expire in 24 hours. Expires is set in uS
+			// Expire in 24 hours. Expires is set in US
 			Expires: uint64(utils.GetTime().Now().Add(24*time.Hour).UnixNano() / 1000),
 		},
 
@@ -427,7 +431,10 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	plan, err := NewPlan(config_obj)
 	assert.NoError(self.T(), err)
 
-	err = foreman_service.UpdatePlan(self.Ctx, config_obj, plan)
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+
+	err = foreman_service.UpdatePlan(self.Ctx, wg, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	err = cvelo_services.FlushBulkIndexer()
@@ -493,7 +500,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	assert.NoError(self.T(), err)
 
 	foreman_service.last_run_time = utils.GetTime().Now()
-	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
+	err = foreman_service.UpdatePlan(self.Ctx, wg, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// The plan should be empty as there is nothing to do!
@@ -520,7 +527,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	new_plan, err = NewPlan(config_obj)
 	assert.NoError(self.T(), err)
 
-	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
+	err = foreman_service.UpdatePlan(self.Ctx, wg, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// Only one client will be scheduled now.
@@ -555,7 +562,10 @@ func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 	plan, err := NewPlan(config_obj)
 	assert.NoError(self.T(), err)
 
-	err = Foreman{}.UpdatePlan(self.Ctx, config_obj, plan)
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+
+	err = Foreman{}.UpdatePlan(self.Ctx, wg, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	// No hunts scheduled
@@ -722,7 +732,10 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 	foreman_service := NewForeman()
 	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
 
-	err = foreman_service.UpdatePlan(self.Ctx, config_obj, plan)
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+
+	err = foreman_service.UpdatePlan(self.Ctx, wg, config_obj, plan)
 	assert.NoError(self.T(), err)
 
 	windowsExpected := []string{"H.AllOSes", "H.WindowsOnly"}
@@ -744,7 +757,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 	foreman_service = NewForeman()
 	foreman_service.last_run_time = utils.GetTime().Now().Add(-10 * time.Minute)
 
-	err = foreman_service.UpdatePlan(self.Ctx, config_obj, new_plan)
+	err = foreman_service.UpdatePlan(self.Ctx, wg, config_obj, new_plan)
 	assert.NoError(self.T(), err)
 
 	// The plan should be empty as there is nothing to do!

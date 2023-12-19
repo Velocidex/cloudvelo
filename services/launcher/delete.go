@@ -130,11 +130,10 @@ const (
 `
 )
 
-func (self *reporter) really_delete(type_, index, key, prefix string) {
+func (self *reporter) really_delete_with_query(type_, index, key, prefix, query string) {
 	var error_message string
 
-	err := cvelo_services.DeleteByQuery(self.ctx, self.config_obj.OrgId, index,
-		json.Format(deletionQuery, key, prefix))
+	err := cvelo_services.DeleteByQuery(self.ctx, self.config_obj.OrgId, index, query)
 	if err != nil {
 		error_message = err.Error()
 	}
@@ -146,6 +145,10 @@ func (self *reporter) really_delete(type_, index, key, prefix string) {
 			Set(key, prefix),
 		Error: error_message,
 	})
+}
+
+func (self *reporter) really_delete(type_, index, key, prefix string) {
+	self.really_delete_with_query(type_, index, key, prefix, json.Format(deletionQuery, key, prefix))
 }
 
 func (self *reporter) delete_index(type_, index, key, prefix string) {

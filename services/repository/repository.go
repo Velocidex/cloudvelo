@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -92,7 +93,7 @@ func (self *Repository) List(
 
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
 		self.config_obj.OrgId, "repository", allNamesQuery, "name")
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 

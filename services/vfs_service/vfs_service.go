@@ -64,7 +64,6 @@ import (
 	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
@@ -85,7 +84,7 @@ func (self *VFSService) ListDirectories(
 	components []string) (*api_proto.VFSListResponse, error) {
 
 	if len(components) == 0 {
-		return renderRootVFS(client_id), nil
+		return renderRootVFS(), nil
 	}
 
 	return renderDBVFS(ctx, config_obj, client_id, components)
@@ -109,7 +108,7 @@ func (self *VFSService) WriteDownloadInfo(
 		client_components...)
 
 	download_record := &DownloadRow{
-		Mtime:        uint64(cvelo_utils.Clock.Now().UnixNano()),
+		Mtime:        uint64(utils.GetTime().Now().UnixNano()),
 		Components:   client_components,
 		FSComponents: file_components,
 		InFlight:     record.InFlight,
@@ -122,14 +121,17 @@ func (self *VFSService) WriteDownloadInfo(
 		utils.JoinComponents(file_components, "/"))
 	stats := &VFSRecord{
 		Id:        dir_id,
+		DocId:     "download_" + file_id,
+		DocType:   "vfs",
 		ClientId:  client_id,
 		Downloads: []string{json.MustMarshalString(download_record)},
+		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
 
 	// Write synchronously so the GUI updates the download file right
 	// away.
-	err := cvelo_services.SetElasticIndex(ctx, config_obj.OrgId, "vfs",
-		"download_"+file_id, stats)
+	err := cvelo_services.SetElasticIndex(
+		ctx, config_obj.OrgId, "results", "", stats)
 
 	utils.GetTime().Sleep(time.Second)
 

@@ -1,9 +1,0 @@
-{
-    "mappings": {
-        "dynamic": false,
-        "properties": {
-            "username":    { "type": "keyword" },
-            "record":      { "type": "binary" }
-        }
-    }
-}

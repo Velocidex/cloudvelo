@@ -24,12 +24,15 @@ var (
 )
 
 type DatastoreRecord struct {
-	ClientId string `json:"client_id"`
-	VFSPath  string `json:"vfs_path"`
-	FlowId   string `json:"flow_id"`
-	Artifact string `json:"artifact"`
-	Type     string `json:"type"`
-	JSONData string `json:"data"`
+	Timestamp int64  `json:"timestamp"`
+	ClientId  string `json:"client_id"`
+	VFSPath   string `json:"vfs_path"`
+	FlowId    string `json:"flow_id"`
+	Artifact  string `json:"artifact"`
+	Type      string `json:"type"`
+	DocType   string `json:"doc_type"`
+	JSONData  string `json:"data"`
+	ID        string `json:"id"`
 }
 
 func DSPathSpecToRecord(path api.DSPathSpec) (*DatastoreRecord, error) {

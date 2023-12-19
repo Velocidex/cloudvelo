@@ -8,7 +8,6 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // When we receive a status we need to modify the collection record.
@@ -37,9 +36,6 @@ func (self Ingestor) HandleFlowStats(
 		ActiveTime:                 msg.Timestamp,
 		QueryStats:                 msg.QueryStatus,
 	}
-	stats := api.ArtifactCollectorRecordFromProto(collector_context)
-	stats.Type = "stats"
-	stats.Timestamp = utils.GetTime().Now().UnixNano()
 
 	failed, completed := calcFlowOutcome(collector_context)
 
@@ -55,11 +51,14 @@ func (self Ingestor) HandleFlowStats(
 			message.Source, message.SessionId, "completed")
 	}
 
+	stats := api.ArtifactCollectorRecordFromProto(collector_context, doc_id)
+	stats.Type = "stats"
+
 	// The status needs to hit the DB quickly, so the GUI can show
 	// progress as the collection is received. The bulk data is still
 	// stored asyncronously.
 	err := services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections", doc_id, stats)
+		config_obj.OrgId, "results", "", stats)
 	if err != nil {
 		return err
 	}

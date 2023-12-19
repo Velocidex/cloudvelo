@@ -37,12 +37,12 @@ func (self *FlowStorageManager) WriteFlow(
 	doc_id := api.GetDocumentIdForCollection(
 		flow.ClientId, flow.SessionId, "")
 
-	record := api.ArtifactCollectorRecordFromProto(flow)
+	record := api.ArtifactCollectorRecordFromProto(flow, doc_id)
 	record.Type = "main"
 	record.Timestamp = utils.GetTime().Now().UnixNano()
 
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections", doc_id, record)
+		config_obj.OrgId, "results", "", record)
 }
 
 func (self *FlowStorageManager) WriteTask(
@@ -59,10 +59,13 @@ func (self *FlowStorageManager) WriteTask(
 		Type:      "task",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 		SessionId: msg.SessionId,
+		ClientId:  client_id,
 		Tasks:     json.MustMarshalString(messages),
+		Doc_Type:  "task",
+		ID:        doc_id,
 	}
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "collections", doc_id, record)
+		config_obj.OrgId, "results", "", record)
 }
 
 // Not used - opensearch is handled with Launcher.GetFlows() directly.
@@ -75,7 +78,8 @@ func (self *FlowStorageManager) ListFlows(
 	return nil, 0, nil
 }
 
-const getFlowDetailsQuery = `
+const (
+	getFlowDetailsQuery = `
 {
   "sort": [
    {"type": {"order": "asc"}},
@@ -85,11 +89,29 @@ const getFlowDetailsQuery = `
      "bool": {
        "must": [
          {"match": {"client_id" : %q}},
-         {"match": {"session_id" : %q}}
+         {"match": {"session_id" : %q}},
+         {"match": {"doc_type" : "collection"}}
       ]}
   }
 }
 `
+	getFlowTasksQuery = `
+{
+  "sort": [
+   {"type": {"order": "asc"}},
+   {"timestamp": {"order": "asc"}}
+  ],
+  "query": {
+     "bool": {
+       "must": [
+         {"match": {"client_id" : %q}},
+         {"match": {"session_id" : %q}},
+         {"match": {"doc_type" : "task"}}
+      ]}
+  }
+}
+`
+)
 
 // Load the collector context from storage.
 func (self *FlowStorageManager) LoadCollectionContext(
@@ -101,7 +123,7 @@ func (self *FlowStorageManager) LoadCollectionContext(
 	}
 
 	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "collections",
+		config_obj.OrgId, "results",
 		json.Format(getFlowDetailsQuery, client_id, flow_id))
 	if err != nil {
 		return nil, err
@@ -144,22 +166,34 @@ func (self *FlowStorageManager) GetFlowRequests(
 	client_id string, flow_id string,
 	offset uint64, count uint64) (*api_proto.ApiFlowRequestDetails, error) {
 
-	doc_id := api.GetDocumentIdForCollection(client_id, flow_id, "tasks")
-	raw, err := cvelo_services.GetElasticRecord(
-		ctx, config_obj.OrgId, "collections", doc_id)
+	if flow_id == "" || client_id == "" {
+		return &api_proto.ApiFlowRequestDetails{}, nil
+	}
+
+	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
+		config_obj.OrgId, "results",
+		json.Format(getFlowTasksQuery, client_id, flow_id))
 	if err != nil {
 		return nil, err
 	}
 
-	record := &api.ArtifactCollectorRecord{}
-	err = json.Unmarshal(raw, record)
-	if err != nil {
-		return nil, err
+	if len(hits) == 0 {
+		return nil, NotFoundError
 	}
 
-	messages := &api_proto.ApiFlowRequestDetails{
-		Items: []*crypto_proto.VeloMessage{},
+	item := &api.ArtifactCollectorRecord{}
+	messages := &api_proto.ApiFlowRequestDetails{}
+	for _, hit := range hits {
+		err = json.Unmarshal(hit, item)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal([]byte(item.Tasks), messages)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = json.Unmarshal([]byte(record.Tasks), &messages)
-	return messages, err
+
+	return messages, nil
 }

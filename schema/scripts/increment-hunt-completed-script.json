@@ -1,0 +1,6 @@
+{
+  "script": {
+    "lang": "painless",
+    "source": "ctx._source.completed++;"
+  }
+}

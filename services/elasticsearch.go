@@ -56,6 +56,11 @@ var (
 	bulk_indexer *BulkIndexer
 )
 
+type _IdQueryResult struct {
+	ID        string `json:"id"`
+	client_id string `json:"client_id"`
+}
+
 // The logger is normally installed in the start up sequence with
 // SetDebugLogger() below.
 func Debug(format string, args ...interface{}) func() {
@@ -148,6 +153,32 @@ func DeleteDocument(
 	return err
 }
 
+func DeleteDocumentByQuery(
+	ctx context.Context, org_id, index string, query string, sync bool) error {
+
+	defer Instrument("DeleteDocument")()
+	expanded_index := GetIndex(org_id, index)
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	res, err := opensearchapi.DeleteByQueryRequest{Query: query, Index: []string{expanded_index}}.Do(ctx, client)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if sync {
+		res, err = opensearchapi.IndicesRefreshRequest{
+			Index: []string{expanded_index},
+		}.Do(ctx, client)
+		defer res.Body.Close()
+	}
+
+	return err
+}
+
 // Should be called to force the index to synchronize.
 func FlushIndex(
 	ctx context.Context, org_id, index string) error {
@@ -205,6 +236,68 @@ func _UpdateIndex(
 
 	// All is well we dont need to parse the results
 	if !res.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
+}
+
+func DoesTemplateExist(ctx context.Context, name string) error {
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	resp, err := opensearchapi.IndicesExistsIndexTemplateRequest{
+		Name: name,
+	}.Do(ctx, client)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !resp.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
+}
+
+func PutTemplate(
+	ctx context.Context, name, template string) error {
+
+	defer Instrument("PutTemplate")()
+
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	resp, err := opensearchapi.IndicesPutIndexTemplateRequest{
+		Name:   name,
+		Create: &TRUE,
+		Body:   strings.NewReader(template),
+	}.Do(ctx, client)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return err
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !resp.IsError() {
 		return nil
 	}
 
@@ -269,7 +362,7 @@ func SetElasticIndexAsync(org_id, index, id string,
 				res opensearchutil.BulkIndexerResponseItem, err error) {
 				logger := logging.GetLogger(l_bulk_indexer.config_obj,
 					&logging.FrontendComponent)
-				logger.Error("BulkIndexer Error during: %v",
+				logger.Error("BulkIndexer Error %v during: %v", res.Error.Reason,
 					json.MustMarshalString(record))
 			},
 		})
@@ -283,6 +376,40 @@ func SetElasticIndex(ctx context.Context,
 	return retry(func() error {
 		return _SetElasticIndex(ctx, org_id, index, id, record)
 	})
+}
+
+func _CreateElasticIndex(
+	ctx context.Context, org_id, index, id string, record interface{}) error {
+	serialized := json.MustMarshalIndent(record)
+	client, err := GetElasticClient()
+	if err != nil {
+		return err
+	}
+
+	es_req := opensearchapi.CreateRequest{
+		Index:      GetIndex(org_id, index),
+		DocumentID: id,
+		Body:       bytes.NewReader(serialized),
+		Refresh:    "true",
+	}
+
+	res, err := es_req.Do(ctx, client)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	// All is well we dont need to parse the results
+	if !res.IsError() {
+		return nil
+	}
+
+	return makeElasticError(data)
 }
 
 func _SetElasticIndex(
@@ -355,6 +482,59 @@ type _ElasticResponse struct {
 }
 
 // Gets a single elastic record by id.
+func GetElasticRecordByQuery(
+	ctx context.Context, org_id, index_suffix, query string) (json.RawMessage, error) {
+	defer Debug("GetElasticRecordByQuery %v %v", index_suffix, query)()
+	defer Instrument("GetElasticRecordByQuery")()
+
+	client, err := GetElasticClient()
+	if err != nil {
+		return nil, err
+	}
+	index := GetIndex(org_id, index_suffix)
+	res, err := opensearchapi.SearchRequest{
+		Index: []string{index},
+		Body:  strings.NewReader(query),
+	}.Do(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// All is well we don't need to parse the results
+	if !res.IsError() {
+		hit := &_ElasticResponse{}
+		err := json.Unmarshal(data, hit)
+		if hit.Hits.Total.Value > 0 {
+			return hit.Hits.Hits[0].Source, err
+		} else {
+			return nil, err
+		}
+	}
+
+	response := ordereddict.NewDict()
+	err = response.UnmarshalJSON(data)
+	if err != nil {
+		return nil, makeReadElasticError(data)
+	}
+
+	found_any, pres := response.Get("found")
+	if pres {
+		found, ok := found_any.(bool)
+		if ok && !found {
+			return nil, os.ErrNotExist
+		}
+	}
+
+	return nil, makeReadElasticError(data)
+}
+
+// Gets a single elastic record by id.
 func GetElasticRecord(
 	ctx context.Context, org_id, index, id string) (json.RawMessage, error) {
 	defer Debug("GetElasticRecord %v %v", index, id)()
@@ -400,7 +580,13 @@ func GetElasticRecord(
 		}
 	}
 
-	return nil, makeReadElasticError(data)
+	// If the index is not yet created this is a not exists error.
+	err = makeReadElasticError(data)
+	if err == nil {
+		return nil, os.ErrNotExist
+	}
+
+	return nil, err
 }
 
 type doc_id struct {
@@ -453,7 +639,7 @@ func GetMultipleElasticRecords(
 		return nil, err
 	}
 
-	// All is well we dont need to parse the results
+	// All is well we don't need to parse the results
 	if !res.IsError() {
 		hit := &docs{}
 		err := json.Unmarshal(data, hit)
@@ -516,7 +702,8 @@ func QueryChan(
 
 	part, _, err := QueryElasticRaw(ctx, org_id, index, part_query)
 	if err != nil {
-		return nil, err
+		close(output_chan)
+		return output_chan, err
 	}
 
 	var search_after interface{}
@@ -716,6 +903,56 @@ func QueryElasticRaw(
 // Return only Ids of matching documents.
 // You probably want to add the following to the query:
 // "_source": false
+func QueryElasticIdFields(
+	ctx context.Context,
+	org_id, index, query string) (ids []string, total int, err error) {
+
+	defer Instrument("QueryElasticIds")()
+	es, err := GetElasticClient()
+	if err != nil {
+		return nil, 0, err
+	}
+	res, err := es.Search(
+		es.Search.WithContext(ctx),
+		es.Search.WithIndex(GetIndex(org_id, index)),
+		es.Search.WithBody(strings.NewReader(query)),
+		es.Search.WithPretty(),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// There was an error so we need to relay it
+	if res.IsError() {
+		return nil, 0, makeReadElasticError(data)
+	}
+
+	parsed := &_ElasticResponse{}
+	err = json.Unmarshal(data, &parsed)
+	if err != nil {
+		return nil, 0, makeReadElasticError(data)
+	}
+
+	var results []string
+	for _, hit := range parsed.Hits.Hits {
+		result := &_IdQueryResult{}
+		err := json.Unmarshal(hit.Source, result)
+		if err == nil && result.ID != "" {
+			results = append(results, result.ID)
+		}
+	}
+	return results, parsed.Hits.Total.Value, nil
+}
+
+// Return only Ids of matching documents.
+// You probably want to add the following to the query:
+// "_source": false
 func QueryElasticIds(
 	ctx context.Context,
 	org_id, index, query string) (ids []string, total int, err error) {
@@ -909,8 +1146,6 @@ func makeElasticError(data []byte) error {
 	return fmt.Errorf("Elastic Error: %v", response)
 }
 
-// For read operations, an index not found error is not considered an
-// error - we just return no results.
 func makeReadElasticError(data []byte) error {
 	response := ordereddict.NewDict()
 	err := response.UnmarshalJSON(data)
@@ -920,6 +1155,11 @@ func makeReadElasticError(data []byte) error {
 
 	err_type := utils.GetString(response, "error.type")
 	if err_type == "index_not_found_exception" {
+		// Now that indexes are created from the templates, a missing
+		// index means that it was not written to yet.
+		//return os.ErrNotExist
+		Debug("ElasticError: %v\n", response)()
+
 		return nil
 	}
 
@@ -967,6 +1207,7 @@ func (self *BulkIndexer) Close() error {
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
 			Client:        elastic_client,
+			Refresh:       "true",
 			FlushInterval: time.Second * 10,
 			OnFlushStart: func(ctx context.Context) context.Context {
 				logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)

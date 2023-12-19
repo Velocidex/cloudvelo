@@ -8,7 +8,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	cvelo_vfs_service "www.velocidex.com/golang/cloudvelo/services/vfs_service"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -49,7 +48,7 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 		id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
 		stats := &api_proto.VFSListResponse{
-			Timestamp: uint64(cvelo_utils.Clock.Now().Unix()),
+			Timestamp: uint64(utils.GetTime().Now().UnixNano()),
 			ClientId:  message.Source,
 			FlowId:    message.SessionId,
 			TotalRows: row.Stats.EndIdx - row.Stats.StartIdx,
@@ -64,11 +63,14 @@ func (self Ingestor) HandleSystemVfsListDirectory(
 			Components: components,
 			Downloads:  []string{},
 			JSONData:   json.MustMarshalString(stats),
+			DocType:    "vfs",
+			DocId:      id,
+			Timestamp:  utils.GetTime().Now().UnixNano(),
 		}
 
 		err = cvelo_services.SetElasticIndexAsync(
-			config_obj.OrgId, "vfs", id,
-			cvelo_services.BulkUpdateIndex, record)
+			config_obj.OrgId, "results", "",
+			cvelo_services.BulkUpdateCreate, record)
 
 		if err != nil {
 			return err
@@ -125,20 +127,24 @@ func (self Ingestor) HandleSystemVfsUpload(
 			file_components := append([]string{message.Source, accessor},
 				row.Components...)
 
-			row.Mtime = uint64(cvelo_utils.Clock.Now().Unix())
+			row.Mtime = uint64(utils.GetTime().Now().Unix())
 			dir_id := cvelo_services.MakeId(
 				utils.JoinComponents(dir_components, "/"))
 			file_id := cvelo_services.MakeId(
 				utils.JoinComponents(file_components, "/"))
 			stats := &cvelo_vfs_service.VFSRecord{
 				Id:        dir_id,
+				ClientId:  message.Source,
+				FlowId:    message.SessionId,
+				DocId:     "download_" + file_id,
+				DocType:   "vfs",
 				Downloads: []string{json.MustMarshalString(row)},
+				Timestamp: utils.GetTime().Now().UnixNano(),
 			}
 
 			cvelo_services.SetElasticIndexAsync(
-				config_obj.OrgId, "vfs",
-				"download_"+file_id,
-				cvelo_services.BulkUpdateIndex, stats)
+				config_obj.OrgId, "results", "",
+				cvelo_services.BulkUpdateCreate, stats)
 		}
 	}
 	return nil

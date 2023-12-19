@@ -3,7 +3,8 @@ package launcher
 import (
 	"context"
 	"errors"
-	"strings"
+	"fmt"
+	"sort"
 
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -21,7 +22,31 @@ var (
 )
 
 // Get all the flow IDs for this client.
-const getFlowsQuery = `
+const (
+	prefixQuery = `{"prefix": {"id": "%v"}}`
+	regexQuery  = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
+
+	getCollectionsQuery = `{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "doc_type": "collection"
+          }
+        }, {
+          "match": {
+            "client_id": %q
+          }
+        }
+      ]
+    }
+  },
+  "size": 10000
+}
+`
+
+	getFlowsQuery = `
 {
   "sort": [{
     "session_id": {"order": "desc"}
@@ -30,14 +55,16 @@ const getFlowsQuery = `
      "bool": {
        "must": [
            {"match": {"client_id" : %q}},
-           {"match": {"type": "main"}}
+           {"match": {"type": "main"}},
+           {"match": {"doc_type": "collection"}}
        ]}
   },
-  "_source": false,
+  "_source": true,
   "from": %q,
   "size": %q
 }
 `
+)
 
 func (self Launcher) GetFlows(
 	ctx context.Context,
@@ -46,40 +73,16 @@ func (self Launcher) GetFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) (*api_proto.ApiFlowResponse, error) {
 
-	ids, total, err := cvelo_services.QueryElasticIds(ctx,
-		self.config_obj.OrgId, "collections",
-		json.Format(getFlowsQuery, client_id, offset, length))
-	if err != nil {
-		return nil, err
-	}
-
-	var flow_ids []string
-	var lookup_ids []string
-
-	// The ArtifactCollectorContext object is made up of several parts:
-	// 1. The first part is the created context the GUI has created.
-	// 2. The second part is the statistics written by the client's
-	//    flow tracker.
-	//
-	// We need to merge them together and return a combined protobuf.
 	lookup := make(map[string]*flows_proto.ArtifactCollectorContext)
 
-	for _, id := range ids {
-		flow_id := strings.Split(id, "_")[0]
-		flow_ids = append(flow_ids, flow_id)
-		lookup_ids = append(lookup_ids, id)
-		lookup_ids = append(lookup_ids, id+"_tasks")
-		lookup_ids = append(lookup_ids, id+"_completed")
-		lookup_ids = append(lookup_ids, id+"_stats_completed")
-		lookup_ids = append(lookup_ids, id+"_stats")
-	}
-
-	records, err := cvelo_services.GetMultipleElasticRecords(ctx,
-		config_obj.OrgId, "collections", lookup_ids)
+	query := fmt.Sprintf(getCollectionsQuery, client_id)
+	records, _, err := cvelo_services.QueryElasticRaw(ctx,
+		config_obj.OrgId, "results", query)
 	if err != nil {
 		return nil, err
 	}
 
+	// Read all the records and merge them into unique records.
 	for _, record := range records {
 		item := &cvelo_schema_api.ArtifactCollectorRecord{}
 		err = json.Unmarshal(record, &item)
@@ -102,21 +105,25 @@ func (self Launcher) GetFlows(
 
 	// Return the results in the required order
 	result := &api_proto.ApiFlowResponse{
-		Total: uint64(total),
+		Total: uint64(len(lookup)),
 	}
-	for _, flow_id := range flow_ids {
-		record, pres := lookup[flow_id]
-		if !pres {
-			continue
-		}
+	for _, record := range lookup {
 		launcher.UpdateFlowStats(record)
 		result.Items = append(result.Items, record)
 	}
+
+	sort.Slice(result.Items, func(i, j int) bool {
+		return result.Items[i].SessionId > result.Items[j].SessionId
+	})
 	return result, nil
 }
 
 // Are any queries currenrly running.
 func is_running(context *flows_proto.ArtifactCollectorContext) bool {
+	if context.State == flows_proto.ArtifactCollectorContext_ERROR {
+		return false
+	}
+
 	for _, s := range context.QueryStats {
 		if s.Status == crypto_proto.VeloStatus_PROGRESS {
 			return true
@@ -173,5 +180,23 @@ func mergeRecords(
 		}
 	}
 
+	// If the final message is errored or cancelled we update this
+	// message.
+	if stats_context.State == flows_proto.ArtifactCollectorContext_ERROR {
+		collection_context.State = stats_context.State
+		collection_context.Status = stats_context.Status
+	}
+
 	return collection_context
+}
+
+func processIds(queryTemplate string, ids []string) string {
+	query := ""
+	for i, id := range ids {
+		query += fmt.Sprintf(queryTemplate, id)
+		if i < len(ids)-1 {
+			query += ","
+		}
+	}
+	return query
 }

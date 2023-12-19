@@ -6,7 +6,6 @@ package foreman
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -16,9 +15,9 @@ import (
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	cvelo_indexing "www.velocidex.com/golang/cloudvelo/services/indexing"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -73,6 +72,115 @@ func (self Foreman) stopHunt(
 
 	return cvelo_services.UpdateIndex(
 		ctx, org_config_obj.OrgId, "hunts", hunt.HuntId, stopHuntQuery)
+}
+
+// Rather than retrieving the entire client record we only get those
+// fields the foreman cares about.
+const getMinimalClientInfoQuery = `{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "client_id": %q
+          }
+        },
+        {
+          "bool": {
+            "should": [
+              {
+                "exists": {
+                  "field": "last_event_table_version"
+                }
+              },
+              {
+                "exists": {
+                  "field": "assigned_hunts"
+                }
+              },
+              {
+                "exists": {
+                  "field": "labels_timestamp"
+                }
+              },
+              {
+                "exists": {
+                  "field": "labels"
+                }
+              },
+              {
+                "exists": {
+                  "field": "system"
+                }
+              },
+              {
+                "exists": {
+                  "field": "last_label_timestamp"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+`
+
+// Get a minimal client info with only fields relevant to the
+// foreman. This allows us to query less documents and it is more
+// efficient. We now write multiple documents for assigned_hunts and
+// merge them in this function.
+func getMinimalClientInfo(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id string) (*api.ClientRecord, error) {
+
+	query := json.Format(getMinimalClientInfoQuery, client_id)
+
+	result := &api.ClientRecord{
+		ClientId: client_id,
+	}
+	hits, err := cvelo_services.QueryChan(ctx,
+		config_obj, 1000, config_obj.OrgId,
+		"clients", query, "client_id")
+	if err != nil {
+		return nil, err
+	}
+
+	for hit := range hits {
+		h := &api.ClientRecord{}
+		err := json.Unmarshal(hit, h)
+		if err != nil {
+			continue
+		}
+
+		if h.LastLabelTimestamp > 0 {
+			result.LastLabelTimestamp = h.LastLabelTimestamp
+		}
+		if h.LastEventTableVersion > 0 {
+			result.LastEventTableVersion = h.LastEventTableVersion
+		}
+
+		for _, l := range h.Labels {
+			if !utils.InString(result.Labels, l) {
+				result.Labels = append(result.Labels, l)
+				result.LowerLabels = append(result.LowerLabels, strings.ToLower(l))
+			}
+		}
+
+		for _, l := range h.AssignedHunts {
+			if !utils.InString(result.AssignedHunts, l) {
+				result.AssignedHunts = append(result.AssignedHunts, l)
+			}
+		}
+
+		if h.System != "" {
+			result.System = h.System
+		}
+	}
+
+	return result, nil
 }
 
 func (self Foreman) planMonitoringForClient(
@@ -166,25 +274,18 @@ func (self Foreman) planHuntForClient(
 	plan.assignClientToHunt(client_info, hunt)
 }
 
-func (self Foreman) planForClient(
-	ctx context.Context,
-	org_config_obj *config_proto.Config,
-	client_info *api.ClientRecord,
-	hunts []*api_proto.Hunt, plan *Plan) {
-
-	for _, h := range hunts {
-		self.planHuntForClient(ctx, org_config_obj, client_info, h, plan)
-	}
-	self.planMonitoringForClient(ctx, org_config_obj, client_info, plan)
-}
-
 // Find clients that polled back up to 3 hours and schedule them for
 // new hunts. This function spawns a goroutine to do this in the
 // background as it can take a while.
 func (self Foreman) scheduleClientsWithBacklog(
 	ctx context.Context,
+	wg *sync.WaitGroup,
 	org_config_obj *config_proto.Config,
 	hunts []*api_proto.Hunt) {
+
+	if len(hunts) == 0 {
+		return
+	}
 
 	new_plan, err := NewPlan(org_config_obj)
 	if err != nil {
@@ -193,63 +294,78 @@ func (self Foreman) scheduleClientsWithBacklog(
 
 	// Schedule started hunts in the background because it could take
 	// a while.
+	wg.Add(1)
 	go func() {
-		indexer, err := services.GetIndexer(org_config_obj)
-		if err != nil {
-			return
-		}
+		defer wg.Done()
 
 		// Consider all clients that were active in the last 3 hours
 		// for scheduling.
 		early_time_range := utils.GetTime().Now().
 			Add(-MAXIMUM_PING_BACKLOG).UnixNano()
-		clients_chan, err := indexer.(*cvelo_indexing.Indexer).SearchClientRecordsChan(
-			ctx, nil, org_config_obj,
-			fmt.Sprintf("after:%d", early_time_range), "")
-
-		if err != nil {
-			logging.GetLogger(org_config_obj, &logging.ClientComponent).
-				Error("Foreman CalculateUpdate: %v", err)
-			return
+		if early_time_range < 0 {
+			early_time_range = 0
 		}
 
-		for client_info := range clients_chan {
-			self.planForClient(ctx, org_config_obj,
-				client_info, hunts, new_plan)
+		hunt_ids := make([]string, 0, len(hunts))
+		for _, h := range hunts {
+			hunt_ids = append(hunt_ids, h.HuntId)
+		}
+
+		for client_id := range self.getClientsSeenAfter(
+			ctx, org_config_obj, early_time_range) {
+
+			// Need to deal with hunts.
+			seen_hunts, err := self.getClientHuntMembership(
+				ctx, org_config_obj, client_id, hunt_ids)
+			if err != nil {
+				return
+			}
+
+			for _, h := range hunts {
+				_, pres := seen_hunts[h.HuntId]
+				if !pres {
+					client_info, err := getMinimalClientInfo(
+						ctx, org_config_obj, client_id)
+					if err != nil {
+						continue
+					}
+
+					self.planHuntForClient(ctx, org_config_obj, client_info, h, new_plan)
+				}
+			}
 		}
 
 		err = new_plan.ExecuteHuntUpdate(ctx, org_config_obj)
 		if err != nil {
 			logging.GetLogger(org_config_obj, &logging.ClientComponent).
-				Error("Foreman CalculateUpdate: %v", err)
+				Error("Foreman ExecuteHuntUpdate: %v", err)
 		}
 	}()
-
 }
 
 func (self Foreman) CalculateUpdate(
 	ctx context.Context,
+	wg *sync.WaitGroup,
 	org_config_obj *config_proto.Config,
 	hunts []*api_proto.Hunt, plan *Plan) error {
 
 	// Get all clients that pinged within the last period
-	indexer, err := services.GetIndexer(org_config_obj)
-	if err != nil {
-		return err
-	}
-
 	now := utils.GetTime().Now().UnixNano()
 	early_time_range := self.last_run_time.UnixNano()
+	if early_time_range < 0 {
+		early_time_range = 0
+	}
 
 	// Split hunts into two sets
 	// 1. Hunts that were started between the last sweep time and now.
-	// 2. Hunts there were started before the last sweep time.
+	// 2. Hunts that were started before the last sweep time.
 	//
 	// For the first case we need to schedule clients that were active
 	// in the recent past. In the second case we only need to schedule
 	// clients that were active since the last sweep time.
 	var started_hunts []*api_proto.Hunt
 	var running_hunts []*api_proto.Hunt
+	var running_hunt_id []string
 
 	for _, hunt := range hunts {
 		hunt_start := int64(hunt.StartTime) * 1000
@@ -257,26 +373,156 @@ func (self Foreman) CalculateUpdate(
 			started_hunts = append(started_hunts, hunt)
 		} else {
 			running_hunts = append(running_hunts, hunt)
+			running_hunt_id = append(running_hunt_id, hunt.HuntId)
 		}
 	}
 
-	// Schedule new hunts with backlog of client pings.
+	// Schedule new hunts with backlog of client pings. This is
+	// expensive as we need to consider all clients that checked in
+	// within the last 3 hours. But this only happens when a hunt is
+	// created so not that often.
 	if len(started_hunts) > 0 {
-		self.scheduleClientsWithBacklog(ctx, org_config_obj, started_hunts)
+		// We must wait for this to complete before we run again to
+		// make sure the client's AssignedHunts are up to date.
+		self.scheduleClientsWithBacklog(
+			ctx, wg, org_config_obj, started_hunts)
 	}
 
-	clients_chan, err := indexer.(*cvelo_indexing.Indexer).SearchClientRecordsChan(
-		ctx, nil, org_config_obj,
-		fmt.Sprintf("after:%d", early_time_range), "")
-	if err != nil {
-		return err
-	}
+	for client_id := range self.getClientsSeenAfter(ctx, org_config_obj, early_time_range) {
+		client_info, err := getMinimalClientInfo(ctx, org_config_obj, client_id)
+		if err != nil {
+			return err
+		}
 
-	for client_info := range clients_chan {
-		self.planForClient(ctx, org_config_obj, client_info, running_hunts, plan)
+		// Need to deal with hunts.
+		if len(running_hunt_id) > 0 {
+			seen_hunts, err := self.getClientHuntMembership(ctx, org_config_obj, client_id, running_hunt_id)
+			if err != nil {
+				return err
+			}
+
+			for _, h := range running_hunts {
+				_, pres := seen_hunts[h.HuntId]
+				if !pres {
+					self.planHuntForClient(ctx, org_config_obj, client_info, h, plan)
+				}
+			}
+		}
+
+		self.planMonitoringForClient(ctx, org_config_obj, client_info, plan)
 	}
 
 	return nil
+}
+
+const (
+	getRecentClientsQuery = `{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "ping": {
+              "gt": %q
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+`
+	clientMembershipQuery = `
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "terms": {
+             "assigned_hunts": %q
+          }
+        },
+        {
+          "term": {
+            "client_id": {
+               "value": %q
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+`
+)
+
+// Get all the hunts that this client is a member of
+func (self Foreman) getClientHuntMembership(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id string, hunts []string) (map[string]bool, error) {
+
+	query := json.Format(clientMembershipQuery, hunts, client_id)
+	seen := make(map[string]bool)
+	hits, err := cvelo_services.QueryChan(ctx,
+		config_obj, 1000, config_obj.OrgId,
+		"clients", query, "client_id")
+	if err != nil {
+		return nil, err
+	}
+
+	for hit := range hits {
+		client_record := &api.ClientRecord{}
+		err = json.Unmarshal(hit, client_record)
+		if err != nil {
+			continue
+		}
+
+		for _, hunt_id := range client_record.AssignedHunts {
+			seen[hunt_id] = true
+		}
+	}
+
+	return seen, nil
+}
+
+func (self Foreman) getClientsSeenAfter(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	early_time_range int64) chan string {
+	output_chan := make(chan string)
+
+	go func() {
+		defer close(output_chan)
+
+		query := json.Format(getRecentClientsQuery, early_time_range)
+
+		hits, err := cvelo_services.QueryChan(
+			ctx, config_obj, 1000,
+			config_obj.OrgId, "clients", query, "ping")
+		if err != nil {
+			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+			logger.Error("getClientsSeenAfter: %v", err)
+			return
+		}
+
+		for hit := range hits {
+			client_record := &api.ClientRecord{}
+			err := json.Unmarshal(hit, client_record)
+			if err != nil || client_record.ClientId == "" {
+				continue
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case output_chan <- client_record.ClientId:
+			}
+		}
+
+	}()
+
+	return output_chan
 }
 
 func (self Foreman) GetActiveHunts(
@@ -320,6 +566,7 @@ func (self Foreman) GetActiveHunts(
 
 func (self Foreman) UpdatePlan(
 	ctx context.Context,
+	wg *sync.WaitGroup,
 	org_config_obj *config_proto.Config, plan *Plan) error {
 
 	hunts, err := self.GetActiveHunts(ctx, org_config_obj)
@@ -330,7 +577,7 @@ func (self Foreman) UpdatePlan(
 	huntCountGauge.WithLabelValues(org_config_obj.OrgId).Set(float64(len(hunts)))
 
 	// Get an update plan
-	err = self.CalculateUpdate(ctx, org_config_obj, hunts, plan)
+	err = self.CalculateUpdate(ctx, wg, org_config_obj, hunts, plan)
 	if err != nil {
 		return err
 	}
@@ -352,6 +599,11 @@ func (self Foreman) UpdatePlan(
 func (self Foreman) RunOnce(
 	ctx context.Context,
 	config_obj *config_proto.Config) error {
+
+	// Wait for all jobs to finish before we exit to avoid a race
+	// condition.
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
 
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 
@@ -378,7 +630,7 @@ func (self Foreman) RunOnce(
 			continue
 		}
 
-		err = self.UpdatePlan(ctx, org_config_obj, plan)
+		err = self.UpdatePlan(ctx, wg, org_config_obj, plan)
 		if err != nil {
 			if logger != nil {
 				logger.Error("UpdatePlan, orgId=%v: %v", org_config_obj.OrgId, err)
@@ -387,7 +639,9 @@ func (self Foreman) RunOnce(
 		}
 	}
 
-	return nil
+	// Make sure to flush out any outstanding writes so the data is
+	// fresh.
+	return cvelo_services.FlushBulkIndexer()
 }
 
 func (self *Foreman) Start(

@@ -17,6 +17,49 @@ type ElasticDatastore struct {
 	ctx context.Context
 }
 
+const (
+	list_children_query = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "prefix": {
+                        "vfs_path": %q
+                    }
+                },
+                {
+                    "match": {
+                        "doc_type": "datastore"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
+	delete_datastore_doc_query = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "prefix": {
+                        "id": %q
+                    }
+                },
+                {
+                    "match": {
+                        "doc_type": "datastore"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
+)
+
 func (self ElasticDatastore) GetSubject(
 	config_obj *config_proto.Config,
 	path api.DSPathSpec,
@@ -29,7 +72,9 @@ func (self ElasticDatastore) GetSubject(
 		return err
 	}
 
-	record := &DatastoreRecord{}
+	record := &DatastoreRecord{
+		Timestamp: utils.GetTime().Now().UnixNano(),
+	}
 	err = json.Unmarshal(data, &record)
 	if err != nil {
 		return err
@@ -49,13 +94,14 @@ func (self ElasticDatastore) SetSubject(
 	}
 
 	record := &DatastoreRecord{
-		Type:     "Generic",
-		VFSPath:  path.AsClientPath(),
-		JSONData: string(serialized),
+		ID:        services.MakeId(path.AsClientPath()),
+		Type:      "Generic",
+		VFSPath:   path.AsClientPath(),
+		JSONData:  string(serialized),
+		DocType:   "datastore",
+		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(
-		self.ctx, config_obj.OrgId, "datastore",
-		services.MakeId(record.VFSPath), record)
+	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "results", "", record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(
@@ -71,25 +117,17 @@ func (self ElasticDatastore) DeleteSubject(
 	urn api.DSPathSpec) error {
 
 	id := services.MakeId(urn.AsClientPath())
-	return services.DeleteDocument(
-		self.ctx, config_obj.OrgId, "datastore", id, services.SyncDelete)
+	return services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "results", json.Format(delete_datastore_doc_query, id), services.SyncDelete)
 }
 
 func (self ElasticDatastore) DeleteSubjectWithCompletion(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec, completion func()) error {
 	id := services.MakeId(urn.AsClientPath())
-	return services.DeleteDocument(
-		self.ctx, config_obj.OrgId, "datastore", id, services.AsyncDelete)
+	return services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "results", json.Format(delete_datastore_doc_query, id), services.AsyncDelete)
 }
-
-const (
-	list_children_query = `
-{"query": {"bool": {"must": [
-   {"prefix": {"vfs_path": %q}}
-]}}}
-`
-)
 
 func (self ElasticDatastore) ListChildren(
 	config_obj *config_proto.Config,
@@ -97,7 +135,7 @@ func (self ElasticDatastore) ListChildren(
 
 	dir := urn.AsDatastoreDirectory(config_obj)
 	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
-		"datastore", json.Format(list_children_query, dir))
+		"results", json.Format(list_children_query, dir))
 	if err != nil {
 		return nil, err
 	}

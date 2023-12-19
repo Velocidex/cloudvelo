@@ -7,25 +7,24 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This is the record we store in the elastic datastore. Timed Results
 // are usually written from event artifacts.
 type TimedResultSetRecord struct {
-	ClientId             string `json:"client_id"`
-	FlowId               string `json:"flow_id"`
-	Artifact             string `json:"artifact"`
-	Type                 string `json:"type"`
-	Timestamp            int64  `json:"timestamp"`
-	Datastream_Timestamp int64  `json:"@timestamp"`
-	Date                 int64  `json:"date"` // Timestamp rounded down to the UTC day
-	VFSPath              string `json:"vfs_path"`
-	JSONData             string `json:"data"`
+	ClientId  string `json:"client_id"`
+	FlowId    string `json:"flow_id"`
+	Artifact  string `json:"artifact"`
+	Type      string `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+	Date      int64  `json:"date"` // Timestamp rounded down to the UTC day
+	VFSPath   string `json:"vfs_path"`
+	JSONData  string `json:"data"`
 }
 
 // Examine the pathspec and construct a new Elastic record.
@@ -37,40 +36,37 @@ func NewTimedResultSetRecord(
 		vfs_path = filename.AsClientPath()
 	}
 
-	now := utils.Clock.Now()
+	now := utils.GetTime().Now()
 	day := now.Truncate(24 * time.Hour).Unix()
 
 	switch t := path_manager.(type) {
 	case *artifacts.ArtifactPathManager:
 		return &TimedResultSetRecord{
-			ClientId:             t.ClientId,
-			FlowId:               t.FlowId,
-			Artifact:             t.FullArtifactName,
-			Type:                 "results",
-			VFSPath:              vfs_path,
-			Timestamp:            now.UnixNano(),
-			Datastream_Timestamp: now.UnixNano(),
-			Date:                 day,
+			ClientId:  t.ClientId,
+			FlowId:    t.FlowId,
+			Artifact:  t.FullArtifactName,
+			Type:      "results",
+			VFSPath:   vfs_path,
+			Timestamp: now.UnixNano(),
+			Date:      day,
 		}
 
 	case *artifacts.ArtifactLogPathManager:
 		return &TimedResultSetRecord{
-			ClientId:             t.ClientId,
-			FlowId:               t.FlowId,
-			Artifact:             t.FullArtifactName,
-			Type:                 "logs",
-			VFSPath:              vfs_path,
-			Timestamp:            utils.Clock.Now().UnixNano(),
-			Datastream_Timestamp: utils.Clock.Now().UnixNano(),
-			Date:                 day,
+			ClientId:  t.ClientId,
+			FlowId:    t.FlowId,
+			Artifact:  t.FullArtifactName,
+			Type:      "logs",
+			VFSPath:   vfs_path,
+			Timestamp: utils.GetTime().Now().UnixNano(),
+			Date:      day,
 		}
 
 	default:
 		return &TimedResultSetRecord{
-			Timestamp:            utils.Clock.Now().UnixNano(),
-			Datastream_Timestamp: utils.Clock.Now().UnixNano(),
-			Date:                 day,
-			VFSPath:              vfs_path,
+			Timestamp: utils.GetTime().Now().UnixNano(),
+			Date:      day,
+			VFSPath:   vfs_path,
 		}
 	}
 }

@@ -1,24 +1,23 @@
 package simple
 
 import (
-	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This is the record we store in the elastic datastore. Simple
 // Results sets are written from collections and contain a table rows.
 type SimpleResultSetRecord struct {
-	ClientId             string `json:"client_id"`
-	FlowId               string `json:"flow_id"`
-	Artifact             string `json:"artifact"`
-	Type                 string `json:"type"`
-	StartRow             int64  `json:"start_row"`
-	EndRow               int64  `json:"end_row"`
-	VFSPath              string `json:"vfs_path"`
-	JSONData             string `json:"data"`
-	TotalRows            uint64 `json:"total_rows"`
-	Timestamp            int64  `json:"timestamp"`
-	Datastream_Timestamp int64  `json:"@timestamp"`
+	ClientId  string `json:"client_id"`
+	FlowId    string `json:"flow_id"`
+	Artifact  string `json:"artifact"`
+	Type      string `json:"type"`
+	StartRow  int64  `json:"start_row"`
+	EndRow    int64  `json:"end_row"`
+	VFSPath   string `json:"vfs_path"`
+	JSONData  string `json:"data"`
+	TotalRows uint64 `json:"total_rows"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // Examine the pathspec and construct a new Elastic record. Because
@@ -40,40 +39,40 @@ func NewSimpleResultSetRecord(
 			// Single artifact no source
 			if len(components) == 5 {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
-					ClientId:             client_id,
-					FlowId:               components[4],
-					Artifact:             components[3],
-					Type:                 "results",
+					Timestamp: utils.GetTime().Now().Unix(),
+					ClientId:  client_id,
+					FlowId:    components[4],
+					Artifact:  components[3],
+					Type:      "results",
 				}
 
 				// Artifact with source name
 			} else if len(components) == 6 {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
-					ClientId:             client_id,
-					FlowId:               components[4],
-					Artifact:             components[3] + "/" + components[5],
-					Type:                 "results",
+					Timestamp: utils.GetTime().Now().Unix(),
+					ClientId:  client_id,
+					FlowId:    components[4],
+					Artifact:  components[3] + "/" + components[5],
+					Type:      "results",
 				}
 			}
 			// Collection logs
 		} else if components[2] == "collections" {
 			if components[4] == "logs" {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
-					ClientId:             client_id,
-					FlowId:               components[3],
-					Type:                 "logs",
+					Timestamp: utils.GetTime().Now().Unix(),
+					ClientId:  client_id,
+					FlowId:    components[3],
+					Type:      "logs",
 				}
 			}
 
 			if components[4] == "uploads" {
 				return &SimpleResultSetRecord{
-					Datastream_Timestamp: utils.Clock.Now().Unix(),
-					ClientId:             client_id,
-					FlowId:               components[3],
-					Type:                 "uploads",
+					Timestamp: utils.GetTime().Now().Unix(),
+					ClientId:  client_id,
+					FlowId:    components[3],
+					Type:      "uploads",
 				}
 			}
 		}

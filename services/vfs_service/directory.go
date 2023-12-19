@@ -5,8 +5,6 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"google.golang.org/protobuf/proto"
-	"www.velocidex.com/golang/cloudvelo/services"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/api/tables"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -17,15 +15,20 @@ import (
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+// This record is mapped to the results index (see
+// schema/templates/results.json).
 type VFSRecord struct {
 	Id         string   `json:"id"`
 	ClientId   string   `json:"client_id"`
+	FlowId     string   `json:"flow_id"`
 	Components []string `json:"components"`
 	Downloads  []string `json:"downloads"`
 	JSONData   string   `json:"data"`
+	DocType    string   `json:"doc_type"`
+	DocId      string   `json:"doc_id"`
+	Timestamp  int64    `json:"timestamp"`
 }
 
 type DownloadRow struct {
@@ -43,7 +46,7 @@ type DownloadRow struct {
 
 // Render the root level pseudo directory. This provides anchor points
 // for the other drivers in the navigation.
-func renderRootVFS(client_id string) *api_proto.VFSListResponse {
+func renderRootVFS() *api_proto.VFSListResponse {
 	return &api_proto.VFSListResponse{
 		Response: `
    [
@@ -62,24 +65,7 @@ func renderDBVFS(
 	client_id string,
 	components []string) (*api_proto.VFSListResponse, error) {
 
-	result := &api_proto.VFSListResponse{}
-	components = append([]string{client_id}, components...)
-
-	id := services.MakeId(utils.JoinComponents(components, "/"))
-	record := &VFSRecord{}
-	serialized, err := services.GetElasticRecord(ctx,
-		config_obj.OrgId, "vfs", id)
-	if err != nil {
-		// Empty responses mean the directory is empty.
-		return result, nil
-	}
-
-	err = json.Unmarshal(serialized, record)
-	if err != nil {
-		return result, nil
-	}
-
-	err = json.Unmarshal([]byte(record.JSONData), result)
+	result, err := getLatestVFSListResponse(ctx, config_obj, client_id, components)
 	if err != nil {
 		return nil, err
 	}
@@ -160,75 +146,6 @@ func renderDBVFS(
 	// Add a Download column as the first column.
 	result.Columns = columns
 	return result, nil
-}
-
-const (
-	queryAllVFSAttributes = `
-{
- "query": {
-   "match": {"id": %q}
- },
- "size": 10000
-}
-`
-)
-
-func (self *VFSService) readDirectoryWithDownloads(
-	ctx context.Context,
-	config_obj *config_proto.Config, client_id string, components []string) (
-	downloads []*DownloadRow,
-	stat *api_proto.VFSListResponse, err error) {
-
-	stat = &api_proto.VFSListResponse{}
-	components = append([]string{client_id}, components...)
-	id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
-
-	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "vfs", json.Format(queryAllVFSAttributes, id))
-	if err != nil {
-		return nil, nil, err
-	}
-	downloads_index := make(map[string]int)
-	for _, hit := range hits {
-		record := &VFSRecord{}
-		err = json.Unmarshal(hit, record)
-		if err != nil {
-			continue
-		}
-
-		if record.JSONData != "" {
-			err = json.Unmarshal([]byte(record.JSONData), stat)
-			if err != nil {
-				continue
-			}
-			stat.Response = ""
-
-		} else if len(record.Downloads) == 1 {
-			download_record := &DownloadRow{}
-			err = json.Unmarshal([]byte(record.Downloads[0]), download_record)
-			if err != nil {
-				continue
-			}
-			filename := download_record.Components[len(download_record.Components)-1]
-			download_idx, ok := downloads_index[filename]
-
-			if ok {
-				if download_record.Mtime > downloads[download_idx].Mtime {
-					downloads[download_idx] = download_record
-				}
-			} else {
-				downloads_index[filename] = len(downloads)
-				downloads = append(downloads, download_record)
-			}
-
-			if download_record.Mtime > stat.DownloadVersion {
-				stat.DownloadVersion = download_record.Mtime
-			}
-		}
-
-	}
-
-	return downloads, stat, nil
 }
 
 // Render all files within the tree node. Enrich with available

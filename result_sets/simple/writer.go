@@ -8,9 +8,9 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	"www.velocidex.com/golang/cloudvelo/utils"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type ElasticSimpleResultSetWriter struct {
@@ -47,7 +47,7 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	record.JSONData = string(serialized)
 	record.StartRow = self.start_row
 	record.EndRow = self.start_row + int64(total_rows)
-	record.Timestamp = utils.Clock.Now().Unix()
+	record.Timestamp = utils.GetTime().Now().Unix()
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 
@@ -56,7 +56,8 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 			self.ctx, self.org_id, "results", "", record)
 	} else {
 		services.SetElasticIndexAsync(
-			self.org_id, "results", "", "create", record)
+			self.org_id, "results", "",
+			cvelo_services.BulkUpdateCreate, record)
 	}
 }
 
