@@ -42,7 +42,7 @@ require (
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/ahocorasick v0.0.0-20180712114356-e1c353eeaaee // indirect
 	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
-	github.com/Velocidex/etw v0.0.0-20231115144702-0b885b292f0f // indirect
+	github.com/Velocidex/etw v0.0.0-20210723072214-4d0cffd1ff22 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
@@ -166,7 +166,7 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
