@@ -70,12 +70,12 @@ func (self *ForemanTestSuite) getClientRecord(client_id string) *api.ClientRecor
 	assert.NoError(self.T(), err)
 
 	config_obj := self.ConfigObj.VeloConf()
-	result, err := api.GetMultipleClients(self.Ctx, config_obj, []string{client_id})
-	if err != nil || len(result) == 0 {
+	result, err := getMinimalClientInfo(self.Ctx, config_obj, client_id)
+	if err != nil {
 		return nil
 	}
 
-	return result[0]
+	return result
 }
 
 func (self *ForemanTestSuite) TestClientMonitoring() {

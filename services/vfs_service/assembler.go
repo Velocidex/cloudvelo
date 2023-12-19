@@ -98,6 +98,7 @@ func (self *VFSService) readDirectoryWithDownloads(
 	downloads []*DownloadRow,
 	stat *api_proto.VFSListResponse, err error) {
 
+	stat = &api_proto.VFSListResponse{}
 	assembler := VFSAssembler{
 		// Deduplicate downloads to the same file.
 		downloads: make(map[string]string),
@@ -123,9 +124,11 @@ func (self *VFSService) readDirectoryWithDownloads(
 			assembler.listing = record.JSONData
 
 		} else if len(record.Downloads) == 1 {
+			download_record := record.Downloads[0]
+
 			// This will replace the download record with the latest
 			// one.
-			assembler.downloads[record.DocId] = record.Downloads[0]
+			assembler.downloads[record.DocId] = download_record
 		}
 	}
 
@@ -133,7 +136,6 @@ func (self *VFSService) readDirectoryWithDownloads(
 		return downloads, stat, nil
 	}
 
-	stat = &api_proto.VFSListResponse{}
 	err = json.Unmarshal([]byte(assembler.listing), stat)
 	if err != nil {
 		return downloads, stat, nil
@@ -151,6 +153,12 @@ func (self *VFSService) readDirectoryWithDownloads(
 		if download_record.Mtime > stat.DownloadVersion {
 			stat.DownloadVersion = download_record.Mtime
 		}
+
+		// If the download failed, remove it from the list.
+		if !download_record.InFlight && download_record.Sha256 == "" {
+			continue
+		}
+
 		downloads = append(downloads, download_record)
 	}
 

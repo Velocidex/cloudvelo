@@ -230,7 +230,7 @@ func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
 		services.ROOT_ORG_ID, "user_options", username)
-	if err == os.ErrNotExist {
+	if err == os.ErrNotExist || len(serialized) == 0 {
 		return &api_proto.SetGUIOptionsRequest{}, nil
 	}
 

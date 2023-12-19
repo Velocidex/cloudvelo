@@ -17,13 +17,15 @@ import (
 // use for better searching.
 type ClientRecord struct {
 	// Stored in '<client id>'
-	ClientId        string `json:"client_id,omitempty"`
-	Hostname        string `json:"hostname,omitempty"`
-	Release         string `json:"release,omitempty"`
-	Architecture    string `json:"architecture,omitempty"`
-	ClientVersion   string `json:"client_version,omitempty"`
-	BuildTime       string `json:"build_time,omitempty"`
-	System          string `json:"system,omitempty"`
+	ClientId      string `json:"client_id,omitempty"`
+	Hostname      string `json:"hostname,omitempty"`
+	Release       string `json:"release,omitempty"`
+	Architecture  string `json:"architecture,omitempty"`
+	ClientVersion string `json:"client_version,omitempty"`
+	BuildTime     string `json:"build_time,omitempty"`
+	System        string `json:"system,omitempty"`
+
+	// Populated by the client's install time.
 	FirstSeenAt     uint64 `json:"first_seen_at,omitempty"`
 	LastInterrogate string `json:"last_interrogate,omitempty"`
 

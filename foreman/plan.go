@@ -18,23 +18,6 @@ import (
 
 const (
 	NOTIFY = true
-
-	updateAllClientEventVersion = `
-{
- "query": {
-   "terms": {
-    "_id": %q
- }},
- "script": {
-   "source": "ctx._source.last_event_table_version = params.timestamp;",
-   "lang": "painless",
-   "params": {
-     "timestamp": %q
-   }
-  }
- }
-}
-`
 )
 
 type Plan struct {
@@ -62,10 +45,8 @@ type Plan struct {
 	// avoids having to recompile messages for each label combination.
 	MonitoringTables map[string]*crypto_proto.VeloMessage
 
-	// Mapping beterrn unique update key and list of clients.
+	// Mapping between unique update key and list of clients.
 	MonitoringTablesToClients map[string][]string
-
-	clientAssignedHunts map[string]*api.ClientRecord
 
 	current_monitoring_state *flows_proto.ClientEventTable
 }
@@ -171,9 +152,19 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 
 		// Update all the client records to the latest event table
 		// version
-		self.updateLastEventTimestamp(org_config_obj, clients)
+		for _, client_id := range clients {
+			cvelo_services.SetElasticIndexAsync(
+				org_config_obj.OrgId, "clients",
+				client_id+"_last_event_version",
+				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
+					ClientId: client_id,
+					LastEventTableVersion: self.
+						current_monitoring_state.Version,
+				})
+		}
 
-		err := self.sendMessageToClients(ctx, org_config_obj, message, clients)
+		err := self.sendMessageToClients(
+			ctx, org_config_obj, message, clients)
 		if err != nil {
 			return err
 		}
@@ -220,70 +211,31 @@ func (self *Plan) ExecuteHuntUpdate(
 		logger.Info("Scheduling hunt %v on %v clients: %v", hunt.HuntId,
 			len(clients), slice(clients, 10))
 
-		self.updateAssignedHunts(org_config_obj, clients, hunt.HuntId)
-
 		err := self.scheduleRequestOnClients(
 			ctx, org_config_obj, hunt.StartRequest, clients)
 		if err != nil {
 			return err
+		}
+
+		// Write a new AssignedHunts record to indicate this hunt ran
+		// on this client.
+		for _, client_id := range clients {
+			cvelo_services.SetElasticIndexAsync(
+				org_config_obj.OrgId, "clients", "",
+				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
+					ClientId:      client_id,
+					AssignedHunts: []string{hunt.HuntId},
+				})
 		}
 	}
 
 	return nil
 }
 
-func (self *Plan) updateAssignedHunts(
-	config_obj *config_proto.Config,
-	client_ids []string, hunt_id string) {
-
-	for _, client_id := range client_ids {
-		client_record, pres := self.ClientIdToClientRecords[client_id]
-		if !pres {
-			continue
-		}
-
-		if !utils.InString(client_record.AssignedHunts, hunt_id) {
-			client_record.AssignedHunts = append(
-				client_record.AssignedHunts, hunt_id)
-		}
-
-		self.clientAssignedHunts[client_id] = &api.ClientRecord{
-			ClientId:              client_id,
-			AssignedHunts:         client_record.AssignedHunts,
-			LastEventTableVersion: client_record.LastEventTableVersion,
-			LastHuntTimestamp:     client_record.LastHuntTimestamp,
-		}
-	}
-}
-
-func (self *Plan) updateLastEventTimestamp(
-	config_obj *config_proto.Config, client_ids []string) {
-
-	for _, client_id := range client_ids {
-		client_record, pres := self.ClientIdToClientRecords[client_id]
-		if !pres {
-			continue
-		}
-
-		self.clientAssignedHunts[client_id] = &api.ClientRecord{
-			ClientId:              client_id,
-			AssignedHunts:         client_record.AssignedHunts,
-			LastEventTableVersion: client_record.LastEventTableVersion,
-			LastHuntTimestamp:     client_record.LastHuntTimestamp,
-		}
-	}
-}
-
 // Update all affected clients' timestamp to ensure next query we do
 // not select them again.
 func (self *Plan) closePlan(ctx context.Context,
 	org_config_obj *config_proto.Config) error {
-
-	for client_id, record := range self.clientAssignedHunts {
-		cvelo_services.SetElasticIndexAsync(
-			org_config_obj.OrgId, "clients", client_id+"_hunts",
-			cvelo_services.BulkUpdateIndex, record)
-	}
 	return nil
 }
 
@@ -300,7 +252,7 @@ func NewPlan(config_obj *config_proto.Config) (*Plan, error) {
 		ClientIdToClientRecords:   make(map[string]*api.ClientRecord),
 		MonitoringTables:          make(map[string]*crypto_proto.VeloMessage),
 		MonitoringTablesToClients: make(map[string][]string),
-		clientAssignedHunts:       make(map[string]*api.ClientRecord),
-		current_monitoring_state:  client_monitoring_service.GetClientMonitoringState(),
+
+		current_monitoring_state: client_monitoring_service.GetClientMonitoringState(),
 	}, nil
 }

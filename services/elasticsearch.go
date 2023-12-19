@@ -580,7 +580,13 @@ func GetElasticRecord(
 		}
 	}
 
-	return nil, makeReadElasticError(data)
+	// If the index is not yet created this is a not exists error.
+	err = makeReadElasticError(data)
+	if err == nil {
+		return nil, os.ErrNotExist
+	}
+
+	return nil, err
 }
 
 type doc_id struct {
@@ -1152,6 +1158,8 @@ func makeReadElasticError(data []byte) error {
 		// Now that indexes are created from the templates, a missing
 		// index means that it was not written to yet.
 		//return os.ErrNotExist
+		Debug("ElasticError: %v\n", response)()
+
 		return nil
 	}
 
@@ -1199,6 +1207,7 @@ func (self *BulkIndexer) Close() error {
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
 			Client:        elastic_client,
+			Refresh:       "wait_for",
 			FlushInterval: time.Second * 10,
 			OnFlushStart: func(ctx context.Context) context.Context {
 				logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
