@@ -1207,7 +1207,7 @@ func (self *BulkIndexer) Close() error {
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
 			Client:        elastic_client,
-			Refresh:       "wait_for",
+			Refresh:       "true",
 			FlushInterval: time.Second * 10,
 			OnFlushStart: func(ctx context.Context) context.Context {
 				logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
