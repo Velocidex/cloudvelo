@@ -28,7 +28,7 @@ func StartCommunicatorServices(
 	}
 
 	sm := services.NewServiceManager(ctx, config_obj.VeloConf())
-	err := cvelo_services.StartElasticSearchService(config_obj)
+	err := cvelo_services.StartElasticSearchService(ctx, config_obj)
 	if err != nil {
 		return sm, err
 	}

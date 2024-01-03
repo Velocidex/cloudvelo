@@ -231,7 +231,7 @@ func (self *OrgManager) Start(
 		return err
 	}
 
-	err = cvelo_services.StartElasticSearchService(config_obj)
+	err = cvelo_services.StartElasticSearchService(ctx, config_obj)
 	if err != nil {
 		return err
 	}
