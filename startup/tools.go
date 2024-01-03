@@ -32,7 +32,7 @@ func StartToolServices(
 	file_store.OverrideFilestoreImplementation(
 		config_obj.VeloConf(), file_store_obj)
 
-	err = cvelo_services.StartElasticSearchService(config_obj)
+	err = cvelo_services.StartElasticSearchService(ctx, config_obj)
 	if err != nil {
 		return nil, err
 	}

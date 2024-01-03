@@ -17,14 +17,12 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
-	"github.com/aws/aws-sdk-go/aws/session"
-
+	config "github.com/aws/aws-sdk-go-v2/config"
 	opensearch "github.com/opensearch-project/opensearch-go/v2"
 	opensearchapi "github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
-	requestsigner "github.com/opensearch-project/opensearch-go/v2/signer/aws"
-
-	"www.velocidex.com/golang/cloudvelo/config"
+	requestsigner "github.com/opensearch-project/opensearch-go/v2/signer/awsv2"
+	cloud_velo_config "www.velocidex.com/golang/cloudvelo/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/crypto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -55,11 +53,6 @@ var (
 
 	bulk_indexer *BulkIndexer
 )
-
-type _IdQueryResult struct {
-	ID        string `json:"id"`
-	client_id string `json:"client_id"`
-}
 
 // The logger is normally installed in the start up sequence with
 // SetDebugLogger() below.
@@ -304,41 +297,6 @@ func PutTemplate(
 	return makeElasticError(data)
 }
 
-func UpdateByQuery(
-	ctx context.Context, org_id, index string, query string) error {
-
-	defer Instrument("UpdateByQuery")()
-
-	client, err := GetElasticClient()
-	if err != nil {
-		return err
-	}
-
-	es_req := opensearchapi.UpdateByQueryRequest{
-		Index:   []string{GetIndex(org_id, index)},
-		Body:    strings.NewReader(query),
-		Refresh: &TRUE,
-	}
-
-	res, err := es_req.Do(ctx, client)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	// All is well we dont need to parse the results
-	if !res.IsError() {
-		return nil
-	}
-
-	return makeElasticError(data)
-}
-
 func SetElasticIndexAsync(org_id, index, id string,
 	action BulkUpdateType, record interface{}) error {
 
@@ -376,40 +334,6 @@ func SetElasticIndex(ctx context.Context,
 	return retry(func() error {
 		return _SetElasticIndex(ctx, org_id, index, id, record)
 	})
-}
-
-func _CreateElasticIndex(
-	ctx context.Context, org_id, index, id string, record interface{}) error {
-	serialized := json.MustMarshalIndent(record)
-	client, err := GetElasticClient()
-	if err != nil {
-		return err
-	}
-
-	es_req := opensearchapi.CreateRequest{
-		Index:      GetIndex(org_id, index),
-		DocumentID: id,
-		Body:       bytes.NewReader(serialized),
-		Refresh:    "true",
-	}
-
-	res, err := es_req.Do(ctx, client)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	// All is well we dont need to parse the results
-	if !res.IsError() {
-		return nil
-	}
-
-	return makeElasticError(data)
 }
 
 func _SetElasticIndex(
@@ -903,56 +827,6 @@ func QueryElasticRaw(
 // Return only Ids of matching documents.
 // You probably want to add the following to the query:
 // "_source": false
-func QueryElasticIdFields(
-	ctx context.Context,
-	org_id, index, query string) (ids []string, total int, err error) {
-
-	defer Instrument("QueryElasticIds")()
-	es, err := GetElasticClient()
-	if err != nil {
-		return nil, 0, err
-	}
-	res, err := es.Search(
-		es.Search.WithContext(ctx),
-		es.Search.WithIndex(GetIndex(org_id, index)),
-		es.Search.WithBody(strings.NewReader(query)),
-		es.Search.WithPretty(),
-	)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// There was an error so we need to relay it
-	if res.IsError() {
-		return nil, 0, makeReadElasticError(data)
-	}
-
-	parsed := &_ElasticResponse{}
-	err = json.Unmarshal(data, &parsed)
-	if err != nil {
-		return nil, 0, makeReadElasticError(data)
-	}
-
-	var results []string
-	for _, hit := range parsed.Hits.Hits {
-		result := &_IdQueryResult{}
-		err := json.Unmarshal(hit.Source, result)
-		if err == nil && result.ID != "" {
-			results = append(results, result.ID)
-		}
-	}
-	return results, parsed.Hits.Total.Value, nil
-}
-
-// Return only Ids of matching documents.
-// You probably want to add the following to the query:
-// "_source": false
 func QueryElasticIds(
 	ctx context.Context,
 	org_id, index, query string) (ids []string, total int, err error) {
@@ -1075,7 +949,7 @@ func SetDebugLogger(config_obj *config_proto.Config) {
 	logger = logging.GetLogger(config_obj, &logging.FrontendComponent)
 }
 
-func StartElasticSearchService(config_obj *config.Config) error {
+func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_config.Config) error {
 	cfg := opensearch.Config{
 		Addresses: config_obj.Cloud.Addresses,
 	}
@@ -1103,7 +977,8 @@ func StartElasticSearchService(config_obj *config.Config) error {
 		cfg.Username = config_obj.Cloud.Username
 		cfg.Password = config_obj.Cloud.Password
 	} else {
-		signer, err := requestsigner.NewSigner(session.Options{SharedConfigState: session.SharedConfigEnable})
+		signer_config, err := config.LoadDefaultConfig(ctx)
+		signer, err := requestsigner.NewSigner(signer_config)
 		if err != nil {
 			return err
 		}
@@ -1262,7 +1137,7 @@ func FlushBulkIndexer() error {
 func StartBulkIndexService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config.Config) error {
+	config_obj *cloud_velo_config.Config) error {
 	elastic_client, err := GetElasticClient()
 	if err != nil {
 		return err
