@@ -33,7 +33,7 @@ func doResetElastic() error {
 	ctx, cancel := install_sig_handler()
 	defer cancel()
 
-	err = services.StartElasticSearchService(config_obj)
+	err = services.StartElasticSearchService(ctx, config_obj)
 	if err != nil {
 		return err
 	}
