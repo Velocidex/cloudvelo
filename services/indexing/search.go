@@ -423,7 +423,7 @@ func (self *Indexer) searchVerbs(ctx context.Context,
 	}
 
 	// Maybe a label
-	if uint64(len(items)) < in.Limit {
+	if uint64(len(items)) < in.Limit && total == 0 {
 		res, total, err = self.searchClientsByLabel(
 			ctx, config_obj, "label", in.Query, in, in.Limit)
 		if err == nil {
