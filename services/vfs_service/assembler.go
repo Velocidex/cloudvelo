@@ -34,6 +34,8 @@ const (
         "bool": {
             "must": [
                 {
+                    "match": {"id": %q}
+                }, {
                     "match": {"doc_id": %q}
                 }, {
                     "match": {"doc_type": "vfs"}
@@ -71,7 +73,7 @@ const (
     "sort": [
       {
         "timestamp": {
-          "order": "desc"
+          "order": "asc"
         }
       }
     ],
