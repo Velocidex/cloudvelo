@@ -34,6 +34,8 @@ const (
         "bool": {
             "must": [
                 {
+                    "match": {"doc_id": %q}
+                }, {
                     "match": {"id": %q}
                 }, {
                     "match": {"doc_type": "vfs"}
