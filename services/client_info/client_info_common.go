@@ -19,7 +19,9 @@ var (
   "query": {
     "bool": {
       "must": [
-         {"match": {"client_id" : %q}}
+ 		 {"match": {"doc_type" : "tasks"}},		
+         {"match": {"client_id" : %q}},
+		 {"match": {"doc_type": "repository"}}
       ]}
   }
 }
@@ -38,11 +40,12 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"tasks", "", &ClientTask{
+		"persisted", "", &ClientTask{
 			ClientId:  client_id,
 			FlowId:    req.SessionId,
 			Timestamp: time.Now().UnixNano(),
 			JSONData:  string(serialized),
+			DocType:   "tasks",
 		})
 }
 
@@ -51,6 +54,7 @@ type ClientTask struct {
 	FlowId    string `json:"flow_id"`
 	Timestamp int64  `json:"timestamp"`
 	JSONData  string `json:"data"`
+	DocType   string `json:"doc_type"`
 }
 
 // Get the client's tasks and remove them from the queue.
@@ -59,7 +63,7 @@ func (self ClientInfoBase) GetClientTasks(
 
 	query := json.Format(getClientTasksQuery, client_id)
 	hits, err := cvelo_services.QueryElastic(ctx, self.config_obj.OrgId,
-		"tasks", query)
+		"persisted", query)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +72,7 @@ func (self ClientInfoBase) GetClientTasks(
 	for _, hit := range hits {
 		err = cvelo_services.DeleteDocument(ctx,
 			self.config_obj.OrgId,
-			"tasks", hit.Id, cvelo_services.NoSync)
+			"persisted", hit.Id, cvelo_services.NoSync)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +99,7 @@ func (self ClientInfoBase) PeekClientTasks(
 
 	query := json.Format(getClientTasksQuery, client_id)
 	hits, err := cvelo_services.QueryElastic(ctx, self.config_obj.OrgId,
-		"tasks", query)
+		"persisted", query)
 	if err != nil {
 		return nil, err
 	}

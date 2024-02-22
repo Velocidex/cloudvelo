@@ -181,7 +181,7 @@ sources:
 func TestLauncher(t *testing.T) {
 	suite.Run(t, &LauncherTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"tasks", "collections", "results"},
+			Indexes: []string{collections", "transient"},
 		},
 	})
 }
@@ -193,7 +193,7 @@ func PeekClientTasks(ctx context.Context,
 
 	query := json.Format(getClientTasksQuery, client_id)
 	hits, err := cvelo_services.QueryElastic(ctx, config_obj.OrgId,
-		"tasks", query)
+		"persisted", query)
 	if err != nil {
 		return nil, err
 	}

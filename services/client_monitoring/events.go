@@ -96,7 +96,7 @@ func listAvailableEventArtifacts(
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
-		config_obj.OrgId, "results",
+		config_obj.OrgId, "transient",
 		query)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func listAvailableEventTimestamps(
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
-		config_obj.OrgId, "results", query)
+		config_obj.OrgId, "transient", query)
 	if err != nil {
 		return nil, err
 	}

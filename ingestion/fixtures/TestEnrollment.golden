@@ -8,5 +8,6 @@
   "hostname": "devbox",
   "system": "linux",
   "type": "main"
+  DocType: "clients",
  }
 }

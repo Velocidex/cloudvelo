@@ -61,7 +61,7 @@ func (self *DeleteNotebookPlugin) Call(ctx context.Context,
 
 		if arg.ReallyDoIt {
 			err := services.DeleteByQuery(
-				ctx, config_obj.OrgId, "notebooks",
+				ctx, config_obj.OrgId, "persisted",
 				json.Format(all_notebook_items, arg.NotebookId))
 			if err != nil {
 				scope.Log("notebook_delete: %v", err)

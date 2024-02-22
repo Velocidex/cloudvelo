@@ -24,8 +24,9 @@ var (
 )
 
 type ConfigEntry struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
+	Type    string `json:"type"`
+	Data    string `json:"data"`
+	DocType string `json:"doc_type"`
 }
 
 type ClientMonitoringManager struct {
@@ -175,10 +176,11 @@ func (self *ClientMonitoringManager) SetClientMonitoringState(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"config", "client_monitoring",
+		"persisted", "client_monitoring",
 		&ConfigEntry{
-			Type: "client_monitoring",
-			Data: json.MustMarshalString(state),
+			Type:    "client_monitoring",
+			Data:    json.MustMarshalString(state),
+			DocType: "config",
 		})
 }
 

@@ -123,7 +123,7 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	// Write the org into the index.
 	return org_record, cvelo_services.SetElasticIndex(self.ctx,
 		services.ROOT_ORG_ID,
-		"orgs", org_record.Id, org_record)
+		"persisted", org_record.Id, org_record)
 }
 
 func (self *OrgManager) makeNewConfigObj(
@@ -145,7 +145,18 @@ func (self *OrgManager) makeNewConfigObj(
 func (self *OrgManager) Scan() error {
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		self.ctx, services.ROOT_ORG_ID,
-		"orgs", `{"query": {"match_all" : {}}, "size": 10000}`)
+		"persisted", `{
+									"query": {
+										"bool":{
+										  "must":[{
+												"match":{
+														"doc_type":"orgs"
+														}
+												  }		
+											],
+										}},
+										"size": 10000
+									}`)
 	if err != nil {
 		return err
 	}

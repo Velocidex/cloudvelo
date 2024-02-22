@@ -26,6 +26,7 @@ type NotebookRecord struct {
 	SharedWith   []string `json:"shared"`
 	Timestamp    int64    `json:"timestamp"`
 	Type         string   `json:"type"`
+	DocType      string   `json:"doc_type"`
 }
 
 type NotebookStoreImpl struct {
@@ -52,7 +53,7 @@ func getType(notebook_id string) string {
 func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error {
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"notebooks", in.NotebookId, &NotebookRecord{
+		"persisted", in.NotebookId, &NotebookRecord{
 			NotebookId: in.NotebookId,
 			Notebook:   json.MustMarshalString(in),
 			Creator:    in.Creator,
@@ -60,7 +61,8 @@ func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error
 			Timestamp:  time.Now().Unix(),
 			SharedWith: append([]string{},
 				in.Collaborators...),
-			Type: getType(in.NotebookId),
+			Type:    getType(in.NotebookId),
+			DocType: "notebooks",
 		})
 }
 
@@ -91,11 +93,12 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 
 	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"notebooks", in.CellId, &NotebookRecord{
+		"persisted", in.CellId, &NotebookRecord{
 			NotebookId:   notebook_id,
 			CellId:       in.CellId,
 			Timestamp:    time.Now().Unix(),
 			NotebookCell: json.MustMarshalString(in),
+			DocType:      "notebooks",
 		})
 	if err != nil {
 		return err

@@ -101,7 +101,7 @@ func (self *ClientInfoBase) Set(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"clients", client_info.ClientId, &api.ClientRecord{
+		"persisted", client_info.ClientId, &api.ClientRecord{
 			ClientId:              client_info.ClientId,
 			Hostname:              client_info.Hostname,
 			System:                client_info.System,
@@ -110,13 +110,14 @@ func (self *ClientInfoBase) Set(
 			MacAddresses:          client_info.MacAddresses,
 			LastHuntTimestamp:     client_info.LastHuntTimestamp,
 			LastEventTableVersion: client_info.LastEventTableVersion,
+			DocType:               "clients",
 		})
 }
 
 func (self ClientInfoBase) Remove(
 	ctx context.Context, client_id string) {
 	cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
-		"clients", client_id, true)
+		"persisted", client_id, true)
 }
 
 // Get a single entry from a client id

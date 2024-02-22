@@ -95,7 +95,7 @@ func (self Labeler) SetClientLabel(
 
 	err := cvelo_services.UpdateIndex(ctx,
 		self.config_obj.OrgId,
-		"clients", client_id+"_labels",
+		"persisted", client_id+"_labels",
 		json.Format(label_update_query, all_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))
 	if err == nil {
@@ -107,12 +107,13 @@ func (self Labeler) SetClientLabel(
 	}
 
 	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId, "clients", client_id+"_labels",
+		self.config_obj.OrgId, "persisted", client_id+"_labels",
 		api.ClientRecord{
 			ClientId:           client_id,
 			Labels:             []string{label},
 			LowerLabels:        []string{strings.ToLower(label)},
 			LastLabelTimestamp: uint64(utils.GetTime().Now().UnixNano()),
+			DocType:            "clients",
 		})
 }
 
@@ -137,7 +138,7 @@ func (self Labeler) RemoveClientLabel(
 	label = strings.TrimSpace(label)
 
 	return cvelo_services.UpdateIndex(ctx, self.config_obj.OrgId,
-		"clients", client_id+"_labels",
+		"persisted", client_id+"_labels",
 		json.Format(label_update_query, remove_label_painless, label,
 			time.Now().UnixNano(), strings.ToLower(label)))
 }

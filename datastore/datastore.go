@@ -101,7 +101,7 @@ func (self ElasticDatastore) SetSubject(
 		DocType:   "datastore",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "results", "", record)
+	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "transient", "", record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(
@@ -118,7 +118,7 @@ func (self ElasticDatastore) DeleteSubject(
 
 	id := services.MakeId(urn.AsClientPath())
 	return services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "results", json.Format(delete_datastore_doc_query, id), services.SyncDelete)
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.SyncDelete)
 }
 
 func (self ElasticDatastore) DeleteSubjectWithCompletion(
@@ -126,7 +126,7 @@ func (self ElasticDatastore) DeleteSubjectWithCompletion(
 	urn api.DSPathSpec, completion func()) error {
 	id := services.MakeId(urn.AsClientPath())
 	return services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "results", json.Format(delete_datastore_doc_query, id), services.AsyncDelete)
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.AsyncDelete)
 }
 
 func (self ElasticDatastore) ListChildren(
@@ -135,7 +135,7 @@ func (self ElasticDatastore) ListChildren(
 
 	dir := urn.AsDatastoreDirectory(config_obj)
 	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
-		"results", json.Format(list_children_query, dir))
+		"transient", json.Format(list_children_query, dir))
 	if err != nil {
 		return nil, err
 	}

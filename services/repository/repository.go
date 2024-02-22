@@ -41,9 +41,17 @@ const (
 	// We only need the names of the artifacts for listing.
 	allNamesQuery = `
 {
-    "query" : {
-        "match_all" : {}
-    }
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "doc_type": "repository"
+                    }
+                }
+            ]
+		}
+	}
 }
 `
 )
@@ -90,9 +98,10 @@ func (self *Repository) List(
 	config_obj *config_proto.Config) ([]string, error) {
 
 	results := ordereddict.NewDict()
-
+	//TODO new index does not like name sortfield
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
-		self.config_obj.OrgId, "repository", allNamesQuery, "name")
+		self.config_obj.OrgId, "persisted", allNamesQuery, "name")
+
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -282,10 +291,11 @@ func (self *Repository) saveArtifact(
 	// Set the artifact in the elastic index.
 	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"repository", artifact.Name,
+		"persisted", artifact.Name,
 		&api.RepositoryEntry{
 			Name:       artifact.Name,
 			Definition: json.MustMarshalString(artifact),
+			DocType:    "repository",
 		})
 
 	// Set the artifact in the LRU

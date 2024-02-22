@@ -120,6 +120,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 			Record: api.ClientRecord{
 				ClientId: "C.ConnectedClient",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.ConnectedClient_ping",
 		},
@@ -128,6 +129,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 			Record: api.ClientRecord{
 				ClientId: "C.WithLabel1",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.WithLabel1_ping",
 		},
@@ -136,6 +138,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 				ClientId:    "C.WithLabel1",
 				Labels:      []string{"Label1"},
 				LowerLabels: []string{"label1"},
+				DocType:     "clients",
 			},
 			Id: "C.WithLabel1_labels",
 		},
@@ -144,6 +147,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 			Record: api.ClientRecord{
 				ClientId: "C.WithLabel2",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.WithLabel2_ping",
 		},
@@ -152,6 +156,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 				ClientId:    "C.WithLabel2",
 				Labels:      []string{"Label2"},
 				LowerLabels: []string{"label2"},
+				DocType:     "clients",
 			},
 			Id: "C.WithLabel2_labels",
 		},
@@ -160,6 +165,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 			Record: api.ClientRecord{
 				ClientId: "C.WithLabel1And2",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.WithLabel1And2_ping",
 		},
@@ -168,6 +174,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 				ClientId:    "C.WithLabel1And2",
 				Labels:      []string{"Label1", "Label2"},
 				LowerLabels: []string{"label1", "label2"},
+				DocType:     "clients",
 			},
 			Id: "C.WithLabel1And2_labels",
 		},
@@ -177,6 +184,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 			Record: api.ClientRecord{
 				ClientId: "C.OfflineClient",
 				Ping:     uint64(utils.GetTime().Now().Add(-72 * time.Hour).UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.OfflineClient_ping",
 		},
@@ -185,7 +193,7 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
+			self.Ctx, config_obj.OrgId, "persisted", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
@@ -370,6 +378,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			Record: api.ClientRecord{
 				ClientId: "C.ConnectedClient",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.ConnectedClient_ping",
 		},
@@ -380,6 +389,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			Record: api.ClientRecord{
 				ClientId: "C.AlreadyRanAllClients",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.AlreadyRanAllClients_ping",
 		},
@@ -387,6 +397,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			Record: api.ClientRecord{
 				ClientId:      "C.AlreadyRanAllClients",
 				AssignedHunts: []string{"H.AllClients"},
+				DocType:       "clients",
 			},
 			Id: "C.AlreadyRanAllClients_hunts",
 		},
@@ -394,6 +405,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			Record: api.ClientRecord{
 				ClientId: "C.WithLabelFoo",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.WithLabelFoo_ping",
 		},
@@ -402,6 +414,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 				ClientId:    "C.WithLabelFoo",
 				Labels:      []string{"Foo"},
 				LowerLabels: []string{"foo"},
+				DocType:     "clients",
 			},
 			Id: "C.WithLabelFoo_labels",
 		},
@@ -411,6 +424,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 			Record: api.ClientRecord{
 				ClientId: "C.OfflineClient",
 				Ping:     uint64(utils.GetTime().Now().Add(-72 * time.Hour).UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.OfflineClient_ping",
 		},
@@ -419,7 +433,7 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
+			self.Ctx, config_obj.OrgId, "persisted", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
@@ -514,11 +528,12 @@ func (self *ForemanTestSuite) TestHuntsAllClients() {
 	// Update the ping time - the client will only be scheduled once
 	// it is online.
 	err = cvelo_services.SetElasticIndex(self.Ctx,
-		config_obj.OrgId, "clients", "C.ConnectedClient_ping",
+		config_obj.OrgId, "persisted", "C.ConnectedClient_ping",
 		&api.ClientRecord{
 			ClientId: "C.ConnectedClient",
 			Type:     "ping",
 			Ping:     uint64(utils.GetTime().Now().Add(time.Second).UnixNano()),
+			DocType:  "clients",
 		})
 	assert.NoError(self.T(), err)
 
@@ -554,9 +569,10 @@ func (self *ForemanTestSuite) testHuntsExpireInFuture() {
 		AssignedHunts: []string{},
 		Labels:        []string{},
 		LowerLabels:   []string{},
+		DocType:       "clients",
 	}
 	err := cvelo_services.SetElasticIndex(
-		self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+		self.Ctx, config_obj.OrgId, "persisted", c.ClientId, c)
 	assert.NoError(self.T(), err)
 
 	plan, err := NewPlan(config_obj)
@@ -663,6 +679,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Windows1",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.Windows1_ping",
 		},
@@ -670,6 +687,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Windows1",
 				System:   "windows",
+				DocType:  "clients",
 			},
 			Id: "C.Windows1",
 		},
@@ -678,6 +696,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Windows2",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.Windows2_ping",
 		},
@@ -685,6 +704,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Windows2",
 				System:   "windows",
+				DocType:  "clients",
 			},
 			Id: "C.Windows2",
 		},
@@ -692,6 +712,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Linux1",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.Linux1_ping",
 		},
@@ -699,6 +720,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Linux1",
 				System:   "linux",
+				DocType:  "clients",
 			},
 			Id: "C.Linux1",
 		},
@@ -721,7 +743,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.Id, c.Record)
+			self.Ctx, config_obj.OrgId, "persisted", c.Id, c.Record)
 		assert.NoError(self.T(), err)
 	}
 
@@ -796,7 +818,7 @@ func (self *ForemanTestSuite) checkAssignedHunts(clientId string, expectedHunts 
 func TestForeman(t *testing.T) {
 	suite.Run(t, &ForemanTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients", "hunts", "repository", "tasks"},
+			Indexes: []string{"persisted"},
 		},
 	})
 }

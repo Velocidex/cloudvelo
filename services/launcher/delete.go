@@ -78,7 +78,7 @@ func (self *FlowStorageManager) DeleteFlow(
 
 	// Order results to facilitate deletion - container deletion
 	// happens after we read its contents.
-	r.delete_index("UploadMetadata", "results", "vfs_path",
+	r.delete_index("UploadMetadata", "transient", "vfs_path",
 		upload_metadata_path.AsClientPath())
 
 	// Remove all result sets from artifacts.
@@ -93,17 +93,17 @@ func (self *FlowStorageManager) DeleteFlow(
 		if err != nil {
 			continue
 		}
-		r.delete_index("Result", "results", "vfs_path",
+		r.delete_index("Result", "transient", "vfs_path",
 			result_path.AsClientPath())
 	}
 
-	r.delete_index("Log", "results", "vfs_path",
+	r.delete_index("Log", "transient", "vfs_path",
 		flow_path_manager.Log().AsClientPath())
 	r.delete_index("CollectionContext", "collections", "session_id", flow_id)
 
 	// All notebook and their cells
 	notebook_id := fmt.Sprintf("N.%s-%s", flow_id, client_id)
-	r.delete_index("Notebook", "notebooks", "notebook_id", notebook_id)
+	r.delete_index("Notebook", "persisted", "notebook_id", notebook_id)
 
 	return r.responses, nil
 }

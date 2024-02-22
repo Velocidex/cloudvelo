@@ -21,6 +21,7 @@ type HuntEntry struct {
 	Errors    uint64 `json:"errors"`
 	Hunt      string `json:"hunt"`
 	State     string `json:"state"`
+	DocType   string `json:"doc_type"`
 }
 
 func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
@@ -80,9 +81,10 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 	}
 
 	record := &HuntEntry{
-		HuntId: hunt_id,
-		Hunt:   string(serialized),
-		State:  hunt.State.String(),
+		HuntId:  hunt_id,
+		Hunt:    string(serialized),
+		State:   hunt.State.String(),
+		DocType: "hunts",
 	}
 
 	if hunt.Stats != nil {
@@ -93,7 +95,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"hunts", hunt.HuntId, record)
+		"persisted", hunt.HuntId, record)
 }
 
 func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
@@ -135,12 +137,24 @@ func (self HuntDispatcher) Refresh(
 
 func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
 
+// TODO add sort and from/size clause
 const getAllHuntsQuery = `
-{"query": {"match_all" : {}},
- "sort": [{
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "doc_type": "hunts"
+                    }
+                }
+            ]
+		}
+	},"sort": [{
     "hunt_id": {"order": "desc", "unmapped_type": "keyword"}
 }],
- "from": %q, "size": %q}
+ "from": %q, "size": %q
+}
 `
 
 func (self HuntDispatcher) ListHunts(
@@ -150,7 +164,7 @@ func (self HuntDispatcher) ListHunts(
 
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId,
-		"hunts", json.Format(getAllHuntsQuery, in.Offset, in.Count))
+		"persisted", json.Format(getAllHuntsQuery, in.Offset, in.Count))
 	if err != nil {
 		return nil, err
 	}
