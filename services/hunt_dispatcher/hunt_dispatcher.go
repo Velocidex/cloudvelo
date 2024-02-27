@@ -100,7 +100,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 
 func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
 	serialized, err := cvelo_services.GetElasticRecord(context.Background(),
-		self.config_obj.OrgId, "hunts", hunt_id)
+		self.config_obj.OrgId, "persisted", hunt_id)
 	if err != nil {
 		return nil, false
 	}

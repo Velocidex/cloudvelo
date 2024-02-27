@@ -131,7 +131,7 @@ func (self *UserManager) GetUserWithHashes(
 	}
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		services.ROOT_ORG_ID, "users", username)
+		services.ROOT_ORG_ID, "persisted", username)
 	if err != nil {
 		return nil, err
 	}
