@@ -185,7 +185,7 @@ func (self *Repository) LoadProto(
 func (self *Repository) Del(name string) {
 	self.lru.Remove(name)
 	cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
-		"repository", name, cvelo_services.SyncDelete)
+		"perrsisted", name, cvelo_services.SyncDelete)
 }
 
 func (self *Repository) Get(
@@ -257,7 +257,7 @@ func (self *Repository) getFromBackend(
 
 	// Nope - get it from the backend.
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		self.config_obj.OrgId, "repository", name)
+		self.config_obj.OrgId, "persisted", name)
 	if err != nil {
 		return nil, false
 	}

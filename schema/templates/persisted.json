@@ -75,7 +75,8 @@
         },
         "gui_options": {
           "type": "binary"
-        }, "client_id": {
+        },
+        "client_id": {
           "type": "keyword"
         },
         "hostname": {

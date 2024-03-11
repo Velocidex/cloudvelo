@@ -23,7 +23,8 @@ const (
             "should": [
               {"match": {"creator" : %q}},
               {"match": {"shared": %q}},
-              {"match": {"public": true}}
+              {"match": {"public": true}},
+              {"match": {"doc_type" : "notebooks"}}
            ]}
         },
         {"match": {"type": "User"}}

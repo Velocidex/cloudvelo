@@ -106,7 +106,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			Set("client_id", self.client_id)))
 
 	result, err := cvelo_services.GetElasticRecord(context.Background(),
-		self.ConfigObj.OrgId, "clients", self.client_id)
+		self.ConfigObj.OrgId, "persisted", self.client_id)
 	assert.Nil(self.T(), result)
 	assert.Equal(self.T(), err, os.ErrNotExist)
 

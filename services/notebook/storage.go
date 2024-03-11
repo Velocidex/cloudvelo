@@ -70,7 +70,7 @@ func (self *NotebookStoreImpl) GetNotebook(notebook_id string) (
 	*api_proto.NotebookMetadata, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(
-		self.ctx, self.config_obj.OrgId, "notebooks", notebook_id)
+		self.ctx, self.config_obj.OrgId, "persisted", notebook_id)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (self *NotebookStoreImpl) GetNotebookCell(notebook_id, cell_id string) (
 	*api_proto.NotebookCell, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(
-		self.ctx, self.config_obj.OrgId, "notebooks", cell_id)
+		self.ctx, self.config_obj.OrgId, "persisted", cell_id)
 	if err != nil {
 		return nil, err
 	}
