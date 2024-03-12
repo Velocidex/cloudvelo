@@ -21,7 +21,6 @@ var (
       "must": [
  		 {"match": {"doc_type" : "tasks"}},		
          {"match": {"client_id" : %q}},
-		 {"match": {"doc_type": "repository"}}
       ]}
   }
 }

@@ -268,9 +268,7 @@ func (self *Indexer) searchWithPrefixedNames(
 
 	result := []*api.ClientRecord{}
 	for _, hit := range hits {
-		record := &api.ClientRecord{
-			DocType: "clients",
-		}
+		record := &api.ClientRecord{}
 		err = json.Unmarshal(hit, record)
 		if err != nil || record.ClientId == "" {
 			continue

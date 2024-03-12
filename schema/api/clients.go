@@ -91,9 +91,7 @@ func GetMultipleClients(
 	// Preserve the lookup order
 	lookup := ordereddict.NewDict() // make(map[string]*ClientRecord)
 	for _, hit := range hits {
-		record := &ClientRecord{
-			DocType: "clients",
-		}
+		record := &ClientRecord{}
 		err = json.Unmarshal(hit, record)
 		if err != nil || record.ClientId == "" {
 			continue

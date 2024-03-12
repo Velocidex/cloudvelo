@@ -156,9 +156,7 @@ func getMinimalClientInfo(
 	}
 
 	for hit := range hits {
-		h := &api.ClientRecord{
-			DocType: "clients",
-		}
+		h := &api.ClientRecord{}
 		err := json.Unmarshal(hit, h)
 		if err != nil {
 			continue
@@ -493,9 +491,7 @@ func (self Foreman) getClientHuntMembership(
 	}
 
 	for hit := range hits {
-		client_record := &api.ClientRecord{
-			DocType: "clients",
-		}
+		client_record := &api.ClientRecord{}
 		err = json.Unmarshal(hit, client_record)
 		if err != nil {
 			continue
@@ -530,9 +526,7 @@ func (self Foreman) getClientsSeenAfter(
 		}
 
 		for hit := range hits {
-			client_record := &api.ClientRecord{
-				DocType: "clients",
-			}
+			client_record := &api.ClientRecord{}
 			err := json.Unmarshal(hit, client_record)
 			if err != nil || client_record.ClientId == "" {
 				continue
