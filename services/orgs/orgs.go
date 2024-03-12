@@ -153,7 +153,7 @@ func (self *OrgManager) Scan() error {
 														"doc_type":"orgs"
 														}
 												  }		
-											],
+											]
 										}},
 										"size": 10000
 									}`)

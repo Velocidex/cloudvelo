@@ -120,7 +120,7 @@ const getMinimalClientInfoQuery = `{
               }
             ]
           }
-        },,
+        },
 		{
 			"match": {
               "doc_type": "clients"
