@@ -84,10 +84,9 @@ func (self Indexer) SearchIndexWithPrefix(
 {
 	"query": {"bool": {
 		"must": [
-				%s,
 					{
                     "match": {
-                        "doc_type": "index"
+                        "doc_type": "clients"
                     }
                 	}
 				]

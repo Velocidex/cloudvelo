@@ -131,7 +131,7 @@ func (self ClientMonitoringManager) makeDefaultClientMonitoringLabel() *flows_pr
 func (self ClientMonitoringManager) GetClientMonitoringState() *flows_proto.ClientEventTable {
 	ctx := context.Background()
 	serialized, err := cvelo_services.GetElasticRecord(
-		ctx, self.config_obj.OrgId, "config", "client_monitoring")
+		ctx, self.config_obj.OrgId, "persisted", "client_monitoring")
 	if err != nil {
 		table := self.makeDefaultClientMonitoringLabel()
 		self.SetClientMonitoringState(ctx, self.config_obj, "", table)
