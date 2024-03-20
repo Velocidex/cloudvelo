@@ -65,7 +65,7 @@ func (self *serverPublicKeyResolver) GetPublicKey(
 
 	record, err := cvelo_services.GetElasticRecord(
 		context.Background(), config_obj.OrgId,
-		"client_keys", client_id)
+		"persisted", client_id)
 	if err != nil {
 		return nil, false
 	}

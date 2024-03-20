@@ -113,7 +113,7 @@ func (self *IngestionTestSuite) TestEnrollment() {
 	client_id := "C.1352adc54e292a23"
 
 	record, err := cvelo_services.GetElasticRecord(self.ctx,
-		"test", "client_keys", client_id+"-test")
+		"test", "persisted", client_id+"-test")
 	assert.NoError(self.T(), err)
 	self.golden.Set("Enrollment", record)
 
