@@ -25,11 +25,15 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+type OrgRecord struct {
+	*api_proto.OrgRecord
+	DocType string `json:"doc_type"`
+}
+
 type OrgContext struct {
-	record     *api_proto.OrgRecord
+	record     *OrgRecord
 	config_obj *config_proto.Config
 	service    services.ServiceContainer
-	DocType    string `json:"doc_type"`
 }
 
 type OrgManager struct {
@@ -81,7 +85,7 @@ func (self *OrgManager) GetOrg(org_id string) (*api_proto.OrgRecord, error) {
 	if !pres {
 		return nil, services.NotFoundError
 	}
-	return result.record, nil
+	return result.record.OrgRecord, nil
 }
 
 func (self *OrgManager) OrgIdByNonce(nonce string) (string, error) {
@@ -119,12 +123,12 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.Id
 	self.mu.Unlock()
 
-	org_record := org_context.record
-
+	orgRecordDocType := org_context.record
+	orgRecord := orgRecordDocType.OrgRecord
 	// Write the org into the index.
-	return org_record, cvelo_services.SetElasticIndex(self.ctx,
+	return orgRecord, cvelo_services.SetElasticIndex(self.ctx,
 		services.ROOT_ORG_ID,
-		"persisted", org_record.Id, org_record)
+		"persisted", orgRecord.Id, orgRecordDocType)
 }
 
 func (self *OrgManager) makeNewConfigObj(
@@ -163,7 +167,7 @@ func (self *OrgManager) Scan() error {
 	}
 
 	for _, hit := range hits {
-		record := &api_proto.OrgRecord{}
+		record := &OrgRecord{}
 		err = json.Unmarshal(hit, record)
 		if err == nil {
 			// Read existing records for backwards compatibility
