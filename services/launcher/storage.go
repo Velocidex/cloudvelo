@@ -50,7 +50,7 @@ func (self *FlowStorageManager) WriteTask(
 	config_obj *config_proto.Config,
 	client_id string, msg *crypto_proto.VeloMessage) error {
 
-	doc_id := api.GetDocumentIdForCollection(client_id, msg.SessionId, "tasks")
+	doc_id := api.GetDocumentIdForCollection(client_id, msg.SessionId, "task")
 	messages := &api_proto.ApiFlowRequestDetails{
 		Items: []*crypto_proto.VeloMessage{msg},
 	}

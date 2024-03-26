@@ -728,6 +728,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Linux2",
 				Ping:     uint64(utils.GetTime().Now().UnixNano()),
+				DocType:  "clients",
 			},
 			Id: "C.Linux2_ping",
 		},
@@ -735,6 +736,7 @@ func (self *ForemanTestSuite) TestHuntsByOS() {
 			Record: api.ClientRecord{
 				ClientId: "C.Linux2",
 				System:   "linux",
+				DocType:  "clients",
 			},
 			Id: "C.Linux2",
 		},

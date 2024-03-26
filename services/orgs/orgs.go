@@ -29,6 +29,7 @@ type OrgContext struct {
 	record     *api_proto.OrgRecord
 	config_obj *config_proto.Config
 	service    services.ServiceContainer
+	DocType    string `json:"doc_type"`
 }
 
 type OrgManager struct {

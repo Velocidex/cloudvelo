@@ -28,13 +28,13 @@ const (
 
 	// Query to retrieve all the task queued for a client.
 	getClientTasksQuery = `{
-  "sort": [
-  {
-    "timestamp": {"order": "asc"}
+  "sort": [{
+    "timestamp": {"order": "asc", "unmapped_type" : "long"}
   }],
   "query": {
     "bool": {
       "must": [
+ 		 {"match": {"doc_type" : "task"}},		
          {"match": {"client_id" : %q}}
       ]}
   }

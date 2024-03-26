@@ -19,8 +19,8 @@ var (
   "query": {
     "bool": {
       "must": [
- 		 {"match": {"doc_type" : "tasks"}},		
-         {"match": {"client_id" : %q}},
+ 		 {"match": {"doc_type" : "task"}},		
+         {"match": {"client_id" : %q}}
       ]}
   }
 }
@@ -44,7 +44,7 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 			FlowId:    req.SessionId,
 			Timestamp: time.Now().UnixNano(),
 			JSONData:  string(serialized),
-			DocType:   "tasks",
+			DocType:   "task",
 		})
 }
 

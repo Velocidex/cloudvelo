@@ -36,10 +36,11 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 	// Create a new service container and cache it for next time
 	record := &api_proto.OrgRecord{
 		// For backwards compatibility
-		OrgId: org_id,
-		Id:    org_id,
-		Name:  name,
-		Nonce: nonce,
+		OrgId:   org_id,
+		Id:      org_id,
+		Name:    name,
+		Nonce:   nonce,
+		DocType: "orgs",
 	}
 
 	if utils.IsRootOrg(org_id) {
@@ -61,6 +62,7 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 		record:     record,
 		config_obj: org_config,
 		service:    service_manager,
+		DocType:    "orgs",
 	}
 
 	self.mu.Lock()
@@ -136,10 +138,11 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgContext, error) {
 	// Create a new service container and cache it for next time
 	record := &api_proto.OrgRecord{
-		OrgId: org_id,
-		Id:    org_id,
-		Name:  name,
-		Nonce: nonce,
+		OrgId:   org_id,
+		Id:      org_id,
+		Name:    name,
+		Nonce:   nonce,
+		DocType: "orgs",
 	}
 
 	if utils.IsRootOrg(org_id) {
@@ -160,6 +163,7 @@ func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgCo
 		record:     record,
 		config_obj: org_config,
 		service:    service_manager,
+		DocType:    "orgs",
 	}
 
 	self.mu.Lock()
