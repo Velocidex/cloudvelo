@@ -36,7 +36,7 @@ func (self *ServerArtifactRunner) CloudConfig() *config.ElasticConfiguration {
 func (self *ServerArtifactRunner) Cancel(
 	ctx context.Context, flow_id, principal string) {
 	cvelo_services.SetElasticIndex(
-		self.ctx, self.config_obj.OrgId, "collections",
+		self.ctx, self.config_obj.OrgId, "transient",
 		flow_id+"_cancel", &api.ArtifactCollectorRecord{
 			ClientId:  principal,
 			SessionId: flow_id,
@@ -78,7 +78,7 @@ func (self *ServerArtifactRunner) LaunchServerArtifact(
 			case <-utils.GetTime().After(10 * time.Second):
 				// If this record appears, we immediately cancel.
 				serialized, err := cvelo_services.GetElasticRecord(sub_ctx,
-					self.config_obj.OrgId, "collections", session_id+"_cancel")
+					self.config_obj.OrgId, "transient", session_id+"_cancel")
 				if err == nil {
 					record := &api.ArtifactCollectorRecord{}
 					err = json.Unmarshal(serialized, record)

@@ -17,11 +17,12 @@ func (self Ingestor) HandlePing(
 	message *crypto_proto.VeloMessage) error {
 
 	err := services.SetElasticIndex(ctx,
-		config_obj.OrgId, "clients", message.Source+"_ping",
+		config_obj.OrgId, "persisted", message.Source+"_ping",
 		&api.ClientRecord{
 			ClientId: message.Source,
 			Type:     "ping",
 			Ping:     uint64(utils.GetTime().Now().UnixNano()),
+			DocType:  "clients",
 		})
 	if err == nil ||
 		strings.Contains(err.Error(), "document_missing_exception") {

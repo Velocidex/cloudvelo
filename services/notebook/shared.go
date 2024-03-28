@@ -23,7 +23,8 @@ const (
             "should": [
               {"match": {"creator" : %q}},
               {"match": {"shared": %q}},
-              {"match": {"public": true}}
+              {"match": {"public": true}},
+              {"match": {"doc_type" : "notebooks"}}
            ]}
         },
         {"match": {"type": "User"}}
@@ -40,7 +41,7 @@ func (self *NotebookManager) GetSharedNotebooks(
 	ctx context.Context, user string, offset, count uint64) (
 	[]*api_proto.NotebookMetadata, error) {
 	hits, _, err := cvelo_services.QueryElasticRaw(
-		ctx, self.config_obj.OrgId, "notebooks",
+		ctx, self.config_obj.OrgId, "persisted",
 		json.Format(query, user, user, count, offset))
 	if err != nil {
 		return nil, err

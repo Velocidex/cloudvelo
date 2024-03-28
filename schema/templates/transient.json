@@ -1,6 +1,6 @@
 {
     "index_patterns": [
-        "*results"
+        "*transient"
     ],
     "data_stream": {
         "timestamp_field": {
@@ -84,6 +84,9 @@
                 },
                 "is_dispatched": {
                     "type": "boolean"
+                },
+                "key": {
+                    "type": "keyword"
                 }
             }
         }

@@ -21,7 +21,8 @@ var (
 )
 
 type ACLRecord struct {
-	ACL string `json:"acl"`
+	ACL     string `json:"acl"`
+	DocType string `json:"doc_type"`
 }
 
 type ACLManager struct {
@@ -55,7 +56,7 @@ func (self ACLManager) GetPolicy(
 
 	hit, err := cvelo_services.GetElasticRecord(
 		context.Background(), config_obj.OrgId,
-		"acls", principal)
+		"persisted", principal)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +96,9 @@ func (self ACLManager) SetPolicy(
 	acl_lru.Set(key, acl_obj)
 	return cvelo_services.SetElasticIndex(self.ctx,
 		config_obj.OrgId,
-		"acls", principal, &ACLRecord{
-			ACL: json.MustMarshalString(acl_obj),
+		"persisted", principal, &ACLRecord{
+			ACL:     json.MustMarshalString(acl_obj),
+			DocType: "acls",
 		})
 }
 

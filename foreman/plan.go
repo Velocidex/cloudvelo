@@ -154,12 +154,13 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 		// version
 		for _, client_id := range clients {
 			cvelo_services.SetElasticIndexAsync(
-				org_config_obj.OrgId, "clients",
+				org_config_obj.OrgId, "persisted",
 				client_id+"_last_event_version",
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
 					ClientId: client_id,
 					LastEventTableVersion: self.
 						current_monitoring_state.Version,
+					DocType: "clients",
 				})
 		}
 
@@ -221,10 +222,11 @@ func (self *Plan) ExecuteHuntUpdate(
 		// on this client.
 		for _, client_id := range clients {
 			cvelo_services.SetElasticIndexAsync(
-				org_config_obj.OrgId, "clients", "",
+				org_config_obj.OrgId, "persisted", "",
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
 					ClientId:      client_id,
 					AssignedHunts: []string{hunt.HuntId},
+					DocType:       "clients",
 				})
 		}
 	}

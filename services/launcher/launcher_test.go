@@ -28,13 +28,13 @@ const (
 
 	// Query to retrieve all the task queued for a client.
 	getClientTasksQuery = `{
-  "sort": [
-  {
-    "timestamp": {"order": "asc"}
+  "sort": [{
+    "timestamp": {"order": "asc", "unmapped_type" : "long"}
   }],
   "query": {
     "bool": {
       "must": [
+ 		 {"match": {"doc_type" : "task"}},		
          {"match": {"client_id" : %q}}
       ]}
   }
@@ -181,7 +181,7 @@ sources:
 func TestLauncher(t *testing.T) {
 	suite.Run(t, &LauncherTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"tasks", "collections", "results"},
+			Indexes: []string{"persisted", "transient"},
 		},
 	})
 }
@@ -193,7 +193,7 @@ func PeekClientTasks(ctx context.Context,
 
 	query := json.Format(getClientTasksQuery, client_id)
 	hits, err := cvelo_services.QueryElastic(ctx, config_obj.OrgId,
-		"tasks", query)
+		"persisted", query)
 	if err != nil {
 		return nil, err
 	}

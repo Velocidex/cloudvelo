@@ -80,7 +80,7 @@ func (self *Indexer) searchWithNames(
 	query := json.Format(getAllClientsAgg, field, label,
 		field, offset, limit+1)
 	hits, err := cvelo_services.QueryElasticAggregations(
-		ctx, config_obj.OrgId, "clients", query)
+		ctx, config_obj.OrgId, "persisted", query)
 	if err != nil {
 		return nil, err
 	}

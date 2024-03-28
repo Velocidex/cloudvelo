@@ -42,6 +42,11 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 		Nonce: nonce,
 	}
 
+	orgRecord := &OrgRecord{
+		record,
+		"orgs",
+	}
+
 	if utils.IsRootOrg(org_id) {
 		record.OrgId = "root"
 		record.Id = "root"
@@ -58,7 +63,7 @@ func (self *OrgManager) makeNewOrgContext(org_id, name, nonce string) (*OrgConte
 	}
 
 	org_context := &OrgContext{
-		record:     record,
+		record:     orgRecord,
 		config_obj: org_config,
 		service:    service_manager,
 	}
@@ -141,6 +146,10 @@ func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgCo
 		Name:  name,
 		Nonce: nonce,
 	}
+	orgRecord := &OrgRecord{
+		record,
+		"orgs",
+	}
 
 	if utils.IsRootOrg(org_id) {
 		record.OrgId = "root"
@@ -157,7 +166,7 @@ func (self *OrgManager) makeClientOrgContext(org_id, name, nonce string) (*OrgCo
 	}
 
 	org_context := &OrgContext{
-		record:     record,
+		record:     orgRecord,
 		config_obj: org_config,
 		service:    service_manager,
 	}

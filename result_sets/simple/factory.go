@@ -26,7 +26,7 @@ func (self ResultSetFactory) NewResultSetWriter(
 		base_record := NewSimpleResultSetRecord(log_path)
 		if base_record.VFSPath != "" {
 			err := cvelo_services.DeleteByQuery(context.Background(), org_id,
-				"results", json.Format(`
+				"transient", json.Format(`
 {"query": {"bool": {"must": [
   {"match": {"vfs_path": %q}}
 ]}}}`, base_record.VFSPath))

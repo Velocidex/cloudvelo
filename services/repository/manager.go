@@ -181,7 +181,7 @@ func (self *RepositoryManager) DeleteArtifactFile(
 	ctx context.Context, config_obj *config_proto.Config,
 	principal, name string) error {
 	err := cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
-		"repository", name, cvelo_services.Sync)
+		"persisted", name, cvelo_services.Sync)
 	if err != nil {
 		return err
 	}

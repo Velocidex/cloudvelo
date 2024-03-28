@@ -18,7 +18,7 @@ import (
 )
 
 // This record is mapped to the results index (see
-// schema/templates/results.json).
+// schema/templates/transient.json).
 type VFSRecord struct {
 	Id         string   `json:"id"`
 	ClientId   string   `json:"client_id"`

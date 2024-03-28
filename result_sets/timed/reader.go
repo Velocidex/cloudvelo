@@ -98,7 +98,7 @@ func (self *TimedResultSetReader) Rows(
 
 		hits_chan, err := cvelo_services.QueryChan(
 			subctx, self.config_obj.VeloConf(), 1000,
-			self.config_obj.OrgId, "results", query,
+			self.config_obj.OrgId, "transient", query,
 			"timestamp")
 		if err != nil {
 			logger := logging.GetLogger(

@@ -52,7 +52,7 @@ func (self HuntDispatcher) GetFlows(
 		query := json.Format(getHuntsFlowsQuery, start, hunt_id)
 		hits, err := cvelo_services.QueryChan(
 			ctx, config_obj, 1000, self.config_obj.OrgId,
-			"results", query, "timestamp")
+			"transient", query, "timestamp")
 		if err != nil {
 			scope.Log("GetFlows for hunt %v: %v", hunt_id, err)
 			return

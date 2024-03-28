@@ -19,7 +19,8 @@ const (
 {"query": {
     "bool": {
         "must": [
-            {"match": {"client_id": %q}}
+            {"match": {"client_id": %q}},
+            {"match": {"doc_type": "clients"}}
         ]}
 }}
 `
@@ -61,7 +62,7 @@ func (self DeleteClientPlugin) Call(ctx context.Context,
 			return
 		}
 
-		indexes := []string{"collections", "results", "hunts", "clients", "tasks"}
+		indexes := []string{"transient", "persisted"}
 		for _, index := range indexes {
 			if arg.ReallyDoIt {
 				err = removeClientDocs(ctx, config_obj, index, arg.ClientId)

@@ -38,7 +38,7 @@ func (self Nofitier) ListenForNotification(id string) (chan bool, func()) {
 
 			case <-time.After(self.poll):
 				serialized, err := cvelo_services.GetElasticRecord(
-					ctx, self.config_obj.OrgId, "notifications", id)
+					ctx, self.config_obj.OrgId, "persisted", id)
 				if err != nil {
 					continue
 				}
@@ -66,10 +66,11 @@ func (self Nofitier) NotifyListener(
 	config_obj *config_proto.Config, id, tag string) error {
 	return cvelo_services.SetElasticIndex(
 		context.Background(),
-		self.config_obj.OrgId, "notifications",
+		self.config_obj.OrgId, "persisted",
 		id, &api.NotificationRecord{
 			Key:       id,
 			Timestamp: time.Now().Unix(),
+			DocType:   "tasks",
 		})
 }
 

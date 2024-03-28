@@ -77,7 +77,7 @@ func (self Launcher) GetFlows(
 
 	query := fmt.Sprintf(getCollectionsQuery, client_id)
 	records, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "results", query)
+		config_obj.OrgId, "transient", query)
 	if err != nil {
 		return nil, err
 	}

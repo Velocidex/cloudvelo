@@ -42,7 +42,7 @@ func (self *OrgManager) DeleteOrg(
 
 	// Remove the org from the index.
 	err = cvelo_services.DeleteDocument(ctx,
-		services.ROOT_ORG_ID, "orgs",
+		services.ROOT_ORG_ID, "persisted",
 		org_id, cvelo_services.SyncDelete)
 	if err != nil {
 		return err

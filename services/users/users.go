@@ -25,11 +25,13 @@ import (
 type UserRecord struct {
 	Username string `json:"username"`
 	Record   string `json:"record"` // An encoded api_proto.VelociraptorUser
+	DocType  string `json:"doc_type"`
 }
 
 type UserGUIOptions struct {
 	Username   string `json:"username"`
 	GUIOptions string `json:"gui_options"` // An endoded api_proto.SetGUIOptionsRequest
+	DocType    string `json:"doc_type"`
 }
 
 type UserManager struct {
@@ -51,9 +53,10 @@ func (self *UserManager) SetUser(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"users", user_record.Name, &UserRecord{
+		"persisted", user_record.Name, &UserRecord{
 			Username: user_record.Name,
 			Record:   string(serialized),
+			DocType:  "users",
 		})
 }
 
@@ -61,7 +64,7 @@ func (self *UserManager) ListUsers(ctx context.Context) (
 	[]*api_proto.VelociraptorUser, error) {
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		self.ctx, services.ROOT_ORG_ID,
-		"users", `{"query": {"match_all": {}}}`)
+		"persisted", `{"query": {"bool":{"must":[{"match":{"doc_type":"users"}}]}}}`)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +131,7 @@ func (self *UserManager) GetUserWithHashes(
 	}
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		services.ROOT_ORG_ID, "users", username)
+		services.ROOT_ORG_ID, "persisted", username)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +222,10 @@ func (self *UserManager) SetUserOptions(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"user_options", username, &UserGUIOptions{
+		"persisted", username, &UserGUIOptions{
 			Username:   username,
 			GUIOptions: string(serialized),
+			DocType:    "user_options",
 		})
 }
 
@@ -229,7 +233,7 @@ func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		services.ROOT_ORG_ID, "user_options", username)
+		services.ROOT_ORG_ID, "persisted", username)
 	if err == os.ErrNotExist || len(serialized) == 0 {
 		return &api_proto.SetGUIOptionsRequest{}, nil
 	}
