@@ -70,7 +70,7 @@ func (self Nofitier) NotifyListener(
 		id, &api.NotificationRecord{
 			Key:       id,
 			Timestamp: time.Now().Unix(),
-			DocType:   "tasks",
+			DocType:   "notifications",
 		})
 }
 

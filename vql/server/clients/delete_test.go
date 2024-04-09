@@ -2,16 +2,15 @@ package clients
 
 import (
 	"context"
-	"os"
-	"testing"
-	"time"
-
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
 	"github.com/stretchr/testify/suite"
+	"testing"
+	"time"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
+	"www.velocidex.com/golang/velociraptor/json"
 
 	"www.velocidex.com/golang/velociraptor/logging"
 	_ "www.velocidex.com/golang/velociraptor/result_sets/simple"
@@ -105,10 +104,11 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			Set("really_do_it", true).
 			Set("client_id", self.client_id)))
 
-	result, err := cvelo_services.GetElasticRecord(context.Background(),
-		self.ConfigObj.OrgId, "persisted", self.client_id)
+	result, _, err := cvelo_services.QueryElasticRaw(
+		ctx, self.ConfigObj.OrgId,
+		"persisted", json.Format(all_client_items, self.client_id))
 	assert.Nil(self.T(), result)
-	assert.Equal(self.T(), err, os.ErrNotExist)
+	assert.Equal(self.T(), err, nil)
 
 	// TODO - verify that files are deleted
 	// TODO - verify that this client is removed from other indexes
