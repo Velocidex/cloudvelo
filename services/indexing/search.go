@@ -103,18 +103,14 @@ const (
  }],
  "_source": false,
  "query": {
-	"bool": {
-		"must": [
-				%s,
-					{
-                    "match": {
-                        "doc_type": "clients"
-                    }
-                	}
-				]
-			}
-		}
- %s
+   "bool": {
+     "must": [
+       %s, {"match": {
+                "doc_type": "clients"
+           }}]
+   }
+}
+%s
 }
 `
 	getAllClientsNamesQuery = `

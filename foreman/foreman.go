@@ -121,12 +121,12 @@ const getMinimalClientInfoQuery = `{
             ]
           }
         },
-		{
-			"match": {
+        {
+            "match": {
               "doc_type": "clients"
-              
+
             }
-		}
+        }
       ]
     }
   }
@@ -434,12 +434,12 @@ const (
             }
           }
         },
-		{
-			"match": {
+        {
+            "match": {
               "doc_type": "clients"
-              
+
             }
-		}
+        }
       ]
     }
   }
@@ -462,12 +462,12 @@ const (
             }
           }
         },
-		{
-			"match": {
+        {
+            "match": {
               "doc_type": "clients"
-              
+
             }
-		}
+        }
       ]
     }
   }

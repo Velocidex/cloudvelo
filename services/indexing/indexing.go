@@ -82,16 +82,12 @@ func (self Indexer) SearchIndexWithPrefix(
 		case "all":
 			query := `
 {
-	"query": {"bool": {
-		"must": [
-					{
-                    "match": {
-                        "doc_type": "clients"
-                    }
-                	}
-				]
-			}},
-	"_source": {"includes": ["client_id"]}
+    "query": {"bool": {
+        "must": [{"match": {
+                    "doc_type": "clients"
+                  }}]
+         }},
+    "_source": {"includes": ["client_id"]}
 }`
 			self.getIndexRecords(ctx, config_obj, query, output_chan)
 			return

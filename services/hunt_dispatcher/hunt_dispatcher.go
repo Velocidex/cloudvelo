@@ -141,16 +141,12 @@ func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
 const getAllHuntsQuery = `
 {
     "query": {
-        "bool": {
-            "must": [
-                {
-                    "match": {
-                        "doc_type": "hunts"
-                    }
-                }
-            ]
-		}
-	},"sort": [{
+      "bool": {
+        "must": [{"match": {
+                    "doc_type": "hunts"
+                 }}]
+      }
+    },"sort": [{
     "hunt_id": {"order": "desc", "unmapped_type": "keyword"}
 }],
  "from": %q, "size": %q

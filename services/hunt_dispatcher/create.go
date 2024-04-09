@@ -130,9 +130,9 @@ func (self HuntDispatcher) CreateHunt(
 
 	// The actual hunt scheduling is done by the foreman.
 	/*
-		if hunt.State == api_proto.Hunt_RUNNING {
-			scheduleClientsForHunt(ctx, config_obj, hunt)
-		}
+	   if hunt.State == api_proto.Hunt_RUNNING {
+	       scheduleClientsForHunt(ctx, config_obj, hunt)
+	   }
 	*/
 	return hunt_id, nil
 }
