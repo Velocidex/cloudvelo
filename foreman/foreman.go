@@ -71,7 +71,7 @@ func (self Foreman) stopHunt(
 `
 
 	return cvelo_services.UpdateIndex(
-		ctx, org_config_obj.OrgId, "hunts", hunt.HuntId, stopHuntQuery)
+		ctx, org_config_obj.OrgId, "persisted", hunt.HuntId, stopHuntQuery)
 }
 
 // Rather than retrieving the entire client record we only get those
@@ -120,6 +120,12 @@ const getMinimalClientInfoQuery = `{
               }
             ]
           }
+        },
+        {
+            "match": {
+              "doc_type": "clients"
+
+            }
         }
       ]
     }
@@ -140,10 +146,11 @@ func getMinimalClientInfo(
 
 	result := &api.ClientRecord{
 		ClientId: client_id,
+		DocType:  "clients",
 	}
 	hits, err := cvelo_services.QueryChan(ctx,
 		config_obj, 1000, config_obj.OrgId,
-		"clients", query, "client_id")
+		"persisted", query, "client_id")
 	if err != nil {
 		return nil, err
 	}
@@ -426,6 +433,12 @@ const (
               "gt": %q
             }
           }
+        },
+        {
+            "match": {
+              "doc_type": "clients"
+
+            }
         }
       ]
     }
@@ -448,6 +461,12 @@ const (
                "value": %q
             }
           }
+        },
+        {
+            "match": {
+              "doc_type": "clients"
+
+            }
         }
       ]
     }
@@ -466,7 +485,7 @@ func (self Foreman) getClientHuntMembership(
 	seen := make(map[string]bool)
 	hits, err := cvelo_services.QueryChan(ctx,
 		config_obj, 1000, config_obj.OrgId,
-		"clients", query, "client_id")
+		"persisted", query, "client_id")
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +518,7 @@ func (self Foreman) getClientsSeenAfter(
 
 		hits, err := cvelo_services.QueryChan(
 			ctx, config_obj, 1000,
-			config_obj.OrgId, "clients", query, "ping")
+			config_obj.OrgId, "persisted", query, "ping")
 		if err != nil {
 			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 			logger.Error("getClientsSeenAfter: %v", err)

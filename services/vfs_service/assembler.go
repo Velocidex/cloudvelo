@@ -108,7 +108,7 @@ func (self *VFSService) readDirectoryWithDownloads(
 	id := cvelo_services.MakeId(utils.JoinComponents(components, "/"))
 
 	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "results", json.Format(queryAllVFSAttributes, id))
+		config_obj.OrgId, "transient", json.Format(queryAllVFSAttributes, id))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +177,7 @@ func getLatestVFSListResponse(
 	id := services.MakeId(utils.JoinComponents(components, "/"))
 	record := &VFSRecord{}
 	serialized, err := services.GetElasticRecordByQuery(ctx,
-		config_obj.OrgId, "results",
+		config_obj.OrgId, "transient",
 		json.Format(vfsSidePanelRenderQuery, id, id))
 	if err != nil || len(serialized) == 0 {
 		// Empty responses mean the directory is empty.

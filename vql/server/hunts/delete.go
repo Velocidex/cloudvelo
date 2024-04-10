@@ -76,7 +76,7 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 		// is deleted immediately.
 		if arg.ReallyDoIt {
 			err := cvelo_services.UpdateIndex(
-				ctx, config_obj.OrgId, "hunts",
+				ctx, config_obj.OrgId, "persisted",
 				arg.HuntId, archiveHuntScript)
 			if err != nil {
 				scope.Log("hunt_delete: %v", err)

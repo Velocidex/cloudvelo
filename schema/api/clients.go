@@ -48,6 +48,7 @@ type ClientRecord struct {
 	LastLabelTimestamp uint64   `json:"labels_timestamp,omitempty"`
 	Labels             []string `json:"labels,omitempty"`
 	LowerLabels        []string `json:"lower_labels,omitempty"`
+	DocType            string   `json:"doc_type"`
 }
 
 func ToClientInfo(record *ClientRecord) *services.ClientInfo {
@@ -82,7 +83,7 @@ func GetMultipleClients(
 	}
 
 	hits, err := cvelo_services.GetMultipleElasticRecords(
-		ctx, config_obj.OrgId, "clients", terms)
+		ctx, config_obj.OrgId, "persisted", terms)
 	if err != nil {
 		return nil, err
 	}

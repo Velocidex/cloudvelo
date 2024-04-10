@@ -120,18 +120,19 @@ func (self HuntDispatcher) CreateHunt(
 
 	err = cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"hunts", hunt_id, &HuntEntry{
+		"persisted", hunt_id, &HuntEntry{
 			HuntId:    hunt_id,
 			Timestamp: time.Now().Unix(),
 			Hunt:      string(serialized),
 			State:     hunt.State.String(),
+			DocType:   "hunts",
 		})
 
 	// The actual hunt scheduling is done by the foreman.
 	/*
-		if hunt.State == api_proto.Hunt_RUNNING {
-			scheduleClientsForHunt(ctx, config_obj, hunt)
-		}
+	   if hunt.State == api_proto.Hunt_RUNNING {
+	       scheduleClientsForHunt(ctx, config_obj, hunt)
+	   }
 	*/
 	return hunt_id, nil
 }

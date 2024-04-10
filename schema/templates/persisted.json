@@ -1,0 +1,159 @@
+{
+  "index_patterns": [
+    "*persisted"
+  ],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "dynamic": false,
+      "properties": {
+        "hunt_id": {
+          "type": "keyword"
+        },
+        "timestamp": {
+          "type": "long"
+        },
+        "scheduled": {
+          "type": "integer"
+        },
+        "completed": {
+          "type": "integer"
+        },
+        "errors": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "keyword"
+        },
+        "hunt": {
+          "type": "binary"
+        },
+        "acl": {
+          "type": "binary"
+        },
+        "notebook_id": {
+          "type": "keyword"
+        },
+        "cell_id": {
+          "type": "keyword"
+        },
+        "notebook": {
+          "type": "binary"
+        },
+        "notebook_cell": {
+          "type": "binary"
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "creator": {
+          "type": "keyword"
+        },
+        "shared": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "doc_type": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "definition": {
+          "type": "binary"
+        },
+        "username": {
+          "type": "keyword"
+        },
+        "record": {
+          "type": "binary"
+        },
+        "gui_options": {
+          "type": "binary"
+        },
+        "client_id": {
+          "type": "keyword"
+        },
+        "hostname": {
+          "type": "keyword"
+        },
+        "release": {
+          "type": "keyword"
+        },
+        "architecture": {
+          "type": "keyword"
+        },
+        "build_time": {
+          "type": "keyword"
+        },
+        "system": {
+          "type": "keyword"
+        },
+        "ping": {
+          "type": "long"
+        },
+        "first_seen_at": {
+          "type": "long"
+        },
+        "labels": {
+          "type": "keyword"
+        },
+        "lower_labels": {
+          "type": "keyword"
+        },
+        "last_interrogate": {
+          "type": "keyword"
+        },
+        "labels_timestamp": {
+          "type": "long"
+        },
+        "mac_addresses": {
+          "type": "keyword"
+        },
+        "last_hunt_timestamp": {
+          "type": "long"
+        },
+        "assigned_hunts": {
+          "type": "keyword"
+        },
+        "last_event_table_version": {
+          "type": "long"
+        },
+        "pem": {
+          "type": "binary"
+        },
+        "enroll_time": {
+          "type": "long"
+        },
+        "org_id": {
+          "type": "keyword"
+        },
+        "nonce": {
+          "type": "keyword"
+        },
+        "flow_id": {
+          "type": "keyword"
+        },
+        "data": {
+          "type": "text",
+          "index": false
+        },
+        "key": {
+          "type": "keyword"
+        },
+        "term": {
+          "type": "keyword"
+        },
+        "entity": {
+          "type": "keyword"
+        }
+      }
+      }
+    }
+  }
+

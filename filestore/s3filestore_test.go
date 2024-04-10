@@ -96,7 +96,7 @@ func (self *S3FilestoreTest) TestS3FileWriting() {
 func TestS3Filestore(t *testing.T) {
 	suite.Run(t, &S3FilestoreTest{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients"},
+			Indexes: []string{"persisted"},
 		},
 	})
 }

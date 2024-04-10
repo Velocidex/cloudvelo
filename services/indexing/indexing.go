@@ -19,6 +19,7 @@ import (
 type ElasticIndexRecord struct {
 	Term     string `json:"term"`
 	ClientId string `json:"client_id"`
+	DocType  string `json:"doc_type"`
 }
 
 type Indexer struct {
@@ -29,9 +30,10 @@ type Indexer struct {
 func (self Indexer) SetIndex(client_id, term string) error {
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"index", "", &ElasticIndexRecord{
+		"persisted", "", &ElasticIndexRecord{
 			Term:     term,
 			ClientId: client_id,
+			DocType:  "index",
 		})
 }
 
@@ -45,7 +47,7 @@ func (self Indexer) getIndexRecords(
 	config_obj *config_proto.Config,
 	query string, output_chan chan *api_proto.IndexRecord) {
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
-		config_obj.OrgId, "clients", query, cvelo_services.NoSortField)
+		config_obj.OrgId, "persisted", query, cvelo_services.NoSortField)
 	if err != nil {
 		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 		logger.Error("getIndexRecords: %v", err)
@@ -78,7 +80,15 @@ func (self Indexer) SearchIndexWithPrefix(
 		operator, term := splitIntoOperatorAndTerms(prefix)
 		switch operator {
 		case "all":
-			query := `{"query": {"match_all" : {}}, "_source": {"includes": ["client_id"]}}`
+			query := `
+{
+    "query": {"bool": {
+        "must": [{"match": {
+                    "doc_type": "clients"
+                  }}]
+         }},
+    "_source": {"includes": ["client_id"]}
+}`
 			self.getIndexRecords(ctx, config_obj, query, output_chan)
 			return
 

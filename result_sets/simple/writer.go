@@ -53,10 +53,10 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 
 	if self.sync {
 		services.SetElasticIndex(
-			self.ctx, self.org_id, "results", "", record)
+			self.ctx, self.org_id, "transient", "", record)
 	} else {
 		services.SetElasticIndexAsync(
-			self.org_id, "results", "",
+			self.org_id, "transient", "",
 			cvelo_services.BulkUpdateCreate, record)
 	}
 }
@@ -104,7 +104,7 @@ func (self *ElasticSimpleResultSetWriter) getLastRow() error {
 	ctx := context.Background()
 	query := json.Format(getLargestRowId, self.log_path.AsClientPath())
 	hits, err := services.QueryElasticAggregations(
-		ctx, self.org_id, "results", query)
+		ctx, self.org_id, "transient", query)
 
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (self *ElasticSimpleResultSetWriter) Flush() {
 	self.buffered_rows = 0
 
 	// Make sure the results are visible immediately
-	cvelo_services.FlushIndex(self.ctx, self.org_id, "results")
+	cvelo_services.FlushIndex(self.ctx, self.org_id, "transient")
 
 	// No need to find the last start row as we assume we are the only
 	// writers.

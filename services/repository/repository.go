@@ -41,9 +41,17 @@ const (
 	// We only need the names of the artifacts for listing.
 	allNamesQuery = `
 {
-    "query" : {
-        "match_all" : {}
-    }
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "doc_type": "repository"
+                    }
+                }
+            ]
+		}
+	}
 }
 `
 )
@@ -90,9 +98,10 @@ func (self *Repository) List(
 	config_obj *config_proto.Config) ([]string, error) {
 
 	results := ordereddict.NewDict()
-
+	//TODO new index does not like name sortfield
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
-		self.config_obj.OrgId, "repository", allNamesQuery, "name")
+		self.config_obj.OrgId, "persisted", allNamesQuery, "name")
+
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -176,7 +185,7 @@ func (self *Repository) LoadProto(
 func (self *Repository) Del(name string) {
 	self.lru.Remove(name)
 	cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
-		"repository", name, cvelo_services.SyncDelete)
+		"perrsisted", name, cvelo_services.SyncDelete)
 }
 
 func (self *Repository) Get(
@@ -248,7 +257,7 @@ func (self *Repository) getFromBackend(
 
 	// Nope - get it from the backend.
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		self.config_obj.OrgId, "repository", name)
+		self.config_obj.OrgId, "persisted", name)
 	if err != nil {
 		return nil, false
 	}
@@ -282,10 +291,11 @@ func (self *Repository) saveArtifact(
 	// Set the artifact in the elastic index.
 	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"repository", artifact.Name,
+		"persisted", artifact.Name,
 		&api.RepositoryEntry{
 			Name:       artifact.Name,
 			Definition: json.MustMarshalString(artifact),
+			DocType:    "repository",
 		})
 
 	// Set the artifact in the LRU

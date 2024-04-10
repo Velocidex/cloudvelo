@@ -41,7 +41,7 @@ func (self Ingestor) maybeHandleHuntResponse(
 			DocType:   "hunt_flow",
 		}
 		return services.SetElasticIndex(ctx,
-			config_obj.OrgId, "results", "", hunt_flow_entry)
+			config_obj.OrgId, "transient", "", hunt_flow_entry)
 	}
 
 	return nil

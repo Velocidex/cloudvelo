@@ -2,16 +2,15 @@ package clients
 
 import (
 	"context"
-	"os"
-	"testing"
-	"time"
-
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
 	"github.com/stretchr/testify/suite"
+	"testing"
+	"time"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
+	"www.velocidex.com/golang/velociraptor/json"
 
 	"www.velocidex.com/golang/velociraptor/logging"
 	_ "www.velocidex.com/golang/velociraptor/result_sets/simple"
@@ -42,6 +41,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			AssignedHunts: []string{},
 			Labels:        []string{},
 			LowerLabels:   []string{},
+			DocType:       "clients",
 		},
 
 		{
@@ -50,6 +50,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			AssignedHunts: []string{"H.AllClients"},
 			Labels:        []string{},
 			LowerLabels:   []string{},
+			DocType:       "clients",
 		},
 
 		{
@@ -58,6 +59,7 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			Labels:        []string{"Foo"},
 			LowerLabels:   []string{"foo"},
 			AssignedHunts: []string{},
+			DocType:       "clients",
 		},
 
 		// This client has not been seen in a while
@@ -67,13 +69,14 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			AssignedHunts: []string{},
 			Labels:        []string{},
 			LowerLabels:   []string{},
+			DocType:       "clients",
 		},
 	}
 
 	// Add these clients directly into the index.
 	for _, c := range clients {
 		err := cvelo_services.SetElasticIndex(
-			self.Ctx, config_obj.OrgId, "clients", c.ClientId, c)
+			self.Ctx, config_obj.OrgId, "persisted", c.ClientId, c)
 		assert.NoError(self.T(), err)
 	}
 
@@ -101,10 +104,11 @@ func (self *DeleteTestSuite) TestDeleteClient() {
 			Set("really_do_it", true).
 			Set("client_id", self.client_id)))
 
-	result, err := cvelo_services.GetElasticRecord(context.Background(),
-		self.ConfigObj.OrgId, "clients", self.client_id)
+	result, _, err := cvelo_services.QueryElasticRaw(
+		ctx, self.ConfigObj.OrgId,
+		"persisted", json.Format(all_client_items, self.client_id))
 	assert.Nil(self.T(), result)
-	assert.Equal(self.T(), err, os.ErrNotExist)
+	assert.Equal(self.T(), err, nil)
 
 	// TODO - verify that files are deleted
 	// TODO - verify that this client is removed from other indexes
@@ -123,7 +127,7 @@ func (self *DeleteTestSuite) getClientRecord(client_id string) *api.ClientRecord
 func TestDeletePlugin(t *testing.T) {
 	suite.Run(t, &DeleteTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"clients"},
+			Indexes: []string{"persisted"},
 		},
 	})
 }

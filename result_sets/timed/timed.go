@@ -86,7 +86,7 @@ func (self ElasticTimedResultSetWriter) WriteJSONL(
 
 	services.SetElasticIndex(self.ctx,
 		filestore.GetOrgId(self.file_store_factory),
-		"results", "", record)
+		"transient", "", record)
 }
 
 func (self ElasticTimedResultSetWriter) Write(row *ordereddict.Dict) {

@@ -63,7 +63,7 @@ func (self *Indexer) searchRecents(
 	[]*api.ClientRecord, int, error) {
 
 	hits, total, err := cvelo_services.QueryElasticRaw(
-		ctx, config_obj.OrgId, "user_mru", json.Format(
+		ctx, config_obj.OrgId, "persisted", json.Format(
 			clientsMRUQuery, principal, from, limit))
 	if err != nil {
 		return nil, 0, err
@@ -102,15 +102,26 @@ const (
     "client_id": {"order": "asc", "unmapped_type": "keyword"}
  }],
  "_source": false,
- "query": {"bool": {"must": [%s]}}
- %s
+ "query": {
+   "bool": {
+     "must": [
+       %s, {"match": {
+                "doc_type": "clients"
+           }}]
+   }
+}
+%s
 }
 `
 	getAllClientsNamesQuery = `
 {"sort": [{
     "client_id": {"order": "asc", "unmapped_type": "keyword"}
  }],
- "query": {"bool": {"must": [%s]}}
+ "query": {"bool": {"must": [%s,{
+                    "match": {
+                        "doc_type": "clients"
+                    }
+                }]}}
  %s
 }
 `
@@ -246,7 +257,7 @@ func (self *Indexer) searchWithPrefixedNames(
 		json.Format(limitQueryPart, offset, limit+1))
 
 	hits, total, err := cvelo_services.QueryElasticRaw(
-		ctx, config_obj.OrgId, "clients", query)
+		ctx, config_obj.OrgId, "persisted", query)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -307,7 +318,7 @@ func (self *Indexer) searchWithSortTerms(
 		json.Format(limitQueryPart, offset, limit+1))
 
 	hits, total, err := cvelo_services.QueryElasticIds(
-		ctx, config_obj.OrgId, "clients", query)
+		ctx, config_obj.OrgId, "persisted", query)
 	if err != nil {
 		return nil, 0, err
 	}

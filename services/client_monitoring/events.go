@@ -86,7 +86,7 @@ func listAvailableEventArtifacts(
 		// artifacts runner, it is still possible for server artifacts
 		// to be written by various services (e.g. Audit manager).
 		query = json.Format(getAvailableServerArtifactsQuery,
-			"server", "results", OPENSEARCH_MAX_BUCKETS)
+			"server", "transient", OPENSEARCH_MAX_BUCKETS)
 
 	} else {
 		// Even if client events are not generated there are always
@@ -96,7 +96,7 @@ func listAvailableEventArtifacts(
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
-		config_obj.OrgId, "results",
+		config_obj.OrgId, "transient",
 		query)
 	if err != nil {
 		return nil, err
@@ -175,11 +175,11 @@ func listAvailableEventTimestamps(
 
 	} else {
 		query = json.Format(getAvailableEventTimesQuery, in.ClientId,
-			"results", in.Artifact, OPENSEARCH_MAX_BUCKETS)
+			"transient", in.Artifact, OPENSEARCH_MAX_BUCKETS)
 	}
 
 	hits, err := cvelo_services.QueryElasticAggregations(ctx,
-		config_obj.OrgId, "results", query)
+		config_obj.OrgId, "transient", query)
 	if err != nil {
 		return nil, err
 	}
