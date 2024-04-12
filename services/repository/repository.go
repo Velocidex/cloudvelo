@@ -185,7 +185,7 @@ func (self *Repository) LoadProto(
 func (self *Repository) Del(name string) {
 	self.lru.Remove(name)
 	cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
-		"perrsisted", name, cvelo_services.SyncDelete)
+		"persisted", name, cvelo_services.SyncDelete)
 }
 
 func (self *Repository) Get(
