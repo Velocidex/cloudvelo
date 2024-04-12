@@ -98,7 +98,7 @@ func (self *Repository) List(
 	config_obj *config_proto.Config) ([]string, error) {
 
 	results := ordereddict.NewDict()
-	//TODO new index does not like name sortfield
+
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
 		self.config_obj.OrgId, "persisted", allNamesQuery, "name")
 
