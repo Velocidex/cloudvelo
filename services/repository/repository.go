@@ -98,7 +98,7 @@ func (self *Repository) List(
 	config_obj *config_proto.Config) ([]string, error) {
 
 	results := ordereddict.NewDict()
-	//TODO new index does not like name sortfield
+
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
 		self.config_obj.OrgId, "persisted", allNamesQuery, "name")
 
@@ -185,7 +185,7 @@ func (self *Repository) LoadProto(
 func (self *Repository) Del(name string) {
 	self.lru.Remove(name)
 	cvelo_services.DeleteDocument(self.ctx, self.config_obj.OrgId,
-		"perrsisted", name, cvelo_services.SyncDelete)
+		"persisted", name, cvelo_services.SyncDelete)
 }
 
 func (self *Repository) Get(
