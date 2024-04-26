@@ -61,8 +61,56 @@ type HuntDispatcher struct {
 	config_obj *config_proto.Config
 }
 
+// TODO: Deprecated - remove.
 func (self HuntDispatcher) ApplyFuncOnHunts(cb func(hunt *api_proto.Hunt) error) error {
 	return errors.New("HuntDispatcher.ApplyFuncOnHunts Not implemented")
+}
+
+func (self HuntDispatcher) ApplyFuncOnHuntsWithOptions(
+	ctx context.Context,
+	options cvelo_services.HuntSearchOptions,
+	cb func(hunt *api_proto.Hunt) error) error {
+
+	sub_ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var query string
+	switch options {
+	case cvelo_services.AllHunts:
+		query = getAllHunts
+	case cvelo_services.OnlyRunningHunts:
+		query = getAllActiveHunts
+	default:
+		return errors.New("HuntSearchOptions not supported")
+	}
+
+	out, err := cvelo_services.QueryChan(
+		sub_ctx, self.config_obj, 1000, self.config_obj.OrgId,
+		"persisted", query, "hunt_id")
+	if err != nil {
+		return err
+	}
+
+	for hit := range out {
+		entry := &HuntEntry{}
+		err := json.Unmarshal(hit, entry)
+		if err != nil {
+			return err
+		}
+
+		hunt_obj, err := entry.GetHunt()
+		if err != nil {
+			continue
+		}
+
+		// Allow the cb to cancel the query.
+		err = cb(hunt_obj)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (self HuntDispatcher) GetLastTimestamp() uint64 {
@@ -170,13 +218,12 @@ const (
                 }
             ]
         }
-    },
-    "from": %q,
-    "size": %q
+    }
 }
 `
 )
 
+// TODO: Deprecated...
 func (self HuntDispatcher) ListHunts(
 	ctx context.Context, config_obj *config_proto.Config,
 	in *api_proto.ListHuntsRequest) (
@@ -209,40 +256,6 @@ func (self HuntDispatcher) ListHunts(
 
 		if hunt_info.State != api_proto.Hunt_ARCHIVED {
 			result.Items = append(result.Items, hunt_info)
-		}
-	}
-
-	return result, nil
-}
-
-func (self HuntDispatcher) ListActiveHunts(
-	ctx context.Context, config_obj *config_proto.Config,
-	in *api_proto.ListHuntsRequest) (
-	*api_proto.ListHuntsResponse, error) {
-
-	hits, _, err := cvelo_services.QueryElasticRaw(
-		ctx, self.config_obj.OrgId,
-		"persisted", json.Format(getAllActiveHunts, in.Offset, in.Count))
-	if err != nil {
-		return nil, err
-	}
-
-	result := &api_proto.ListHuntsResponse{}
-	for _, hit := range hits {
-		entry := &HuntEntry{}
-		err = json.Unmarshal(hit, entry)
-		if err != nil {
-			continue
-		}
-
-		hunt_info, err := entry.GetHunt()
-		if err != nil {
-			continue
-		}
-
-		if in.UserFilter != "" &&
-			in.UserFilter != hunt_info.Creator {
-			continue
 		}
 	}
 

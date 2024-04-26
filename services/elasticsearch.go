@@ -386,8 +386,8 @@ type _ElasticHits struct {
 }
 
 type _AggBucket struct {
-	Key   string `json:"key"`
-	Count int    `json:"doc_count"`
+	Key   interface{} `json:"key"`
+	Count int         `json:"doc_count"`
 }
 
 type _AggResults struct {
@@ -781,56 +781,47 @@ func to_string(a interface{}) string {
 func QueryElasticRaw(
 	ctx context.Context,
 	org_id, index, query string) ([]json.RawMessage, int, error) {
-	elastic_result, err := QueryElasticRawResults(ctx, GetIndex(org_id, index), query)
-	if err != nil {
-		return nil, 0, err
-	}
-	var results []json.RawMessage
-	for _, hit := range elastic_result.Hits.Hits {
-		results = append(results, hit.Source)
-	}
-	return results, elastic_result.Hits.Total.Value, nil
-}
-
-func QueryElasticRawResults(
-	ctx context.Context,
-	index, query string) (*_ElasticResponse, error) {
 
 	defer Instrument("QueryElasticRaw")()
 	defer Debug("QueryElasticRaw %v", index)()
 
 	es, err := GetElasticClient()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	res, err := es.Search(
 		es.Search.WithContext(ctx),
-		es.Search.WithIndex(index),
+		es.Search.WithIndex(GetIndex(org_id, index)),
 		es.Search.WithBody(strings.NewReader(query)),
 		es.Search.WithPretty(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// There was an error so we need to relay it
 	if res.IsError() {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
-	results := &_ElasticResponse{}
-	err = json.Unmarshal(data, &results)
+	parsed := &_ElasticResponse{}
+	err = json.Unmarshal(data, &parsed)
 	if err != nil {
-		return nil, makeReadElasticError(data)
+		return nil, 0, makeReadElasticError(data)
 	}
 
-	return results, nil
+	var results []json.RawMessage
+	for _, hit := range parsed.Hits.Hits {
+		results = append(results, hit.Source)
+	}
+
+	return results, parsed.Hits.Total.Value, nil
 }
 
 // Return only Ids of matching documents.

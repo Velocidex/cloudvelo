@@ -553,31 +553,26 @@ func (self Foreman) GetActiveHunts(
 		return nil, err
 	}
 
-	hunts, err := hunt_dispatcher.ListActiveHunts(
-		ctx, org_config_obj, &api_proto.ListHuntsRequest{
-			Count: 1000,
+	var result []*api_proto.Hunt
+
+	err = cvelo_services.ApplyFuncOnHuntsWithOptions(hunt_dispatcher, ctx,
+		cvelo_services.OnlyRunningHunts,
+		func(hunt *api_proto.Hunt) error {
+
+			// Check if the hunt is expired and stop it if it is
+			if hunt.Expires < uint64(utils.GetTime().Now().UnixNano()/1000) {
+				err := self.stopHunt(ctx, org_config_obj, hunt)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			result = append(result, hunt)
+			return nil
 		})
 	if err != nil {
 		return nil, err
-	}
-
-	result := make([]*api_proto.Hunt, 0, len(hunts.Items))
-	for _, hunt := range hunts.Items {
-		if hunt.State != api_proto.Hunt_RUNNING ||
-			hunt.StartTime == 0 {
-			continue
-		}
-
-		// Check if the hunt is expired and stop it if it is
-		if hunt.Expires < uint64(utils.GetTime().Now().UnixNano()/1000) {
-			err := self.stopHunt(ctx, org_config_obj, hunt)
-			if err != nil {
-				return nil, err
-			}
-			continue
-		}
-
-		result = append(result, hunt)
 	}
 
 	return result, nil
