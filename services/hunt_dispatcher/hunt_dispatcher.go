@@ -221,6 +221,21 @@ const (
     }
 }
 `
+	getAllHunts = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "doc_type": "hunts"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
 )
 
 // TODO: Deprecated...
