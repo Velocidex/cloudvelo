@@ -152,6 +152,24 @@ const getAllHuntsQuery = `
  "from": %q, "size": %q
 }
 `
+	getAllActiveHunts = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "state": "RUNNING"
+                    }
+                }
+            ]
+        }
+    },
+    "from": %q,
+    "size": %q
+}
+`
+)
 
 func (self HuntDispatcher) ListHunts(
 	ctx context.Context, config_obj *config_proto.Config,
@@ -161,6 +179,44 @@ func (self HuntDispatcher) ListHunts(
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId,
 		"persisted", json.Format(getAllHuntsQuery, in.Offset, in.Count))
+	if err != nil {
+		return nil, err
+	}
+
+	result := &api_proto.ListHuntsResponse{}
+	for _, hit := range hits {
+		entry := &HuntEntry{}
+		err = json.Unmarshal(hit, entry)
+		if err != nil {
+			continue
+		}
+
+		hunt_info, err := entry.GetHunt()
+		if err != nil {
+			continue
+		}
+
+		if in.UserFilter != "" &&
+			in.UserFilter != hunt_info.Creator {
+			continue
+		}
+
+		if hunt_info.State != api_proto.Hunt_ARCHIVED {
+			result.Items = append(result.Items, hunt_info)
+		}
+	}
+
+	return result, nil
+}
+
+func (self HuntDispatcher) ListActiveHunts(
+	ctx context.Context, config_obj *config_proto.Config,
+	in *api_proto.ListHuntsRequest) (
+	*api_proto.ListHuntsResponse, error) {
+
+	hits, _, err := cvelo_services.QueryElasticRaw(
+		ctx, self.config_obj.OrgId,
+		"hunts", json.Format(getAllActiveHunts, in.Offset, in.Count))
 	if err != nil {
 		return nil, err
 	}

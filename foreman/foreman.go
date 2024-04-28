@@ -553,7 +553,7 @@ func (self Foreman) GetActiveHunts(
 		return nil, err
 	}
 
-	hunts, err := hunt_dispatcher.ListHunts(
+	hunts, err := hunt_dispatcher.ListActiveHunts(
 		ctx, org_config_obj, &api_proto.ListHuntsRequest{
 			Count: 1000,
 		})
@@ -631,6 +631,7 @@ func (self Foreman) RunOnce(
 		return err
 	}
 
+	// Only list orgs that have active hunts
 	orgs := org_manager.ListOrgs()
 	orgCountGauge.Set(float64(len(orgs)))
 
