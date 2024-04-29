@@ -2,10 +2,10 @@ package datastore
 
 import (
 	"context"
-
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"www.velocidex.com/golang/cloudvelo/services"
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
@@ -19,16 +19,17 @@ type ElasticDatastore struct {
 
 const (
 	list_children_query = `
-{
+{"sort": {"timestamp": {"order": "desc"}},
+ "size": 1,
     "query": {
         "bool": {
             "must": [
-                {
+ {
                     "prefix": {
                         "vfs_path": %q
                     }
-                },
-                {
+                	},
+					{
                     "match": {
                         "doc_type": "datastore"
                     }
@@ -58,29 +59,90 @@ const (
     }
 }
 `
+	get_download_id = `
+{"sort": {"timestamp": {"order": "desc"}},
+ "size": 1,
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "vfs_path": %q
+                    }
+                },
+                {
+                    "match": {
+                        "doc_type": "download"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
+	get_datastore_doc_query = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "id": %q
+                    }
+                },
+                {
+                    "match": {
+                        "doc_type": "datastore"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
 )
+
+type hash struct {
+	Hash string `json:"hash"`
+}
+
+type downloadid struct {
+	Id        string `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	VFSPath   string `json:"vfs_path"`
+	DocType   string `json:"doc_type"`
+}
 
 func (self ElasticDatastore) GetSubject(
 	config_obj *config_proto.Config,
 	path api.DSPathSpec,
 	message proto.Message) error {
 
-	id := services.MakeId(path.AsClientPath())
-	data, err := services.GetElasticRecord(
-		self.ctx, config_obj.OrgId, "datastore", id)
-	if err != nil {
-		return err
+	//id := cvelo_services.MakeId(path.AsClientPath())
+	response, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+		"transient", json.Format(get_download_id, path.AsClientPath()))
+	result := &downloadid{}
+	for _, hit := range response {
+		err = json.Unmarshal(hit, &result)
+		if err != nil {
+			continue
+		}
 	}
+	hits, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+		"transient", json.Format(get_datastore_doc_query, result.Id))
 
 	record := &DatastoreRecord{
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	err = json.Unmarshal(data, &record)
-	if err != nil {
-		return err
-	}
+	for _, hit := range hits {
+		err = json.Unmarshal(hit, &record)
+		if err != nil {
+			continue
+		}
 
-	return protojson.Unmarshal([]byte(record.JSONData), message)
+		return protojson.Unmarshal([]byte(record.JSONData), message)
+	}
+	return nil
 }
 
 func (self ElasticDatastore) SetSubject(
@@ -93,15 +155,26 @@ func (self ElasticDatastore) SetSubject(
 		return err
 	}
 
+	id := uuid.New()
+
 	record := &DatastoreRecord{
-		ID:        services.MakeId(path.AsClientPath()),
+		ID:        id.String(),
 		Type:      "Generic",
 		VFSPath:   path.AsClientPath(),
 		JSONData:  string(serialized),
 		DocType:   "datastore",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "transient", "", record)
+
+	cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", cvelo_services.BulkUpdateCreate, &downloadid{
+		Id:        id.String(),
+		Timestamp: utils.GetTime().Now().UnixNano(),
+		VFSPath:   path.AsClientPath(),
+		DocType:   "download",
+	})
+
+	return cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", cvelo_services.BulkUpdateCreate, record)
+
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(
@@ -116,17 +189,17 @@ func (self ElasticDatastore) DeleteSubject(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec) error {
 
-	id := services.MakeId(urn.AsClientPath())
-	return services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.SyncDelete)
+	id := cvelo_services.MakeId(urn.AsClientPath())
+	return cvelo_services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), cvelo_services.SyncDelete)
 }
 
 func (self ElasticDatastore) DeleteSubjectWithCompletion(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec, completion func()) error {
-	id := services.MakeId(urn.AsClientPath())
-	return services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.AsyncDelete)
+	id := cvelo_services.MakeId(urn.AsClientPath())
+	return cvelo_services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), cvelo_services.AsyncDelete)
 }
 
 func (self ElasticDatastore) ListChildren(
@@ -134,7 +207,7 @@ func (self ElasticDatastore) ListChildren(
 	urn api.DSPathSpec) ([]api.DSPathSpec, error) {
 
 	dir := urn.AsDatastoreDirectory(config_obj)
-	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+	hits, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
 		"transient", json.Format(list_children_query, dir))
 	if err != nil {
 		return nil, err
