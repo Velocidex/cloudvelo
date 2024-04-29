@@ -138,7 +138,8 @@ func (self HuntDispatcher) Refresh(
 func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
 
 // TODO add sort and from/size clause
-const getAllHuntsQuery = `
+const (
+	getAllHuntsQuery = `
 {
     "query": {
       "bool": {
@@ -157,6 +158,11 @@ const getAllHuntsQuery = `
     "query": {
         "bool": {
             "must": [
+                {
+                    "match": {
+                        "doc_type": "hunts"
+                    }
+                },
                 {
                     "match": {
                         "state": "RUNNING"
@@ -216,7 +222,7 @@ func (self HuntDispatcher) ListActiveHunts(
 
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId,
-		"hunts", json.Format(getAllActiveHunts, in.Offset, in.Count))
+		"persisted", json.Format(getAllActiveHunts, in.Offset, in.Count))
 	if err != nil {
 		return nil, err
 	}
@@ -237,10 +243,6 @@ func (self HuntDispatcher) ListActiveHunts(
 		if in.UserFilter != "" &&
 			in.UserFilter != hunt_info.Creator {
 			continue
-		}
-
-		if hunt_info.State != api_proto.Hunt_ARCHIVED {
-			result.Items = append(result.Items, hunt_info)
 		}
 	}
 
