@@ -2,7 +2,6 @@ package datastore
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -81,7 +80,8 @@ const (
 }
 `
 	get_datastore_doc_query = `
-{
+{"sort": {"timestamp": {"order": "desc"}},
+ "size": 1,
     "query": {
         "bool": {
             "must": [
@@ -118,18 +118,10 @@ func (self ElasticDatastore) GetSubject(
 	path api.DSPathSpec,
 	message proto.Message) error {
 
-	//id := cvelo_services.MakeId(path.AsClientPath())
-	response, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
-		"transient", json.Format(get_download_id, path.AsClientPath()))
-	result := &downloadid{}
-	for _, hit := range response {
-		err = json.Unmarshal(hit, &result)
-		if err != nil {
-			continue
-		}
-	}
+	id := cvelo_services.MakeId(path.AsClientPath())
+
 	hits, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
-		"transient", json.Format(get_datastore_doc_query, result.Id))
+		"transient", json.Format(get_datastore_doc_query, id))
 
 	record := &DatastoreRecord{
 		Timestamp: utils.GetTime().Now().UnixNano(),
@@ -155,23 +147,14 @@ func (self ElasticDatastore) SetSubject(
 		return err
 	}
 
-	id := uuid.New()
-
 	record := &DatastoreRecord{
-		ID:        id.String(),
+		ID:        cvelo_services.MakeId(path.AsClientPath()),
 		Type:      "Generic",
 		VFSPath:   path.AsClientPath(),
 		JSONData:  string(serialized),
 		DocType:   "datastore",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-
-	cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", cvelo_services.BulkUpdateCreate, &downloadid{
-		Id:        id.String(),
-		Timestamp: utils.GetTime().Now().UnixNano(),
-		VFSPath:   path.AsClientPath(),
-		DocType:   "download",
-	})
 
 	return cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", cvelo_services.BulkUpdateCreate, record)
 
