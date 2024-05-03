@@ -58,27 +58,6 @@ const (
     }
 }
 `
-	get_download_id = `
-{"sort": {"timestamp": {"order": "desc"}},
- "size": 1,
-    "query": {
-        "bool": {
-            "must": [
-                {
-                    "match": {
-                        "vfs_path": %q
-                    }
-                },
-                {
-                    "match": {
-                        "doc_type": "download"
-                    }
-                }
-            ]
-        }
-    }
-}
-`
 	get_datastore_doc_query = `
 {"sort": {"timestamp": {"order": "desc"}},
  "size": 1,
@@ -101,17 +80,6 @@ const (
 }
 `
 )
-
-type hash struct {
-	Hash string `json:"hash"`
-}
-
-type downloadid struct {
-	Id        string `json:"id"`
-	Timestamp int64  `json:"timestamp"`
-	VFSPath   string `json:"vfs_path"`
-	DocType   string `json:"doc_type"`
-}
 
 func (self ElasticDatastore) GetSubject(
 	config_obj *config_proto.Config,
