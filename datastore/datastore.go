@@ -65,7 +65,7 @@ const (
         "bool": {
             "must": [
                 {
-                    "match": {
+                    "prefix": {
                         "id": %q
                     }
                 },
