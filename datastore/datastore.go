@@ -4,7 +4,7 @@ import (
 	"context"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
@@ -86,10 +86,14 @@ func (self ElasticDatastore) GetSubject(
 	path api.DSPathSpec,
 	message proto.Message) error {
 
-	id := cvelo_services.MakeId(path.AsClientPath())
+	id := services.MakeId(path.AsClientPath())
 
-	hits, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
 		"transient", json.Format(get_datastore_doc_query, id))
+
+	if err != nil {
+		return err
+	}
 
 	record := &DatastoreRecord{
 		Timestamp: utils.GetTime().Now().UnixNano(),
@@ -97,7 +101,8 @@ func (self ElasticDatastore) GetSubject(
 	for _, hit := range hits {
 		err = json.Unmarshal(hit, &record)
 		if err != nil {
-			continue
+
+			return err
 		}
 
 		return protojson.Unmarshal([]byte(record.JSONData), message)
@@ -116,7 +121,7 @@ func (self ElasticDatastore) SetSubject(
 	}
 
 	record := &DatastoreRecord{
-		ID:        cvelo_services.MakeId(path.AsClientPath()),
+		ID:        services.MakeId(path.AsClientPath()),
 		Type:      "Generic",
 		VFSPath:   path.AsClientPath(),
 		JSONData:  string(serialized),
@@ -124,7 +129,7 @@ func (self ElasticDatastore) SetSubject(
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
 
-	return cvelo_services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", cvelo_services.BulkUpdateCreate, record)
+	return services.SetElasticIndexAsync(config_obj.OrgId, "transient", "", services.BulkUpdateCreate, record)
 
 }
 
@@ -140,17 +145,17 @@ func (self ElasticDatastore) DeleteSubject(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec) error {
 
-	id := cvelo_services.MakeId(urn.AsClientPath())
-	return cvelo_services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), cvelo_services.SyncDelete)
+	id := services.MakeId(urn.AsClientPath())
+	return services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.SyncDelete)
 }
 
 func (self ElasticDatastore) DeleteSubjectWithCompletion(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec, completion func()) error {
-	id := cvelo_services.MakeId(urn.AsClientPath())
-	return cvelo_services.DeleteDocumentByQuery(
-		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), cvelo_services.AsyncDelete)
+	id := services.MakeId(urn.AsClientPath())
+	return services.DeleteDocumentByQuery(
+		self.ctx, config_obj.OrgId, "transient", json.Format(delete_datastore_doc_query, id), services.AsyncDelete)
 }
 
 func (self ElasticDatastore) ListChildren(
@@ -158,7 +163,7 @@ func (self ElasticDatastore) ListChildren(
 	urn api.DSPathSpec) ([]api.DSPathSpec, error) {
 
 	dir := urn.AsDatastoreDirectory(config_obj)
-	hits, _, err := cvelo_services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
 		"transient", json.Format(list_children_query, dir))
 	if err != nil {
 		return nil, err
