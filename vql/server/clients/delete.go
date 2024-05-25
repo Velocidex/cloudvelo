@@ -12,6 +12,8 @@ import (
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 	"www.velocidex.com/golang/vfilter"
 	"www.velocidex.com/golang/vfilter/arg_parser"
+
+	_ "www.velocidex.com/golang/velociraptor/vql/server/clients"
 )
 
 const (
