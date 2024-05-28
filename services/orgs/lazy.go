@@ -16,6 +16,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/launcher"
 	"www.velocidex.com/golang/cloudvelo/services/notebook"
 	"www.velocidex.com/golang/cloudvelo/services/notifier"
+	"www.velocidex.com/golang/cloudvelo/services/scheduler"
 	"www.velocidex.com/golang/cloudvelo/services/server_artifacts"
 	"www.velocidex.com/golang/cloudvelo/services/vfs_service"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -82,6 +83,10 @@ func (self *LazyServiceContainer) HuntDispatcher() (services.IHuntDispatcher, er
 
 func (self *LazyServiceContainer) Indexer() (services.Indexer, error) {
 	return indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+}
+
+func (self *LazyServiceContainer) Scheduler() (services.Scheduler, error) {
+	return scheduler.NewInlineScheduler(), nil
 }
 
 func (self *LazyServiceContainer) RepositoryManager() (services.RepositoryManager, error) {

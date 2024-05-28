@@ -34,6 +34,11 @@ type NotebookStoreImpl struct {
 	config_obj *config_proto.Config
 }
 
+func NewNotebookStore(
+	ctx context.Context, config_obj *config_proto.Config) *NotebookStoreImpl {
+	return &NotebookStoreImpl{ctx: ctx, config_obj: config_obj}
+}
+
 func getType(notebook_id string) string {
 	if strings.HasPrefix(notebook_id, "N.F.") {
 		return "Flow"
