@@ -41,6 +41,8 @@ const (
 	// The types of Async updates that are allowed.
 	BulkUpdateIndex  = "index"  // Create or update existing record.
 	BulkUpdateCreate = "create" // Create new record if no existing record.
+
+	DocIdRandom = ""
 )
 
 var (

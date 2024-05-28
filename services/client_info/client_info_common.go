@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -19,7 +20,7 @@ var (
   "query": {
     "bool": {
       "must": [
- 		 {"match": {"doc_type" : "task"}},		
+ 		 {"match": {"doc_type" : "task"}},
          {"match": {"client_id" : %q}}
       ]}
   }
@@ -37,9 +38,12 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 		return err
 	}
 
+	// This is problematic because there is no way to remove these
+	// from persisted storage.
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"persisted", "", &ClientTask{
+		"persisted", services.DocIdRandom,
+		&ClientTask{
 			ClientId:  client_id,
 			FlowId:    req.SessionId,
 			Timestamp: time.Now().UnixNano(),

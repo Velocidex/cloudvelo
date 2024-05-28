@@ -42,7 +42,8 @@ func (self *FlowStorageManager) WriteFlow(
 	record.Timestamp = utils.GetTime().Now().UnixNano()
 
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "transient", "", record)
+		config_obj.OrgId, "transient",
+		cvelo_services.DocIdRandom, record)
 }
 
 func (self *FlowStorageManager) WriteTask(
@@ -65,7 +66,8 @@ func (self *FlowStorageManager) WriteTask(
 		ID:        doc_id,
 	}
 	return cvelo_services.SetElasticIndex(ctx,
-		config_obj.OrgId, "transient", "", record)
+		config_obj.OrgId, "transient",
+		cvelo_services.DocIdRandom, record)
 }
 
 // Not used - opensearch is handled with Launcher.GetFlows() directly.

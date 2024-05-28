@@ -154,8 +154,8 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 		// version
 		for _, client_id := range clients {
 			cvelo_services.SetElasticIndexAsync(
-				org_config_obj.OrgId, "persisted",
-				client_id+"_last_event_version",
+				org_config_obj.OrgId,
+				"persisted", client_id+"_last_event_version",
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
 					ClientId: client_id,
 					LastEventTableVersion: self.
@@ -221,8 +221,11 @@ func (self *Plan) ExecuteHuntUpdate(
 		// Write a new AssignedHunts record to indicate this hunt ran
 		// on this client.
 		for _, client_id := range clients {
+
+			// This leaks data as we dont have a way to delete them.
 			cvelo_services.SetElasticIndexAsync(
-				org_config_obj.OrgId, "persisted", "",
+				org_config_obj.OrgId,
+				"persisted", cvelo_services.DocIdRandom,
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
 					ClientId:      client_id,
 					AssignedHunts: []string{hunt.HuntId},

@@ -65,9 +65,9 @@ func (self Nofitier) NotifyListener(
 	ctx context.Context,
 	config_obj *config_proto.Config, id, tag string) error {
 	return cvelo_services.SetElasticIndex(
-		context.Background(),
-		self.config_obj.OrgId, "persisted",
-		id, &api.NotificationRecord{
+		context.Background(), self.config_obj.OrgId,
+		"persisted", id,
+		&api.NotificationRecord{
 			Key:       id,
 			Timestamp: time.Now().Unix(),
 			DocType:   "notifications",

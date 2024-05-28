@@ -28,9 +28,13 @@ type Indexer struct {
 }
 
 func (self Indexer) SetIndex(client_id, term string) error {
+
+	// This is problematic because there is no way to remove these
+	// from persisted storage.
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"persisted", "", &ElasticIndexRecord{
+		"persisted", cvelo_services.DocIdRandom,
+		&ElasticIndexRecord{
 			Term:     term,
 			ClientId: client_id,
 			DocType:  "index",

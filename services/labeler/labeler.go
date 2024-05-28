@@ -107,7 +107,8 @@ func (self Labeler) SetClientLabel(
 	}
 
 	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId, "persisted", client_id+"_labels",
+		self.config_obj.OrgId,
+		"persisted", client_id+"_labels",
 		api.ClientRecord{
 			ClientId:           client_id,
 			Labels:             []string{label},

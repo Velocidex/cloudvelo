@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"context"
+
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/services"
@@ -134,7 +135,10 @@ func (self ElasticDatastore) SetSubject(
 		DocType:   "datastore",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "transient", "", record)
+	return services.SetElasticIndex(
+		self.ctx, config_obj.OrgId,
+		"transient", services.DocIdRandom,
+		record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(
