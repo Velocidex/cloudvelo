@@ -22,10 +22,10 @@ func (self HuntDispatcher) CreateHunt(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	acl_manager vql_subsystem.ACLManager,
-	hunt *api_proto.Hunt) (string, error) {
+	hunt *api_proto.Hunt) (*api_proto.Hunt, error) {
 
 	if hunt.StartRequest == nil || hunt.StartRequest.Artifacts == nil {
-		return "", errors.New("No artifacts to collect.")
+		return nil, errors.New("No artifacts to collect.")
 	}
 
 	if hunt.Expires == 0 {
@@ -39,7 +39,7 @@ func (self HuntDispatcher) CreateHunt(
 	}
 
 	if hunt.Expires < hunt.CreateTime {
-		return "", errors.New("Hunt expiry is in the past!")
+		return nil, errors.New("Hunt expiry is in the past!")
 	}
 
 	// Set the artifacts information in the hunt object itself.
@@ -69,17 +69,17 @@ func (self HuntDispatcher) CreateHunt(
 	// First compile the request to make sure it is valid.
 	manager, err := services.GetRepositoryManager(config_obj)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	repository, err := manager.GetGlobalRepository(config_obj)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	laucher_manager, err := services.GetLauncher(config_obj)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	compiled, err := laucher_manager.CompileCollectorArgs(
@@ -88,11 +88,11 @@ func (self HuntDispatcher) CreateHunt(
 			ObfuscateNames: true,
 		}, hunt.StartRequest)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(compiled) == 0 {
-		return "", errors.New("No compiled requests!")
+		return nil, errors.New("No compiled requests!")
 	}
 
 	// Add a special hunt message to trigger stats update by the
@@ -115,7 +115,7 @@ func (self HuntDispatcher) CreateHunt(
 
 	serialized, err := protojson.Marshal(hunt)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = cvelo_services.SetElasticIndex(ctx,
@@ -131,10 +131,5 @@ func (self HuntDispatcher) CreateHunt(
 		})
 
 	// The actual hunt scheduling is done by the foreman.
-	/*
-	   if hunt.State == api_proto.Hunt_RUNNING {
-	       scheduleClientsForHunt(ctx, config_obj, hunt)
-	   }
-	*/
 	return hunt_id, nil
 }

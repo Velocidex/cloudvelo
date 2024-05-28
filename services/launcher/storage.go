@@ -29,7 +29,8 @@ func (self *FlowStorageManager) WriteFlow(
 	completion func()) error {
 
 	defer func() {
-		if completion != nil {
+		if completion != nil &&
+			!utils.CompareFuncs(completion, utils.SyncCompleter) {
 			completion()
 		}
 	}()

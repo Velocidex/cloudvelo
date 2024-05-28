@@ -43,7 +43,7 @@ require (
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/ahocorasick v0.0.0-20180712114356-e1c353eeaaee // indirect
 	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
-	github.com/Velocidex/etw v0.0.0-20210723072214-4d0cffd1ff22 // indirect
+	github.com/Velocidex/etw v0.0.0-20231115144702-0b885b292f0f // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
@@ -78,6 +78,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bradleyjkemp/sigma-go v0.6.4 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/clayscode/Go-Splunk-HTTP/splunk/v2 v2.0.1-0.20221027171526-76a36be4fa02 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
@@ -90,7 +91,7 @@ require (
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/dustmop/soup v1.1.2-0.20190516214245-38228baa104e // indirect
-	github.com/elastic/go-libaudit v0.4.0 // indirect
+	github.com/elastic/go-libaudit/v2 v2.4.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/glaslos/tlsh v0.2.0 // indirect
@@ -173,6 +174,7 @@ require (
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20230925163745-10651d5192ab // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
@@ -208,7 +210,7 @@ require (
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
 
-// replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
+//replace www.velocidex.com/golang/velociraptor => /home/mic/projects/velociraptor
 // replace www.velocidex.com/golang/vfilter => /home/mic/projects/vfilter
 // replace www.velocidex.com/golang/go-ntfs => /home/mic/projects/go-ntfs
 // replace www.velocidex.com/golang/go-pe => /home/mic/projects/go-pe

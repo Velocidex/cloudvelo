@@ -58,6 +58,12 @@ type RepositoryManager struct {
 	ctx        context.Context
 }
 
+func (self *RepositoryManager) ReformatVQL(
+	ctx context.Context, artifact_yaml string) (string, error) {
+
+	return (&repository.RepositoryManager{}).ReformatVQL(ctx, artifact_yaml)
+}
+
 // New Repository is called to create a new temporary repository
 func (self *RepositoryManager) NewRepository() services.Repository {
 	return &repository.Repository{
@@ -255,6 +261,12 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	}
 
 	return nil
+}
+
+func (self *RepositoryManager) SetArtifactMetadata(
+	ctx context.Context, config_obj *config_proto.Config,
+	principal, name string, metadata *artifacts_proto.ArtifactMetadata) error {
+	return errors.New("RepositoryManager.SetArtifactMetadata not implemented")
 }
 
 func LoadOverridenArtifacts(
