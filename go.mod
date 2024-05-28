@@ -46,6 +46,7 @@ require (
 	github.com/Velocidex/etw v0.0.0-20231115144702-0b885b292f0f // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
+	github.com/Velocidex/go-ewf v0.0.0-20240210123447-97dc81b7d8c3 // indirect
 	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
 	github.com/Velocidex/go-magic v0.0.0-20211018155418-c5dc48282f28 // indirect
 	github.com/Velocidex/go-yara v1.1.10-0.20221202090138-c7dde4c43aa4 // indirect
@@ -175,7 +176,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20230925163745-10651d5192ab // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
@@ -199,13 +200,13 @@ require (
 	howett.net/plist v1.0.0 // indirect
 	www.velocidex.com/golang/binparsergen v0.1.1-0.20220107080050-ae6122c5ed14 // indirect
 	www.velocidex.com/golang/evtx v0.2.1-0.20220404133451-1fdf8be7325e // indirect
-	www.velocidex.com/golang/go-ese v0.1.1-0.20230821114411-ecb5494187ed // indirect
-	www.velocidex.com/golang/go-ntfs v0.1.2-0.20230922133004-33eadbbaf1f2 // indirect
+	www.velocidex.com/golang/go-ese v0.2.1-0.20240207005444-85d57b555f8b // indirect
+	www.velocidex.com/golang/go-ntfs v0.1.2-0.20231201083609-cc79ced94180 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20230228112150-ef2eadf34bc3 // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20220801101854-338dbe61982a // indirect
 	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect
 	www.velocidex.com/golang/regparser v0.0.0-20221020153526-bbc758cbd18b // indirect
-	www.velocidex.com/golang/vtypes v0.0.0-20231115033415-7856327477d2 // indirect
+	www.velocidex.com/golang/vtypes v0.0.0-20240123105603-069d4a7f435c // indirect
 )
 
 replace www.velocidex.com/golang/velociraptor => ./velociraptor
