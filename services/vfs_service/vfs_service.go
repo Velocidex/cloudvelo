@@ -131,7 +131,9 @@ func (self *VFSService) WriteDownloadInfo(
 	// Write synchronously so the GUI updates the download file right
 	// away.
 	err := cvelo_services.SetElasticIndex(
-		ctx, config_obj.OrgId, "transient", "", stats)
+		ctx, config_obj.OrgId,
+		"transient", cvelo_services.DocIdRandom,
+		stats)
 
 	utils.GetTime().Sleep(time.Second)
 

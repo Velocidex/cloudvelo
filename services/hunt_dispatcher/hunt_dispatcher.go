@@ -143,7 +143,8 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"persisted", hunt.HuntId, record)
+		"persisted", hunt.HuntId,
+		record)
 }
 
 func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {

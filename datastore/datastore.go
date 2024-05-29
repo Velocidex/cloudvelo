@@ -18,7 +18,31 @@ type ElasticDatastore struct {
 }
 
 const (
+	/**
+	This query has been added for the UX to return the download file associated with the given it.
+	*/
 	list_children_query = `
+{"sort": {"timestamp": {"order": "desc"}},
+ "size": 1,
+    "query": {
+        "bool": {
+            "must": [
+ {
+                    "prefix": {
+                        "vfs_path": %q
+                    }
+                	},
+					{
+                    "match": {
+                        "doc_type": "datastore"
+                    }
+                }
+            ]
+        }
+    }
+}
+`
+	delete_datastore_doc_query = `
 {
     "query": {
         "bool": {
@@ -38,8 +62,12 @@ const (
     }
 }
 `
-	delete_datastore_doc_query = `
-{
+	/**This query has been updated due to the transient index being changed to a datastream. Previously the index item was updated in place until the zip was available for download.
+
+	As we cannot update a datastream item in place, we have to take the most recent item (by setting size to 1 and order by timestamp) with the vfs path as the key**/
+	get_datastore_doc_query = `
+{"sort": {"timestamp": {"order": "desc"}},
+ "size": 1,
     "query": {
         "bool": {
             "must": [
@@ -66,8 +94,10 @@ func (self ElasticDatastore) GetSubject(
 	message proto.Message) error {
 
 	id := services.MakeId(path.AsClientPath())
-	data, err := services.GetElasticRecord(
-		self.ctx, config_obj.OrgId, "datastore", id)
+
+	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
+		"transient", json.Format(get_datastore_doc_query, id))
+
 	if err != nil {
 		return err
 	}
@@ -75,12 +105,16 @@ func (self ElasticDatastore) GetSubject(
 	record := &DatastoreRecord{
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	err = json.Unmarshal(data, &record)
-	if err != nil {
-		return err
-	}
+	for _, hit := range hits {
+		err = json.Unmarshal(hit, &record)
+		if err != nil {
 
-	return protojson.Unmarshal([]byte(record.JSONData), message)
+			return err
+		}
+
+		return protojson.Unmarshal([]byte(record.JSONData), message)
+	}
+	return nil
 }
 
 func (self ElasticDatastore) SetSubject(
@@ -101,7 +135,10 @@ func (self ElasticDatastore) SetSubject(
 		DocType:   "datastore",
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
-	return services.SetElasticIndex(self.ctx, config_obj.OrgId, "transient", "", record)
+	return services.SetElasticIndex(
+		self.ctx, config_obj.OrgId,
+		"transient", services.DocIdRandom,
+		record)
 }
 
 func (self ElasticDatastore) SetSubjectWithCompletion(

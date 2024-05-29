@@ -123,12 +123,12 @@ func (self *OrgManager) CreateNewOrg(name, id string) (
 	self.org_id_by_nonce[org_context.record.Nonce] = org_context.record.Id
 	self.mu.Unlock()
 
-	orgRecordDocType := org_context.record
-	orgRecord := orgRecordDocType.OrgRecord
 	// Write the org into the index.
-	return orgRecord, cvelo_services.SetElasticIndex(self.ctx,
-		services.ROOT_ORG_ID,
-		"persisted", orgRecord.Id, orgRecordDocType)
+	return org_context.record.OrgRecord,
+		cvelo_services.SetElasticIndex(self.ctx,
+			services.ROOT_ORG_ID,
+			"persisted", org_context.record.Id,
+			org_context.record)
 }
 
 func (self *OrgManager) makeNewConfigObj(

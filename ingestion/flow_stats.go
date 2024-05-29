@@ -58,7 +58,9 @@ func (self Ingestor) HandleFlowStats(
 	// progress as the collection is received. The bulk data is still
 	// stored asyncronously.
 	err := services.SetElasticIndex(ctx,
-		config_obj.OrgId, "transient", "", stats)
+		config_obj.OrgId,
+		"transient", services.DocIdRandom,
+		stats)
 	if err != nil {
 		return err
 	}

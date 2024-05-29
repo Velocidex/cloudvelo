@@ -65,7 +65,7 @@ func (self *serverPublicKeyResolver) GetPublicKey(
 
 	record, err := cvelo_services.GetElasticRecord(
 		context.Background(), config_obj.OrgId,
-		"persisted", client_id)
+		"persisted", client_id+"_key")
 	if err != nil {
 		return nil, false
 	}
@@ -93,7 +93,9 @@ func (self *serverPublicKeyResolver) SetPublicKey(
 		EnrollTime: uint64(utils.GetTime().Now().Unix()),
 	}
 	return cvelo_services.SetElasticIndex(
-		self.ctx, config_obj.OrgId, "persisted", client_id, pem)
+		self.ctx, config_obj.OrgId,
+		"persisted", client_id+"_key",
+		pem)
 }
 
 func (self *serverPublicKeyResolver) Clear() {}

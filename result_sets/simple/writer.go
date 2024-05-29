@@ -53,10 +53,11 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 
 	if self.sync {
 		services.SetElasticIndex(
-			self.ctx, self.org_id, "transient", "", record)
+			self.ctx, self.org_id, "transient",
+			services.DocIdRandom, record)
 	} else {
 		services.SetElasticIndexAsync(
-			self.org_id, "transient", "",
+			self.org_id, "transient", services.DocIdRandom,
 			cvelo_services.BulkUpdateCreate, record)
 	}
 }

@@ -53,7 +53,8 @@ func (self *UserManager) SetUser(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"persisted", user_record.Name, &UserRecord{
+		"persisted", user_record.Name,
+		&UserRecord{
 			Username: user_record.Name,
 			Record:   string(serialized),
 			DocType:  "users",
@@ -222,7 +223,8 @@ func (self *UserManager) SetUserOptions(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"persisted", username, &UserGUIOptions{
+		"persisted", username+"_options",
+		&UserGUIOptions{
 			Username:   username,
 			GUIOptions: string(serialized),
 			DocType:    "user_options",
@@ -233,7 +235,7 @@ func (self *UserManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(self.ctx,
-		services.ROOT_ORG_ID, "persisted", username)
+		services.ROOT_ORG_ID, "persisted", username+"_options")
 	if err == os.ErrNotExist || len(serialized) == 0 {
 		return &api_proto.SetGUIOptionsRequest{}, nil
 	}

@@ -36,8 +36,9 @@ func (self *ServerArtifactRunner) CloudConfig() *config.ElasticConfiguration {
 func (self *ServerArtifactRunner) Cancel(
 	ctx context.Context, flow_id, principal string) {
 	cvelo_services.SetElasticIndex(
-		self.ctx, self.config_obj.OrgId, "transient",
-		flow_id+"_cancel", &api.ArtifactCollectorRecord{
+		self.ctx, self.config_obj.OrgId,
+		"transient", flow_id+"_cancel",
+		&api.ArtifactCollectorRecord{
 			ClientId:  principal,
 			SessionId: flow_id,
 		})
