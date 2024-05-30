@@ -61,56 +61,8 @@ type HuntDispatcher struct {
 	config_obj *config_proto.Config
 }
 
-// TODO: Deprecated - remove.
 func (self HuntDispatcher) ApplyFuncOnHunts(cb func(hunt *api_proto.Hunt) error) error {
 	return errors.New("HuntDispatcher.ApplyFuncOnHunts Not implemented")
-}
-
-func (self HuntDispatcher) ApplyFuncOnHuntsWithOptions(
-	ctx context.Context,
-	options cvelo_services.HuntSearchOptions,
-	cb func(hunt *api_proto.Hunt) error) error {
-
-	sub_ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	var query string
-	switch options {
-	case cvelo_services.AllHunts:
-		query = getAllHunts
-	case cvelo_services.OnlyRunningHunts:
-		query = getAllActiveHunts
-	default:
-		return errors.New("HuntSearchOptions not supported")
-	}
-
-	out, err := cvelo_services.QueryChan(
-		sub_ctx, self.config_obj, 1000, self.config_obj.OrgId,
-		"persisted", query, "hunt_id")
-	if err != nil {
-		return err
-	}
-
-	for hit := range out {
-		entry := &HuntEntry{}
-		err := json.Unmarshal(hit, entry)
-		if err != nil {
-			return err
-		}
-
-		hunt_obj, err := entry.GetHunt()
-		if err != nil {
-			continue
-		}
-
-		// Allow the cb to cancel the query.
-		err = cb(hunt_obj)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (self HuntDispatcher) GetLastTimestamp() uint64 {
@@ -187,8 +139,7 @@ func (self HuntDispatcher) Refresh(
 func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
 
 // TODO add sort and from/size clause
-const (
-	getAllHuntsQuery = `
+const getAllHuntsQuery = `
 {
     "query": {
       "bool": {
@@ -202,44 +153,7 @@ const (
  "from": %q, "size": %q
 }
 `
-	getAllActiveHunts = `
-{
-    "query": {
-        "bool": {
-            "must": [
-                {
-                    "match": {
-                        "doc_type": "hunts"
-                    }
-                },
-                {
-                    "match": {
-                        "state": "RUNNING"
-                    }
-                }
-            ]
-        }
-    }
-}
-`
-	getAllHunts = `
-{
-    "query": {
-        "bool": {
-            "must": [
-                {
-                    "match": {
-                        "doc_type": "hunts"
-                    }
-                }
-            ]
-        }
-    }
-}
-`
-)
 
-// TODO: Deprecated...
 func (self HuntDispatcher) ListHunts(
 	ctx context.Context, config_obj *config_proto.Config,
 	in *api_proto.ListHuntsRequest) (
