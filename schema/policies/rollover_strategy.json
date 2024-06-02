@@ -31,8 +31,8 @@
       }
     ],
     "ism_template": {
-      "index_patterns": ["*_results*"],
-      "priority": 101
+      "index_patterns": ["*_transient*"],
+      "priority": 300
     }
   }
 }
