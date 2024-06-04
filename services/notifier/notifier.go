@@ -9,6 +9,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	velo_json "www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 )
 
@@ -26,6 +27,30 @@ func (self Nofitier) ListenForNotification(id string) (chan bool, func()) {
 	logger := logging.GetLogger(self.config_obj, &logging.GUIComponent)
 	ctx, cancel := context.WithCancel(context.Background())
 
+	var notifications_query = `
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {"key": %q}
+                }, {
+                    "match": {"doc_type": "notifications"}
+                }
+            ]
+        }
+    },
+    "sort": [
+      {
+        "timestamp": {
+          "order": "desc"
+        }
+      }
+    ],
+    "size": 1
+}
+`
+
 	go func() {
 		defer close(output_chan)
 
@@ -37,8 +62,10 @@ func (self Nofitier) ListenForNotification(id string) (chan bool, func()) {
 				return
 
 			case <-time.After(self.poll):
-				serialized, err := cvelo_services.GetElasticRecord(
-					ctx, self.config_obj.OrgId, "persisted", id)
+
+				serialized, err := cvelo_services.GetElasticRecordByQuery(ctx,
+					self.config_obj.OrgId, "persisted",
+					velo_json.Format(notifications_query, id))
 				if err != nil {
 					continue
 				}
@@ -66,7 +93,7 @@ func (self Nofitier) NotifyListener(
 	config_obj *config_proto.Config, id, tag string) error {
 	return cvelo_services.SetElasticIndex(
 		context.Background(), self.config_obj.OrgId,
-		"persisted", id,
+		"persisted", cvelo_services.DocIdRandom,
 		&api.NotificationRecord{
 			Key:       id,
 			Timestamp: time.Now().Unix(),
