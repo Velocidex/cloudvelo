@@ -27,6 +27,9 @@ debug_pool_client:
 gui:
 	$(BINARY) $(CONFIG_ARGS) gui -v --debug
 
+dump:
+	$(BINARY) $(CONFIG_ARGS) elastic dump -v
+
 debug_gui:
 	$(DLV) $(CONFIG_ARGS) gui -v --debug
 

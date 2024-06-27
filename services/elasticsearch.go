@@ -820,7 +820,12 @@ func QueryElasticRaw(
 
 	var results []json.RawMessage
 	for _, hit := range parsed.Hits.Hits {
-		results = append(results, hit.Source)
+		// Append the id to the end
+		source := hit.Source
+		source = source[:len(source)-1]
+		source = append(source, []byte(json.Format(`, "_id":%q}`, hit.Id))...)
+
+		results = append(results, source)
 	}
 
 	return results, parsed.Hits.Total.Value, nil

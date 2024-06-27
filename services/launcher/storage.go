@@ -83,10 +83,6 @@ func (self *FlowStorageManager) ListFlows(
 const (
 	getFlowDetailsQuery = `
 {
-  "sort": [
-   {"type": {"order": "asc"}},
-   {"timestamp": {"order": "asc"}}
-  ],
   "query": {
      "bool": {
        "must": [
@@ -124,20 +120,16 @@ func (self *FlowStorageManager) LoadCollectionContext(
 		return &flows_proto.ArtifactCollectorContext{}, nil
 	}
 
-	hits, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "transient",
-		json.Format(getFlowDetailsQuery, client_id, flow_id))
+	hit_chan, err := cvelo_services.QueryChan(ctx,
+		config_obj, 1000, config_obj.OrgId, "transient",
+		json.Format(getFlowDetailsQuery, client_id, flow_id), "timestamp")
 	if err != nil {
 		return nil, err
 	}
 
-	if len(hits) == 0 {
-		return nil, NotFoundError
-	}
-
 	var collection_context *flows_proto.ArtifactCollectorContext
 
-	for _, hit := range hits {
+	for hit := range hit_chan {
 		item := &cvelo_schema_api.ArtifactCollectorRecord{}
 		err = json.Unmarshal(hit, item)
 		if err != nil {
