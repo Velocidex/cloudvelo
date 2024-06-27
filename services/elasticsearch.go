@@ -663,6 +663,9 @@ func QueryChan(
 
 					search_after, pres = row.Get(sort_field)
 					if !pres {
+						logger := logging.GetLogger(config_obj,
+							&logging.FrontendComponent)
+						logger.Error("QueryChan: Row does not contain sorting column %v", sort_field)
 						return
 					}
 				}
