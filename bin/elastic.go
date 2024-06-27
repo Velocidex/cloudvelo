@@ -39,6 +39,10 @@ var (
 	elastic_command_dump_filter = elastic_command_dump.Flag(
 		"filter", "A VQL Lambda to filter rows by e.g. x=> x.type =~ 'results'").
 		Default("x=>TRUE").String()
+
+	elastic_command_dump_sort = elastic_command_dump.Flag(
+		"sort", "A field to sort by (default 'timestamp')").
+		Default("timestamp").String()
 )
 
 func doResetElastic() error {
@@ -96,7 +100,7 @@ func doDumpElastic() error {
 	rows, err := services.QueryChan(ctx, config_obj.VeloConf(), 1000,
 		*elastic_command_dump_org_id,
 		*elastic_command_dump_index,
-		`{"query": {"match_all" : {}}}`, "_id")
+		`{"query": {"match_all" : {}}}`, *elastic_command_dump_sort)
 	if err != nil {
 		return err
 	}

@@ -663,6 +663,9 @@ func QueryChan(
 
 					search_after, pres = row.Get(sort_field)
 					if !pres {
+						logger := logging.GetLogger(config_obj,
+							&logging.FrontendComponent)
+						logger.Error("QueryChan: Row does not contain sorting column %v", sort_field)
 						return
 					}
 				}
@@ -820,12 +823,7 @@ func QueryElasticRaw(
 
 	var results []json.RawMessage
 	for _, hit := range parsed.Hits.Hits {
-		// Append the id to the end
-		source := hit.Source
-		source = source[:len(source)-1]
-		source = append(source, []byte(json.Format(`, "_id":%q}`, hit.Id))...)
-
-		results = append(results, source)
+		results = append(results, hit.Source)
 	}
 
 	return results, parsed.Hits.Total.Value, nil
