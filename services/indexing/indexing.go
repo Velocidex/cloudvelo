@@ -3,7 +3,6 @@ package indexing
 import (
 	"context"
 	"errors"
-	"strings"
 	"sync"
 
 	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -71,6 +70,22 @@ func (self Indexer) getIndexRecords(
 	}
 }
 
+const searchlabel = `
+{"sort": [{
+    "client_id": {"order": "asc", "unmapped_type": "keyword"}
+ }],
+ "query": {
+   "bool": {
+     "must": [
+       %s, {"match": {
+                "doc_type": "clients"
+           }}]
+   }
+}
+,"_source":{"includes":["client_id"]}
+}
+`
+
 // Search the index for clients matching the term
 func (self Indexer) SearchIndexWithPrefix(
 	ctx context.Context,
@@ -97,10 +112,9 @@ func (self Indexer) SearchIndexWithPrefix(
 			return
 
 		case "label":
-			terms := []string{json.Format(fieldSearchQuery, "labels", term)}
+			terms := json.Format(fieldSearchQuery, "labels", term)
 			query := json.Format(
-				getAllClientsQuery, strings.Join(terms, ","),
-				`,{"_source":{"includes":["client_id"]}}`)
+				searchlabel, terms)
 			self.getIndexRecords(ctx, config_obj, query, output_chan)
 			return
 
