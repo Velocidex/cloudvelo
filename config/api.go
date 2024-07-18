@@ -41,7 +41,10 @@ type ElasticConfiguration struct {
 
 	ForemanIntervalSeconds int `json:"foreman_interval_seconds"`
 
-	ApprovedTools []Tool `json:"approved_tools"`
+	ApprovedTools       []Tool   `json:"approved_tools"`
+	DedicatedForeman    bool     `json:"dedicated_foreman"`
+	DedicatedForemanOrg string   `json:"dedicated_foreman_org"`
+	ForemanExcludedOrgs []string `json:"foreman_excluded_orgs"`
 }
 
 // Create a new cloud config object which contains the original

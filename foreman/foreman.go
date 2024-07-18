@@ -612,14 +612,14 @@ func (self Foreman) UpdatePlan(
 
 func (self Foreman) RunOnce(
 	ctx context.Context,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 
 	// Wait for all jobs to finish before we exit to avoid a race
 	// condition.
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 
 	org_manager, err := services.GetOrgManager()
 	if err != nil {
@@ -627,36 +627,74 @@ func (self Foreman) RunOnce(
 	}
 
 	// Only list orgs that have active hunts
-	orgs := org_manager.ListOrgs()
-	orgCountGauge.Set(float64(len(orgs)))
-
-	for _, org := range orgs {
-		org_config_obj, err := org_manager.GetOrgConfig(org.OrgId)
-		if err != nil {
-			continue
-		}
-
-		if logger != nil {
-			logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
-		}
-
-		plan, err := NewPlan(org_config_obj)
-		if err != nil {
-			continue
-		}
-
-		err = self.UpdatePlan(ctx, wg, org_config_obj, plan)
+	if config_obj.Cloud.DedicatedForeman {
+		org, err := org_manager.GetOrg(config_obj.Cloud.DedicatedForemanOrg)
 		if err != nil {
 			if logger != nil {
-				logger.Error("UpdatePlan, orgId=%v: %v", org_config_obj.OrgId, err)
+				logger.Error("UpdatePlan, orgId=%v: %v", org.OrgId, err)
 			}
-			continue
+			return err
+		}
+		err = self.runForOrg(ctx, org_manager, org, logger, wg)
+		if err != nil {
+			if logger != nil {
+				logger.Error("UpdatePlan, orgId=%v: %v", org.OrgId, err)
+			}
+		}
+	} else {
+		orgs := org_manager.ListOrgs()
+		orgCountGauge.Set(float64(len(orgs)))
+		for _, org := range orgs {
+			if sliceContainsKey(config_obj.Cloud.ForemanExcludedOrgs, org.OrgId) {
+				continue
+			}
+			err := self.runForOrg(ctx, org_manager, org, logger, wg)
+			if err != nil {
+				return err
+			}
+			if err != nil {
+				if logger != nil {
+					logger.Error("UpdatePlan, orgId=%v: %v", org.OrgId, err)
+				}
+				continue
+			}
 		}
 	}
 
 	// Make sure to flush out any outstanding writes so the data is
 	// fresh.
 	return cvelo_services.FlushBulkIndexer()
+}
+
+func sliceContainsKey(slice []string, key string) bool {
+	for _, val := range slice {
+		if val == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (self Foreman) runForOrg(ctx context.Context,
+	org_manager services.OrgManager,
+	org *api_proto.OrgRecord,
+	logger *logging.LogContext,
+	wg *sync.WaitGroup) error {
+	org_config_obj, err := org_manager.GetOrgConfig(org.OrgId)
+	if err != nil {
+		return err
+	}
+
+	if logger != nil {
+		logger.Debug("Foreman RunOnce, org: %v", org_config_obj.OrgId)
+	}
+
+	plan, err := NewPlan(org_config_obj)
+	if err != nil {
+		return err
+	}
+
+	return self.UpdatePlan(ctx, wg, org_config_obj, plan)
 }
 
 func (self *Foreman) Start(
@@ -666,7 +704,7 @@ func (self *Foreman) Start(
 
 	// Run once inline to trap any errors.
 	self.last_run_time = utils.GetTime().Now()
-	err := self.RunOnce(ctx, config_obj.VeloConf())
+	err := self.RunOnce(ctx, config_obj)
 	if err != nil {
 		return err
 	}
@@ -682,7 +720,7 @@ func (self *Foreman) Start(
 				return
 
 			case <-time.After(time.Duration(config_obj.Cloud.ForemanIntervalSeconds) * time.Second):
-				err := self.RunOnce(ctx, config_obj.VeloConf())
+				err := self.RunOnce(ctx, config_obj)
 				if err != nil {
 					logger.Error("Foreman: %v", err)
 				} else {
