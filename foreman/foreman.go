@@ -704,7 +704,7 @@ func (self *Foreman) Start(
 
 	// Run once inline to trap any errors.
 	self.last_run_time = utils.GetTime().Now()
-	err := self.RunOnce(ctx, config_obj.VeloConf())
+	err := self.RunOnce(ctx, config_obj)
 	if err != nil {
 		return err
 	}
