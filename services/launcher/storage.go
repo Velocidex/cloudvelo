@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"context"
+	"errors"
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -148,7 +149,9 @@ func (self *FlowStorageManager) LoadCollectionContext(
 
 		collection_context = mergeRecords(collection_context, stats_context)
 	}
-
+	if collection_context == nil {
+		return nil, errors.New("Not found")
+	}
 	launcher.UpdateFlowStats(collection_context)
 
 	return collection_context, nil
