@@ -582,9 +582,12 @@ func (self Foreman) UpdatePlan(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	org_config_obj *config_proto.Config, plan *Plan) error {
-
+	logger := logging.GetLogger(org_config_obj, &logging.FrontendComponent)
 	hunts, err := self.GetActiveHunts(ctx, org_config_obj)
+	logger.Info("retrieved active hunts: %v", len(hunts))
+
 	if err != nil {
+		logger.Error("Unable to get active hunts: %v", err)
 		return err
 	}
 
@@ -592,18 +595,24 @@ func (self Foreman) UpdatePlan(
 
 	// Get an update plan
 	err = self.CalculateUpdate(ctx, wg, org_config_obj, hunts, plan)
+	logger.Info("calculated updates")
 	if err != nil {
+		logger.Error("Unable to calculate updates: %v", err)
 		return err
 	}
 
 	// Now execute the plan.
 	err = plan.ExecuteHuntUpdate(ctx, org_config_obj)
+	logger.Info("Executed hunt updates")
 	if err != nil {
+		logger.Error("Unable to execute updates: %v", err)
 		return err
 	}
 
 	err = plan.ExecuteClientMonitoringUpdate(ctx, org_config_obj)
+	logger.Info("Executed client monitoring updates")
 	if err != nil {
+		logger.Error("Unable to execute client monitoring updates: %v", err)
 		return err
 	}
 
@@ -693,8 +702,9 @@ func (self Foreman) runForOrg(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
-	return self.UpdatePlan(ctx, wg, org_config_obj, plan)
+	result := self.UpdatePlan(ctx, wg, org_config_obj, plan)
+	logger.Debug("Foreman run completed, org: %v", org_config_obj.OrgId)
+	return result
 }
 
 func (self *Foreman) Start(
