@@ -154,6 +154,7 @@ const (
  "size": 0
 }
 `
+	hostnameExistsQuery = `{"query": {"exists": {"field": "hostname"}}}`
 )
 
 func (self *Indexer) getAllClients(
@@ -174,7 +175,7 @@ func (self *Indexer) getAllClients(
 	clients, _, err := self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
 	total, err := cvelo_services.QueryCountAPI(
-		ctx, config_obj.OrgId, "persisted", allClientsQuery)
+		ctx, config_obj.OrgId, "persisted", hostnameExistsQuery)
 	return clients, total, err
 }
 
