@@ -884,7 +884,7 @@ func QueryCountAPI(
 	ctx context.Context,
 	org_id, index, query string) (total int, err error) {
 
-	defer Instrument("QueryElasticIds")()
+	defer Instrument("QueryCountAPI")()
 	es, err := GetElasticClient()
 	if err != nil {
 		return 0, err
