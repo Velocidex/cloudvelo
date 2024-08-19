@@ -407,6 +407,10 @@ type _ElasticResponse struct {
 	Aggregations _ElasticAgg  `json:"aggregations"`
 }
 
+type _CountResponse struct {
+	Count int `json:"count"`
+}
+
 // Gets a single elastic record by id.
 func GetElasticRecordByQuery(
 	ctx context.Context, org_id, index_suffix, query string) (json.RawMessage, error) {
@@ -874,6 +878,45 @@ func QueryElasticIds(
 	}
 
 	return results, parsed.Hits.Total.Value, nil
+}
+
+func QueryCountAPI(
+	ctx context.Context,
+	org_id, index, query string) (total int, err error) {
+
+	defer Instrument("QueryElasticIds")()
+	es, err := GetElasticClient()
+	if err != nil {
+		return 0, err
+	}
+	res, err := es.Count(
+		es.Count.WithContext(ctx),
+		es.Count.WithIndex(GetIndex(org_id, index)),
+		es.Count.WithBody(strings.NewReader(query)),
+		es.Count.WithPretty(),
+	)
+	if err != nil {
+		return 0, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, err
+	}
+
+	// There was an error so we need to relay it
+	if res.IsError() {
+		return 0, makeReadElasticError(data)
+	}
+
+	parsed := &_CountResponse{}
+	err = json.Unmarshal(data, &parsed)
+	if err != nil {
+		return 0, makeReadElasticError(data)
+	}
+
+	return parsed.Count, nil
 }
 
 type Result struct {
