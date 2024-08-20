@@ -154,26 +154,7 @@ const (
  "size": 0
 }
 `
-	getAllClientDocsQuery = `
-{
-  "query": {
-    "bool": {
-      "must": [
-        {
-          "exists": {
-            "field": "hostname"
-          }
-        },
-        {
-          "match": {
-            "doc_type": "clients"
-          }
-        }
-      ]
-    }
-  }
-}
-`
+	getClientsQuery = `{"query": {"bool": {"must": [%s]}}}`
 )
 
 func (self *Indexer) getAllClients(
@@ -191,11 +172,8 @@ func (self *Indexer) getAllClients(
 	}
 
 	terms := []string{allClientsQuery}
-	clients, _, err := self.searchWithTerms(ctx, config_obj,
+	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
-	total, err := cvelo_services.QueryCountAPI(
-		ctx, config_obj.OrgId, "persisted", getAllClientDocsQuery)
-	return clients, total, err
 }
 
 const (
@@ -312,8 +290,33 @@ func (self *Indexer) searchWithTerms(
 	terms []string,
 	offset, limit uint64) ([]*api.ClientRecord, int, error) {
 	sorter := json.Format(sortQueryPart, "client_id", "asc")
-	return self.searchWithSortTerms(ctx, config_obj,
-		sorter, filter, terms, offset, limit)
+
+	clients, _, err := self.searchWithSortTerms(ctx, config_obj, sorter, filter, terms, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := self.CountWithTerms(ctx, config_obj, filter, terms)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return clients, total, nil
+}
+
+func (self *Indexer) CountWithTerms(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	filter api_proto.SearchClientsRequest_Filters,
+	terms []string) (total int, err error) {
+
+	if filter == api_proto.SearchClientsRequest_ONLINE {
+		terms = []string{json.Format(recentClientsQuery,
+			time.Now().UnixNano()-600000000000)}
+	}
+
+	query := json.Format(getClientsQuery, strings.Join(terms, ","))
+	return cvelo_services.QueryCountAPI(ctx, config_obj.OrgId, "persisted", query)
 }
 
 func (self *Indexer) searchWithSortTerms(
