@@ -118,7 +118,8 @@ func NewIngestor(
 	config_obj *config.Config,
 	crypto_manager *server.ServerCryptoManager) (*Ingestor, error) {
 
-	client, err := cvelo_services.GetElasticClientByType("primary")
+	client, err := cvelo_services.GetElasticClientByType(
+		cvelo_services.PrimaryOpenSearch)
 	if err != nil {
 		return nil, err
 	}

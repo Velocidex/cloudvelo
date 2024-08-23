@@ -32,7 +32,7 @@ import (
 
 type BulkUpdateType string
 
-type OpenSearchClusterOptions string
+type OpenSearchClusterOptions int
 
 const (
 	AsyncDelete = false
@@ -44,21 +44,26 @@ const (
 	BulkUpdateIndex  = "index"  // Create or update existing record.
 	BulkUpdateCreate = "create" // Create new record if no existing record.
 
-	DocIdRandom         = ""
-	PrimaryOpenSearch   = "primary"
-	SecondaryOpenSearch = "secondary"
+	DocIdRandom                                = ""
+	PrimaryOpenSearch OpenSearchClusterOptions = iota + 1
+	SecondaryOpenSearch
 )
 
 var (
 	mu             sync.Mutex
-	elasticClients map[OpenSearchClusterOptions]*opensearch.Client
-	primary_orgs   []string
-	TRUE           = true
-	True           = "true"
+	elasticClients = make(map[OpenSearchClusterOptions]*opensearch.Client)
+
+	// A set of orgs that belong to the primary cluster.
+	primary_orgs = make(map[string]bool)
+
+	TRUE = true
 
 	logger *logging.LogContext
 
 	bulk_indexer *BulkIndexer
+
+	ElasticConfigurationNotInitializedError = errors.New(
+		"Elastic configuration not initialized")
 )
 
 // The logger is normally installed in the start up sequence with
@@ -992,53 +997,51 @@ func QueryElastic(
 func GetElasticClientByType(instance_type OpenSearchClusterOptions) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	if instance_type == PrimaryOpenSearch {
-		if elasticClients[PrimaryOpenSearch] == nil {
-			return nil, errors.New("Elastic configuration not initialized")
+
+	switch instance_type {
+	case PrimaryOpenSearch:
+		res, pres := elasticClients[PrimaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
 		}
-		return elasticClients[PrimaryOpenSearch], nil
-	} else if instance_type == SecondaryOpenSearch {
-		if elasticClients[SecondaryOpenSearch] == nil {
-			return nil, errors.New("Elastic configuration not initialized")
+		return res, nil
+
+	case SecondaryOpenSearch:
+		res, pres := elasticClients[SecondaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
 		}
-		return elasticClients[SecondaryOpenSearch], nil
+		return res, nil
+
+	default:
+		return nil, errors.New("invalid opensearch client instance type")
 	}
-	return nil, errors.New("invalid opensearch client instance type")
 }
 
 func GetElasticClient(org_id string) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	if primary_orgs == nil || arrayContains(primary_orgs, org_id) {
-		if elasticClients[PrimaryOpenSearch] == nil {
-			return nil, errors.New("Elastic configuration not initialized")
-		}
-		return elasticClients[PrimaryOpenSearch], nil
-	}
-	if elasticClients[SecondaryOpenSearch] == nil {
-		return nil, errors.New("Elastic configuration not initialized")
-	}
-	return elasticClients[SecondaryOpenSearch], nil
-}
 
-func arrayContains(a []string, s string) bool {
-	for _, b := range a {
-		if b == s {
-			return true
+	if primary_orgs[org_id] {
+		res, pres := elasticClients[PrimaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
 		}
+		return res, nil
 	}
-	return false
+
+	res, pres := elasticClients[SecondaryOpenSearch]
+	if !pres {
+		return nil, ElasticConfigurationNotInitializedError
+	}
+	return res, nil
 }
 
 func SetElasticClient(clientKey OpenSearchClusterOptions, c *opensearch.Client) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if elasticClients == nil {
-		elasticClients = map[OpenSearchClusterOptions]*opensearch.Client{clientKey: c}
-	} else {
-		elasticClients[clientKey] = c
-	}
+	elasticClients[clientKey] = c
 }
 
 func SetDebugLogger(config_obj *config_proto.Config) {
@@ -1049,12 +1052,19 @@ func SetDebugLogger(config_obj *config_proto.Config) {
 }
 
 func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_config.Config) error {
-	primary_orgs = config_obj.Cloud.PrimaryOrgs
+
+	// Initialize the primary_orgs from the config file.
+	primary_orgs = make(map[string]bool)
+	for _, o := range config_obj.Cloud.PrimaryOrgs {
+		primary_orgs[o] = true
+	}
+
 	primary_config := opensearch.Config{
 		Addresses: config_obj.Cloud.Addresses,
 	}
 
-	primary_client, err := createOpenSearchClientFromConfig(ctx, config_obj, primary_config)
+	primary_client, err := createOpenSearchClientFromConfig(
+		ctx, config_obj, primary_config)
 	if err != nil {
 		return err
 	}
@@ -1062,13 +1072,15 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 	// Set the global elastic client
 	SetElasticClient(PrimaryOpenSearch, primary_client)
 
-	// Secondary Clients are only required in environments big enough to required multiple OpenSearch clusters
+	// Secondary Clients are only required in environments big enough
+	// to required multiple OpenSearch clusters
 	if config_obj.Cloud.SecondaryAddresses != nil {
 		secondary_config := opensearch.Config{
 			Addresses: config_obj.Cloud.SecondaryAddresses,
 		}
 
-		secondary_client, err := createOpenSearchClientFromConfig(ctx, config_obj, secondary_config)
+		secondary_client, err := createOpenSearchClientFromConfig(
+			ctx, config_obj, secondary_config)
 		if err != nil {
 			return err
 		}

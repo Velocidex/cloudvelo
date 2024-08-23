@@ -252,13 +252,15 @@ func (self *OrgManager) Start(
 		return err
 	}
 
-	err = cvelo_services.StartBulkIndexService(self.ctx, self.wg, "primary", config_obj)
+	err = cvelo_services.StartBulkIndexService(self.ctx, self.wg,
+		cvelo_services.PrimaryOpenSearch, config_obj)
 	if err != nil {
 		return err
 	}
 
 	if config_obj.Cloud.SecondaryAddresses != nil {
-		err = cvelo_services.StartBulkIndexService(self.ctx, self.wg, "secondary", config_obj)
+		err = cvelo_services.StartBulkIndexService(self.ctx, self.wg,
+			cvelo_services.SecondaryOpenSearch, config_obj)
 		if err != nil {
 			return err
 		}
