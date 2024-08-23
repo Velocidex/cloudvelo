@@ -1022,7 +1022,9 @@ func GetElasticClient(org_id string) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if primary_orgs[org_id] {
+	// If the config did not specify any primary orgs we always use
+	// the primary client.
+	if len(primary_orgs) == 0 || primary_orgs[org_id] {
 		res, pres := elasticClients[PrimaryOpenSearch]
 		if !pres {
 			return nil, ElasticConfigurationNotInitializedError
