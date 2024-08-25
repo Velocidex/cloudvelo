@@ -47,7 +47,8 @@ const (
 
 var (
 	mu             sync.Mutex
-	gElasticClient *opensearch.Client
+	elasticClients map[string]*opensearch.Client
+	primary_orgs   []string
 	TRUE           = true
 	True           = "true"
 
@@ -73,11 +74,19 @@ type IndexInfo struct {
 }
 
 func ListIndexes(ctx context.Context) ([]string, error) {
-	client, err := GetElasticClient()
-	if err != nil {
-		return nil, err
-	}
 
+	results := []string{}
+	for _, client := range elasticClients {
+		indexes, err := listIndexes(client, ctx)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, indexes...)
+	}
+	return results, nil
+}
+
+func listIndexes(client *opensearch.Client, ctx context.Context) ([]string, error) {
 	res, err := opensearchapi.CatIndicesRequest{
 		Format: "json",
 	}.Do(ctx, client)
@@ -103,7 +112,6 @@ func ListIndexes(ctx context.Context) ([]string, error) {
 	}
 
 	return results, nil
-
 }
 
 func GetIndex(org_id, index string) string {
@@ -124,7 +132,7 @@ func DeleteDocument(
 	defer Instrument("DeleteDocument")()
 
 	defer Debug("DeleteDocument %v", id)()
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -153,7 +161,7 @@ func DeleteDocumentByQuery(
 
 	defer Instrument("DeleteDocument")()
 	expanded_index := GetIndex(org_id, index)
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -177,7 +185,7 @@ func DeleteDocumentByQuery(
 // Should be called to force the index to synchronize.
 func FlushIndex(
 	ctx context.Context, org_id, index string) error {
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -206,7 +214,7 @@ func UpdateIndex(
 
 func _UpdateIndex(
 	ctx context.Context, org_id, index, id string, query string) error {
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -238,11 +246,16 @@ func _UpdateIndex(
 }
 
 func DoesTemplateExist(ctx context.Context, name string) error {
-	client, err := GetElasticClient()
-	if err != nil {
-		return err
+	for _, client := range elasticClients {
+		err := doesTemplateExist(client, ctx, name)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
+func doesTemplateExist(client *opensearch.Client, ctx context.Context, name string) error {
 	resp, err := opensearchapi.IndicesExistsIndexTemplateRequest{
 		Name: name,
 	}.Do(ctx, client)
@@ -341,7 +354,7 @@ func SetElasticIndex(ctx context.Context,
 func _SetElasticIndex(
 	ctx context.Context, org_id, index, id string, record interface{}) error {
 	serialized := json.MustMarshalIndent(record)
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -417,7 +430,7 @@ func GetElasticRecordByQuery(
 	defer Debug("GetElasticRecordByQuery %v %v", index_suffix, query)()
 	defer Instrument("GetElasticRecordByQuery")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +483,7 @@ func GetElasticRecord(
 	defer Debug("GetElasticRecord %v %v", index, id)()
 	defer Instrument("GetElasticRecord")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +558,7 @@ func GetMultipleElasticRecords(
 		defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
 	}
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +711,7 @@ func DeleteByQuery(
 
 	defer Instrument("DeleteByQuery")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -732,7 +745,7 @@ func QueryElasticAggregations(
 	defer Instrument("QueryElasticAggregations")()
 	defer Debug("QueryElasticAggregations %v", index)()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -794,7 +807,7 @@ func QueryElasticRaw(
 	defer Instrument("QueryElasticRaw")()
 	defer Debug("QueryElasticRaw %v", index)()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -841,7 +854,7 @@ func QueryElasticIds(
 	org_id, index, query string) (ids []string, total int, err error) {
 
 	defer Instrument("QueryElasticIds")()
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -930,7 +943,7 @@ func QueryElastic(
 
 	defer Instrument("QueryElastic")()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -972,22 +985,39 @@ func QueryElastic(
 	return results, nil
 }
 
-func GetElasticClient() (*opensearch.Client, error) {
+func GetElasticClient(org_id string) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
-
-	if gElasticClient == nil {
+	if arrayContains(primary_orgs, org_id) {
+		if elasticClients["primary"] == nil {
+			return nil, errors.New("Elastic configuration not initialized")
+		}
+		return elasticClients["primary"], nil
+	}
+	if elasticClients["secondary"] == nil {
 		return nil, errors.New("Elastic configuration not initialized")
 	}
-
-	return gElasticClient, nil
+	return elasticClients["secondary"], nil
 }
 
-func SetElasticClient(c *opensearch.Client) {
+func arrayContains(a []string, s string) bool {
+	for _, b := range a {
+		if b == s {
+			return true
+		}
+	}
+	return false
+}
+
+func SetElasticClient(clientKey string, c *opensearch.Client) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	gElasticClient = c
+	if elasticClients == nil {
+		elasticClients = map[string]*opensearch.Client{clientKey: c}
+	} else {
+		elasticClients[clientKey] = c
+	}
 }
 
 func SetDebugLogger(config_obj *config_proto.Config) {
@@ -998,19 +1028,43 @@ func SetDebugLogger(config_obj *config_proto.Config) {
 }
 
 func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_config.Config) error {
-	cfg := opensearch.Config{
+	primary_config := opensearch.Config{
 		Addresses: config_obj.Cloud.Addresses,
 	}
 
+	primary_client, err := createOpenSearchClientFromConfig(ctx, config_obj, primary_config)
+	if err != nil {
+		return err
+	}
+
+	// Set the global elastic client
+	SetElasticClient("primary", primary_client)
+
+	// Secondary Clients are only required in environments big enough to required multiple OpenSearch clusters
+	if config_obj.Cloud.SecondaryAddresses != nil {
+		secondary_config := opensearch.Config{
+			Addresses: config_obj.Cloud.SecondaryAddresses,
+		}
+
+		secondary_client, err := createOpenSearchClientFromConfig(ctx, config_obj, secondary_config)
+		if err != nil {
+			return err
+		}
+		SetElasticClient("secondary", secondary_client)
+	}
+	return nil
+}
+
+func createOpenSearchClientFromConfig(ctx context.Context, config_obj *cloud_velo_config.Config, openSearchConfigs opensearch.Config) (*opensearch.Client, error) {
 	CA_Pool := x509.NewCertPool()
 	crypto.AddPublicRoots(CA_Pool)
 
 	if config_obj.Cloud.RootCerts != "" &&
 		!CA_Pool.AppendCertsFromPEM([]byte(config_obj.Cloud.RootCerts)) {
-		return errors.New("cloud ingestion: Unable to add root certs")
+		return nil, errors.New("cloud ingestion: Unable to add root certs")
 	}
 
-	cfg.Transport = &http.Transport{
+	openSearchConfigs.Transport = &http.Transport{
 		MaxIdleConnsPerHost:   10,
 		ResponseHeaderTimeout: 100 * time.Second,
 		TLSClientConfig: &tls.Config{
@@ -1022,35 +1076,33 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 	}
 
 	if config_obj.Cloud.Username != "" && config_obj.Cloud.Password != "" {
-		cfg.Username = config_obj.Cloud.Username
-		cfg.Password = config_obj.Cloud.Password
+		openSearchConfigs.Username = config_obj.Cloud.Username
+		openSearchConfigs.Password = config_obj.Cloud.Password
 	} else {
 		signer_config, err := config.LoadDefaultConfig(ctx)
 		signer, err := requestsigner.NewSigner(signer_config)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		cfg.Signer = signer
+		openSearchConfigs.Signer = signer
 	}
 
-	client, err := opensearch.NewClient(cfg)
+	client, err := opensearch.NewClient(openSearchConfigs)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Fetch info immediately to verify that we can actually connect
 	// to the server.
 	res, err := client.Info()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	// Set the global elastic client
-	SetElasticClient(client)
-
-	return nil
+	return client, nil
 }
 
 func makeElasticError(data []byte) error {
@@ -1193,7 +1245,6 @@ func StartBulkIndexService(
 
 	new_bulk_indexer, err := opensearchutil.NewBulkIndexer(
 		opensearchutil.BulkIndexerConfig{
-			Client:        elastic_client,
 			FlushInterval: time.Second * 2,
 			OnFlushStart: func(ctx context.Context) context.Context {
 				logger := logging.GetLogger(

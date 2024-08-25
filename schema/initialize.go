@@ -32,7 +32,7 @@ var fs embed.FS
 func Delete(ctx context.Context,
 	config_obj *config_proto.Config, org_id, filter string) error {
 
-	client, err := services.GetElasticClient()
+	client, err := services.GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
