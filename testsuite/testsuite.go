@@ -97,8 +97,8 @@ func (self *CloudTestSuite) SetupTest() {
 	self.Ctx, self.cancel = context.WithTimeout(context.Background(),
 		time.Second*60)
 
-	config_obj := self.ConfigObj.VeloConf()
-	sm := services.NewServiceManager(self.Ctx, config_obj)
+	config_obj := self.ConfigObj
+	sm := services.NewServiceManager(self.Ctx, config_obj.VeloConf())
 	org_manager, err := orgs.NewOrgManager(sm.Ctx, sm.Wg, self.ConfigObj)
 	assert.NoError(self.T(), err)
 
@@ -108,7 +108,7 @@ func (self *CloudTestSuite) SetupTest() {
 	}
 
 	// Delete the previous indexes for the org.
-	err = schema.Delete(self.Ctx, config_obj, test_org, schema.NO_FILTER)
+	err = schema.Delete(self.Ctx, config_obj.VeloConf(), test_org, schema.NO_FILTER)
 	assert.NoError(self.T(), err)
 
 	_, err = org_manager.CreateNewOrg("test", test_org)

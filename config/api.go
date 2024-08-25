@@ -23,6 +23,8 @@ type ElasticConfiguration struct {
 	Password           string   `json:"password"`
 	APIKey             string   `json:"api_key"`
 	Addresses          []string `json:"addresses"`
+	SecondaryAddresses []string `json:"secondary_addresses"`
+	PrimaryOrgs        []string `json:"primary_orgs"`
 	CloudID            string   `json:"cloud_id"`
 	DisableSSLSecurity bool     `json:"disable_ssl_security"`
 	RootCerts          string   `json:"root_cert"`

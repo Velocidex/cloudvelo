@@ -86,7 +86,7 @@ func (self *HTTPIngestor) Execute(
 	case "OVERWRITE", "NEW":
 		fmt.Printf("%v: %v\n", plan.Type, plan.DocId)
 
-		client, err := services.GetElasticClient()
+		client, err := services.GetElasticClientByType("primary")
 		if err != nil {
 			return err
 		}

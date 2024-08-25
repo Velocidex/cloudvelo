@@ -60,7 +60,7 @@ func doResetElastic() error {
 	}
 
 	// Make sure the database is properly configured
-	err = schema.InstallIndexTemplates(ctx, config_obj.VeloConf())
+	err = schema.InstallIndexTemplates(ctx, config_obj)
 	if err != nil {
 		return err
 	}
