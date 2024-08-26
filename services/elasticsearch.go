@@ -32,6 +32,8 @@ import (
 
 type BulkUpdateType string
 
+type OpenSearchClusterOptions string
+
 const (
 	AsyncDelete = false
 	SyncDelete  = true
@@ -42,12 +44,14 @@ const (
 	BulkUpdateIndex  = "index"  // Create or update existing record.
 	BulkUpdateCreate = "create" // Create new record if no existing record.
 
-	DocIdRandom = ""
+	DocIdRandom         = ""
+	PrimaryOpenSearch   = "primary"
+	SecondaryOpenSearch = "secondary"
 )
 
 var (
 	mu             sync.Mutex
-	elasticClients map[string]*opensearch.Client
+	elasticClients map[OpenSearchClusterOptions]*opensearch.Client
 	primary_orgs   []string
 	TRUE           = true
 	True           = "true"
@@ -279,7 +283,7 @@ func doesTemplateExist(client *opensearch.Client, ctx context.Context, name stri
 }
 
 func PutTemplate(
-	ctx context.Context, name, template string, instance_type string) error {
+	ctx context.Context, name, template string, instance_type OpenSearchClusterOptions) error {
 
 	defer Instrument("PutTemplate")()
 
@@ -985,19 +989,19 @@ func QueryElastic(
 	return results, nil
 }
 
-func GetElasticClientByType(instance_type string) (*opensearch.Client, error) {
+func GetElasticClientByType(instance_type OpenSearchClusterOptions) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	if instance_type == "primary" {
-		if elasticClients["primary"] == nil {
+	if instance_type == PrimaryOpenSearch {
+		if elasticClients[PrimaryOpenSearch] == nil {
 			return nil, errors.New("Elastic configuration not initialized")
 		}
-		return elasticClients["primary"], nil
-	} else if instance_type == "secondary" {
-		if elasticClients["secondary"] == nil {
+		return elasticClients[PrimaryOpenSearch], nil
+	} else if instance_type == SecondaryOpenSearch {
+		if elasticClients[SecondaryOpenSearch] == nil {
 			return nil, errors.New("Elastic configuration not initialized")
 		}
-		return elasticClients["secondary"], nil
+		return elasticClients[SecondaryOpenSearch], nil
 	}
 	return nil, errors.New("invalid opensearch client instance type")
 }
@@ -1006,15 +1010,15 @@ func GetElasticClient(org_id string) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	if primary_orgs == nil || arrayContains(primary_orgs, org_id) {
-		if elasticClients["primary"] == nil {
+		if elasticClients[PrimaryOpenSearch] == nil {
 			return nil, errors.New("Elastic configuration not initialized")
 		}
-		return elasticClients["primary"], nil
+		return elasticClients[PrimaryOpenSearch], nil
 	}
-	if elasticClients["secondary"] == nil {
+	if elasticClients[SecondaryOpenSearch] == nil {
 		return nil, errors.New("Elastic configuration not initialized")
 	}
-	return elasticClients["secondary"], nil
+	return elasticClients[SecondaryOpenSearch], nil
 }
 
 func arrayContains(a []string, s string) bool {
@@ -1026,12 +1030,12 @@ func arrayContains(a []string, s string) bool {
 	return false
 }
 
-func SetElasticClient(clientKey string, c *opensearch.Client) {
+func SetElasticClient(clientKey OpenSearchClusterOptions, c *opensearch.Client) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if elasticClients == nil {
-		elasticClients = map[string]*opensearch.Client{clientKey: c}
+		elasticClients = map[OpenSearchClusterOptions]*opensearch.Client{clientKey: c}
 	} else {
 		elasticClients[clientKey] = c
 	}
@@ -1056,7 +1060,7 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 	}
 
 	// Set the global elastic client
-	SetElasticClient("primary", primary_client)
+	SetElasticClient(PrimaryOpenSearch, primary_client)
 
 	// Secondary Clients are only required in environments big enough to required multiple OpenSearch clusters
 	if config_obj.Cloud.SecondaryAddresses != nil {
@@ -1068,7 +1072,7 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 		if err != nil {
 			return err
 		}
-		SetElasticClient("secondary", secondary_client)
+		SetElasticClient(SecondaryOpenSearch, secondary_client)
 	}
 	return nil
 }
@@ -1176,7 +1180,7 @@ type BulkIndexer struct {
 	ctx           context.Context
 	config_obj    *config_proto.Config
 	mu            sync.Mutex
-	instance_type string
+	instance_type OpenSearchClusterOptions
 	indexes       map[string]bool
 }
 
@@ -1255,7 +1259,7 @@ func FlushBulkIndexer() error {
 func StartBulkIndexService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	instance string,
+	instance OpenSearchClusterOptions,
 	config_obj *cloud_velo_config.Config) error {
 	elastic_client, err := GetElasticClientByType(instance)
 	if err != nil {

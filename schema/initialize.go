@@ -130,14 +130,14 @@ func InstallIndexTemplates(
 		}
 
 		logger.Info("Creating index template %v\n", name)
-		err = services.PutTemplate(ctx, name, string(data), "primary")
+		err = services.PutTemplate(ctx, name, string(data), services.PrimaryOpenSearch)
 		if err != nil {
 			logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 			logger.Error("While creating index template %v: %v",
 				name, err)
 		}
 		if config_obj.Cloud.SecondaryAddresses != nil {
-			err = services.PutTemplate(ctx, name, string(data), "secondary")
+			err = services.PutTemplate(ctx, name, string(data), services.SecondaryOpenSearch)
 			if err != nil {
 				logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 				logger.Error("While creating index template %v: %v",
