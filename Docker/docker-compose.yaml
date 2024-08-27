@@ -6,8 +6,6 @@
 # * The "base" profile brings up only opensearch and localstack so you
 #   can start various Velociraptor services manually (See Makefile in
 #   top level).
-
-version: '3.9'
 services:
   opensearch:
     profiles:

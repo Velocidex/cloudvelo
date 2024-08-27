@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"www.velocidex.com/golang/cloudvelo/config"
 
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 	"github.com/pkg/errors"
@@ -32,7 +33,7 @@ var fs embed.FS
 func Delete(ctx context.Context,
 	config_obj *config_proto.Config, org_id, filter string) error {
 
-	client, err := services.GetElasticClient()
+	client, err := services.GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -106,13 +107,13 @@ func DeleteAllOrgs(ctx context.Context,
 
 func InstallIndexTemplates(
 	ctx context.Context,
-	config_obj *config_proto.Config) error {
+	config_obj *config.Config) error {
 
 	files, err := fs.ReadDir("templates")
 	if err != nil {
 		return err
 	}
-	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+	logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 
 	for _, filename := range files {
 		name := strings.Split(filename.Name(), ".")[0]
@@ -129,11 +130,19 @@ func InstallIndexTemplates(
 		}
 
 		logger.Info("Creating index template %v\n", name)
-		err = services.PutTemplate(ctx, name, string(data))
+		err = services.PutTemplate(ctx, name, string(data), services.PrimaryOpenSearch)
 		if err != nil {
-			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
+			logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
 			logger.Error("While creating index template %v: %v",
 				name, err)
+		}
+		if config_obj.Cloud.SecondaryAddresses != nil {
+			err = services.PutTemplate(ctx, name, string(data), services.SecondaryOpenSearch)
+			if err != nil {
+				logger := logging.GetLogger(config_obj.VeloConf(), &logging.FrontendComponent)
+				logger.Error("While creating index template %v: %v",
+					name, err)
+			}
 		}
 	}
 

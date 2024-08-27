@@ -252,14 +252,23 @@ func (self *OrgManager) Start(
 		return err
 	}
 
-	err = cvelo_services.StartBulkIndexService(self.ctx, self.wg, config_obj)
+	err = cvelo_services.StartBulkIndexService(self.ctx, self.wg,
+		cvelo_services.PrimaryOpenSearch, config_obj)
 	if err != nil {
 		return err
 	}
 
+	if config_obj.Cloud.SecondaryAddresses != nil {
+		err = cvelo_services.StartBulkIndexService(self.ctx, self.wg,
+			cvelo_services.SecondaryOpenSearch, config_obj)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Ensure database is properly initialized
 	// Make sure the database is properly configured
-	err = schema.InstallIndexTemplates(ctx, config_obj.VeloConf())
+	err = schema.InstallIndexTemplates(ctx, config_obj)
 	if err != nil {
 		return err
 	}

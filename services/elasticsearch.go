@@ -32,6 +32,8 @@ import (
 
 type BulkUpdateType string
 
+type OpenSearchClusterOptions int
+
 const (
 	AsyncDelete = false
 	SyncDelete  = true
@@ -42,18 +44,26 @@ const (
 	BulkUpdateIndex  = "index"  // Create or update existing record.
 	BulkUpdateCreate = "create" // Create new record if no existing record.
 
-	DocIdRandom = ""
+	DocIdRandom                                = ""
+	PrimaryOpenSearch OpenSearchClusterOptions = iota + 1
+	SecondaryOpenSearch
 )
 
 var (
 	mu             sync.Mutex
-	gElasticClient *opensearch.Client
-	TRUE           = true
-	True           = "true"
+	elasticClients = make(map[OpenSearchClusterOptions]*opensearch.Client)
+
+	// A set of orgs that belong to the primary cluster.
+	primary_orgs = make(map[string]bool)
+
+	TRUE = true
 
 	logger *logging.LogContext
 
 	bulk_indexer *BulkIndexer
+
+	ElasticConfigurationNotInitializedError = errors.New(
+		"Elastic configuration not initialized")
 )
 
 // The logger is normally installed in the start up sequence with
@@ -73,11 +83,19 @@ type IndexInfo struct {
 }
 
 func ListIndexes(ctx context.Context) ([]string, error) {
-	client, err := GetElasticClient()
-	if err != nil {
-		return nil, err
-	}
 
+	results := []string{}
+	for _, client := range elasticClients {
+		indexes, err := listIndexes(client, ctx)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, indexes...)
+	}
+	return results, nil
+}
+
+func listIndexes(client *opensearch.Client, ctx context.Context) ([]string, error) {
 	res, err := opensearchapi.CatIndicesRequest{
 		Format: "json",
 	}.Do(ctx, client)
@@ -103,7 +121,6 @@ func ListIndexes(ctx context.Context) ([]string, error) {
 	}
 
 	return results, nil
-
 }
 
 func GetIndex(org_id, index string) string {
@@ -124,7 +141,7 @@ func DeleteDocument(
 	defer Instrument("DeleteDocument")()
 
 	defer Debug("DeleteDocument %v", id)()
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -153,7 +170,7 @@ func DeleteDocumentByQuery(
 
 	defer Instrument("DeleteDocument")()
 	expanded_index := GetIndex(org_id, index)
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -177,7 +194,7 @@ func DeleteDocumentByQuery(
 // Should be called to force the index to synchronize.
 func FlushIndex(
 	ctx context.Context, org_id, index string) error {
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -206,7 +223,7 @@ func UpdateIndex(
 
 func _UpdateIndex(
 	ctx context.Context, org_id, index, id string, query string) error {
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -238,11 +255,16 @@ func _UpdateIndex(
 }
 
 func DoesTemplateExist(ctx context.Context, name string) error {
-	client, err := GetElasticClient()
-	if err != nil {
-		return err
+	for _, client := range elasticClients {
+		err := doesTemplateExist(client, ctx, name)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
+func doesTemplateExist(client *opensearch.Client, ctx context.Context, name string) error {
 	resp, err := opensearchapi.IndicesExistsIndexTemplateRequest{
 		Name: name,
 	}.Do(ctx, client)
@@ -266,11 +288,11 @@ func DoesTemplateExist(ctx context.Context, name string) error {
 }
 
 func PutTemplate(
-	ctx context.Context, name, template string) error {
+	ctx context.Context, name, template string, instance_type OpenSearchClusterOptions) error {
 
 	defer Instrument("PutTemplate")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClientByType(instance_type)
 	if err != nil {
 		return err
 	}
@@ -341,7 +363,7 @@ func SetElasticIndex(ctx context.Context,
 func _SetElasticIndex(
 	ctx context.Context, org_id, index, id string, record interface{}) error {
 	serialized := json.MustMarshalIndent(record)
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -397,6 +419,10 @@ type _AggResults struct {
 	Value   interface{}  `json:"value"`
 }
 
+type _CountResponse struct {
+	Count int `json:"count"`
+}
+
 type _ElasticAgg struct {
 	Results _AggResults `json:"genres"`
 }
@@ -407,17 +433,13 @@ type _ElasticResponse struct {
 	Aggregations _ElasticAgg  `json:"aggregations"`
 }
 
-type _CountResponse struct {
-	Count int `json:"count"`
-}
-
 // Gets a single elastic record by id.
 func GetElasticRecordByQuery(
 	ctx context.Context, org_id, index_suffix, query string) (json.RawMessage, error) {
 	defer Debug("GetElasticRecordByQuery %v %v", index_suffix, query)()
 	defer Instrument("GetElasticRecordByQuery")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +492,7 @@ func GetElasticRecord(
 	defer Debug("GetElasticRecord %v %v", index, id)()
 	defer Instrument("GetElasticRecord")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +567,7 @@ func GetMultipleElasticRecords(
 		defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
 	}
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +720,7 @@ func DeleteByQuery(
 
 	defer Instrument("DeleteByQuery")()
 
-	client, err := GetElasticClient()
+	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
 	}
@@ -732,7 +754,7 @@ func QueryElasticAggregations(
 	defer Instrument("QueryElasticAggregations")()
 	defer Debug("QueryElasticAggregations %v", index)()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -794,7 +816,7 @@ func QueryElasticRaw(
 	defer Instrument("QueryElasticRaw")()
 	defer Debug("QueryElasticRaw %v", index)()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -841,7 +863,7 @@ func QueryElasticIds(
 	org_id, index, query string) (ids []string, total int, err error) {
 
 	defer Instrument("QueryElasticIds")()
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -885,7 +907,7 @@ func QueryCountAPI(
 	org_id, index, query string) (total int, err error) {
 
 	defer Instrument("QueryCountAPI")()
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return 0, err
 	}
@@ -930,7 +952,7 @@ func QueryElastic(
 
 	defer Instrument("QueryElastic")()
 
-	es, err := GetElasticClient()
+	es, err := GetElasticClient(org_id)
 	if err != nil {
 		return nil, err
 	}
@@ -972,22 +994,56 @@ func QueryElastic(
 	return results, nil
 }
 
-func GetElasticClient() (*opensearch.Client, error) {
+func GetElasticClientByType(instance_type OpenSearchClusterOptions) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if gElasticClient == nil {
-		return nil, errors.New("Elastic configuration not initialized")
-	}
+	switch instance_type {
+	case PrimaryOpenSearch:
+		res, pres := elasticClients[PrimaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
+		}
+		return res, nil
 
-	return gElasticClient, nil
+	case SecondaryOpenSearch:
+		res, pres := elasticClients[SecondaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
+		}
+		return res, nil
+
+	default:
+		return nil, errors.New("invalid opensearch client instance type")
+	}
 }
 
-func SetElasticClient(c *opensearch.Client) {
+func GetElasticClient(org_id string) (*opensearch.Client, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	gElasticClient = c
+	// If the config did not specify any primary orgs we always use
+	// the primary client.
+	if len(primary_orgs) == 0 || primary_orgs[org_id] {
+		res, pres := elasticClients[PrimaryOpenSearch]
+		if !pres {
+			return nil, ElasticConfigurationNotInitializedError
+		}
+		return res, nil
+	}
+
+	res, pres := elasticClients[SecondaryOpenSearch]
+	if !pres {
+		return nil, ElasticConfigurationNotInitializedError
+	}
+	return res, nil
+}
+
+func SetElasticClient(clientKey OpenSearchClusterOptions, c *opensearch.Client) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	elasticClients[clientKey] = c
 }
 
 func SetDebugLogger(config_obj *config_proto.Config) {
@@ -998,19 +1054,53 @@ func SetDebugLogger(config_obj *config_proto.Config) {
 }
 
 func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_config.Config) error {
-	cfg := opensearch.Config{
+
+	// Initialize the primary_orgs from the config file.
+	primary_orgs = make(map[string]bool)
+	for _, o := range config_obj.Cloud.PrimaryOrgs {
+		primary_orgs[o] = true
+	}
+
+	primary_config := opensearch.Config{
 		Addresses: config_obj.Cloud.Addresses,
 	}
 
+	primary_client, err := createOpenSearchClientFromConfig(
+		ctx, config_obj, primary_config)
+	if err != nil {
+		return err
+	}
+
+	// Set the global elastic client
+	SetElasticClient(PrimaryOpenSearch, primary_client)
+
+	// Secondary Clients are only required in environments big enough
+	// to required multiple OpenSearch clusters
+	if config_obj.Cloud.SecondaryAddresses != nil {
+		secondary_config := opensearch.Config{
+			Addresses: config_obj.Cloud.SecondaryAddresses,
+		}
+
+		secondary_client, err := createOpenSearchClientFromConfig(
+			ctx, config_obj, secondary_config)
+		if err != nil {
+			return err
+		}
+		SetElasticClient(SecondaryOpenSearch, secondary_client)
+	}
+	return nil
+}
+
+func createOpenSearchClientFromConfig(ctx context.Context, config_obj *cloud_velo_config.Config, openSearchConfigs opensearch.Config) (*opensearch.Client, error) {
 	CA_Pool := x509.NewCertPool()
 	crypto.AddPublicRoots(CA_Pool)
 
 	if config_obj.Cloud.RootCerts != "" &&
 		!CA_Pool.AppendCertsFromPEM([]byte(config_obj.Cloud.RootCerts)) {
-		return errors.New("cloud ingestion: Unable to add root certs")
+		return nil, errors.New("cloud ingestion: Unable to add root certs")
 	}
 
-	cfg.Transport = &http.Transport{
+	openSearchConfigs.Transport = &http.Transport{
 		MaxIdleConnsPerHost:   10,
 		ResponseHeaderTimeout: 100 * time.Second,
 		TLSClientConfig: &tls.Config{
@@ -1022,35 +1112,33 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 	}
 
 	if config_obj.Cloud.Username != "" && config_obj.Cloud.Password != "" {
-		cfg.Username = config_obj.Cloud.Username
-		cfg.Password = config_obj.Cloud.Password
+		openSearchConfigs.Username = config_obj.Cloud.Username
+		openSearchConfigs.Password = config_obj.Cloud.Password
 	} else {
 		signer_config, err := config.LoadDefaultConfig(ctx)
 		signer, err := requestsigner.NewSigner(signer_config)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		cfg.Signer = signer
+		openSearchConfigs.Signer = signer
 	}
 
-	client, err := opensearch.NewClient(cfg)
+	client, err := opensearch.NewClient(openSearchConfigs)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Fetch info immediately to verify that we can actually connect
 	// to the server.
 	res, err := client.Info()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	// Set the global elastic client
-	SetElasticClient(client)
-
-	return nil
+	return client, nil
 }
 
 func makeElasticError(data []byte) error {
@@ -1103,11 +1191,11 @@ func MakeId(item string) string {
 
 type BulkIndexer struct {
 	opensearchutil.BulkIndexer
-	ctx        context.Context
-	config_obj *config_proto.Config
-	mu         sync.Mutex
-
-	indexes map[string]bool
+	ctx           context.Context
+	config_obj    *config_proto.Config
+	mu            sync.Mutex
+	instance_type OpenSearchClusterOptions
+	indexes       map[string]bool
 }
 
 func (self *BulkIndexer) Add(ctx context.Context, item opensearchutil.BulkIndexerItem) error {
@@ -1122,7 +1210,7 @@ func (self *BulkIndexer) Close() error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	elastic_client, err := GetElasticClient()
+	elastic_client, err := GetElasticClientByType(self.instance_type)
 	if err != nil {
 		return err
 	}
@@ -1185,8 +1273,9 @@ func FlushBulkIndexer() error {
 func StartBulkIndexService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
+	instance OpenSearchClusterOptions,
 	config_obj *cloud_velo_config.Config) error {
-	elastic_client, err := GetElasticClient()
+	elastic_client, err := GetElasticClientByType(instance)
 	if err != nil {
 		return err
 	}
@@ -1215,10 +1304,11 @@ func StartBulkIndexService(
 
 	mu.Lock()
 	bulk_indexer = &BulkIndexer{
-		BulkIndexer: new_bulk_indexer,
-		config_obj:  config_obj.VeloConf(),
-		ctx:         ctx,
-		indexes:     make(map[string]bool),
+		BulkIndexer:   new_bulk_indexer,
+		config_obj:    config_obj.VeloConf(),
+		ctx:           ctx,
+		indexes:       make(map[string]bool),
+		instance_type: instance,
 	}
 	mu.Unlock()
 
