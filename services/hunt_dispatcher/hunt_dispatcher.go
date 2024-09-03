@@ -16,6 +16,7 @@ import (
 type HuntEntry struct {
 	HuntId    string `json:"hunt_id"`
 	Timestamp int64  `json:"timestamp"`
+	Expires   uint64 `json:"expires"`
 	Scheduled uint64 `json:"scheduled"`
 	Completed uint64 `json:"completed"`
 	Errors    uint64 `json:"errors"`

@@ -123,6 +123,7 @@ func (self HuntDispatcher) CreateHunt(
 		"persisted", hunt_id,
 		&HuntEntry{
 			HuntId:    hunt_id,
+			Expires:   hunt.Expires,
 			Timestamp: time.Now().Unix(),
 			Hunt:      string(serialized),
 			State:     hunt.State.String(),
