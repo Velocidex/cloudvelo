@@ -51,7 +51,7 @@ jobs:
         go run make.go -v DarwinBase
 
     - name: StoreBinaries
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: Binaries
         path: output
