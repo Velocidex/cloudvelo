@@ -151,9 +151,12 @@
         },
         "entity": {
           "type": "keyword"
+        },
+        "expires": {
+          "type": "long"
         }
-      }
       }
     }
   }
+}
 
