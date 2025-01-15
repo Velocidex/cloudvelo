@@ -131,6 +131,7 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 
 	record := &HuntEntry{
 		HuntId:  hunt_id,
+		Expires: hunt.Expires,
 		Hunt:    string(serialized),
 		State:   hunt.State.String(),
 		DocType: "hunts",
