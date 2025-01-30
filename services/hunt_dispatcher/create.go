@@ -131,5 +131,5 @@ func (self HuntDispatcher) CreateHunt(
 		})
 
 	// The actual hunt scheduling is done by the foreman.
-	return hunt_id, nil
+	return hunt, nil
 }
