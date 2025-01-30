@@ -13,7 +13,7 @@ func (self HuntDispatcher) ModifyHuntObject(ctx context.Context, hunt_id string,
 	cb func(hunt *api_proto.Hunt) services.HuntModificationAction,
 ) services.HuntModificationAction {
 
-	hunt, pres := self.GetHunt(hunt_id)
+	hunt, pres := self.GetHunt(ctx, hunt_id)
 	if !pres {
 		return services.HuntUnmodified
 	}

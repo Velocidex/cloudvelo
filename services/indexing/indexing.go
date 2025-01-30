@@ -45,6 +45,12 @@ func (self Indexer) UnsetIndex(client_id, term string) error {
 	return errors.New("Indexer.UnsetIndex Not implemented")
 }
 
+func (self Indexer) RebuildIndex(
+	ctx context.Context,
+	config_obj *config_proto.Config) error {
+	return nil
+}
+
 func (self Indexer) getIndexRecords(
 	ctx context.Context,
 	config_obj *config_proto.Config,

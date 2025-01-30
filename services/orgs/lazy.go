@@ -49,6 +49,14 @@ func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, e
 	return nil, errors.New("LazyServiceContainer.FrontendManager is Not implemented")
 }
 
+func (self *LazyServiceContainer) BackupService() (services.BackupService, error) {
+	return nil, errors.New("LazyServiceContainer.BackupService is Not implemented")
+}
+
+func (self *LazyServiceContainer) SecretsService() (services.SecretsService, error) {
+	return nil, errors.New("LazyServiceContainer.SecretsService is Not implemented")
+}
+
 func (self *LazyServiceContainer) AuditManager() (services.AuditManager, error) {
 	return &audit_manager.AuditManager{}, nil
 }

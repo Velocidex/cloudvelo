@@ -555,8 +555,7 @@ func (self Foreman) GetActiveHunts(
 
 	var result []*api_proto.Hunt
 
-	err = cvelo_services.ApplyFuncOnHuntsWithOptions(hunt_dispatcher, ctx,
-		cvelo_services.OnlyRunningHunts,
+	err = hunt_dispatcher.ApplyFuncOnHunts(ctx, services.OnlyRunningHunts,
 		func(hunt *api_proto.Hunt) error {
 
 			// Check if the hunt is expired and stop it if it is

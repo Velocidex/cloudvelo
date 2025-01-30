@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
@@ -221,6 +222,16 @@ func (self *SimpleResultSetReader) JSON(
 	}()
 
 	return output_chan, nil
+}
+
+// TODO
+func (self *SimpleResultSetReader) MTime() time.Time {
+	return time.Time{}
+}
+
+// TODO
+func (self *SimpleResultSetReader) Stacker() api.FSPathSpec {
+	return self.log_path
 }
 
 func (self *SimpleResultSetReader) Close() {}

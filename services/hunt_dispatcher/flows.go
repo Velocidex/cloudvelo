@@ -7,6 +7,7 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/vfilter"
 )
@@ -34,11 +35,13 @@ type HuntFlowEntry struct {
 	DocType   string `json:"doc_type"`
 }
 
+// TODO
 func (self HuntDispatcher) GetFlows(
 	ctx context.Context,
 	config_obj *config_proto.Config,
+	options result_sets.ResultSetOptions,
 	scope vfilter.Scope,
-	hunt_id string, start int) chan *api_proto.FlowDetails {
+	hunt_id string, start int) (chan *api_proto.FlowDetails, int64, error) {
 	output_chan := make(chan *api_proto.FlowDetails)
 
 	go func() {
@@ -73,5 +76,6 @@ func (self HuntDispatcher) GetFlows(
 		}
 
 	}()
-	return output_chan
+
+	return output_chan, 0, nil
 }

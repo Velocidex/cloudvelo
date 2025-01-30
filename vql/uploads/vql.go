@@ -140,7 +140,7 @@ func (self UploadFunction) Upload(
 		}
 
 		return uploader.Upload(ctx, scope, ospath, accessor, name,
-			size, mtime, atime, ctime, btime, reader)
+			size, mtime, atime, ctime, btime, 0644, reader)
 	}
 
 	// If we get here we have a specialized uploader factory

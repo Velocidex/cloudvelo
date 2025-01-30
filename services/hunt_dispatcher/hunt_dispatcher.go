@@ -10,7 +10,9 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type HuntEntry struct {
@@ -62,14 +64,9 @@ type HuntDispatcher struct {
 	config_obj *config_proto.Config
 }
 
-// TODO: Deprecated - remove.
-func (self HuntDispatcher) ApplyFuncOnHunts(cb func(hunt *api_proto.Hunt) error) error {
-	return errors.New("HuntDispatcher.ApplyFuncOnHunts Not implemented")
-}
-
-func (self HuntDispatcher) ApplyFuncOnHuntsWithOptions(
+func (self HuntDispatcher) ApplyFuncOnHunts(
 	ctx context.Context,
-	options cvelo_services.HuntSearchOptions,
+	options services.HuntSearchOptions,
 	cb func(hunt *api_proto.Hunt) error) error {
 
 	sub_ctx, cancel := context.WithCancel(ctx)
@@ -77,9 +74,9 @@ func (self HuntDispatcher) ApplyFuncOnHuntsWithOptions(
 
 	var query string
 	switch options {
-	case cvelo_services.AllHunts:
+	case services.AllHunts:
 		query = getAllHunts
-	case cvelo_services.OnlyRunningHunts:
+	case services.OnlyRunningHunts:
 		query = getAllActiveHunts
 	default:
 		return errors.New("HuntSearchOptions not supported")
@@ -150,7 +147,8 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 		record)
 }
 
-func (self HuntDispatcher) GetHunt(hunt_id string) (*api_proto.Hunt, bool) {
+func (self HuntDispatcher) GetHunt(
+	ctx context.Context, hunt_id string) (*api_proto.Hunt, bool) {
 	serialized, err := cvelo_services.GetElasticRecord(context.Background(),
 		self.config_obj.OrgId, "persisted", hunt_id)
 	if err != nil {
@@ -187,7 +185,7 @@ func (self HuntDispatcher) Refresh(
 	return nil
 }
 
-func (self HuntDispatcher) Close(config_obj *config_proto.Config) {}
+func (self HuntDispatcher) Close(ctx context.Context) {}
 
 // TODO add sort and from/size clause
 const (
@@ -241,6 +239,14 @@ const (
 }
 `
 )
+
+// TODO
+func (self *HuntDispatcher) GetHunts(ctx context.Context,
+	config_obj *config_proto.Config,
+	options result_sets.ResultSetOptions,
+	start_row, length int64) ([]*api_proto.Hunt, int64, error) {
+	return nil, 0, utils.NotImplementedError
+}
 
 // TODO: Deprecated...
 func (self HuntDispatcher) ListHunts(

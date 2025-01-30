@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -14,6 +15,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type NotebookRecord struct {
@@ -135,7 +137,7 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 
 }
 
-func (self *NotebookStoreImpl) GetNotebookCell(notebook_id, cell_id string) (
+func (self *NotebookStoreImpl) GetNotebookCell(notebook_id, cell_id, version string) (
 	*api_proto.NotebookCell, error) {
 
 	serialized, err := cvelo_services.GetElasticRecord(
@@ -192,4 +194,69 @@ func (self *NotebookStoreImpl) GetAvailableUploadFiles(notebook_id string) (
 func (self *NotebookStoreImpl) UpdateShareIndex(
 	notebook *api_proto.NotebookMetadata) error {
 	return nil
+}
+
+const (
+	all_notebook_query = `
+{
+  "sort": [
+  {
+    "timestamp": {"order": "desc"}
+  }],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              {"match": {"public": true}},
+              {"match": {"doc_type" : "notebooks"}}
+           ]}
+        },
+        {"match": {"type": "User"}}
+      ]}
+  },
+  "size": %q,
+  "from": %q
+}
+`
+)
+
+func (self *NotebookStoreImpl) GetAllNotebooks() (
+	[]*api_proto.NotebookMetadata, error) {
+
+	hits, _, err := cvelo_services.QueryElasticRaw(
+		self.ctx, self.config_obj.OrgId, "persisted",
+		json.Format(all_notebook_query, 1000, 0))
+	if err != nil {
+		return nil, err
+	}
+
+	result := []*api_proto.NotebookMetadata{}
+	for _, hit := range hits {
+		entry := &NotebookRecord{}
+		err = json.Unmarshal(hit, entry)
+		if err != nil {
+			continue
+		}
+
+		item := &api_proto.NotebookMetadata{}
+		err = json.Unmarshal([]byte(entry.Notebook), item)
+		if err != nil {
+			continue
+		}
+
+		if !item.Hidden {
+			result = append(result, item)
+		}
+
+	}
+	return result, nil
+}
+
+// TODO
+func (self *NotebookStoreImpl) RemoveNotebookCell(
+	ctx context.Context, config_obj *config_proto.Config,
+	notebook_id, cell_id, version string, output_chan chan *ordereddict.Dict) error {
+	return utils.NotImplementedError
 }
