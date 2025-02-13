@@ -147,7 +147,7 @@ const (
  "query": {"prefix": {%q: {"value": %q,  "case_insensitive": true}}},
  "aggs": {
     "genres": {
-      "terms": { "field": %q }
+      "terms": { "field": %q , "size": 100}
     }
   },
  "fields": [ "client_id" ],
