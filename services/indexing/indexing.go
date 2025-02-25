@@ -12,7 +12,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
-	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type ElasticIndexRecord struct {
@@ -166,7 +166,7 @@ func (self Indexer) FastGetApiClient(
 	}
 
 	if len(records) == 0 {
-		return nil, services.NotFoundError
+		return nil, utils.NotFoundError
 	}
 
 	return _makeApiClient(records[0]), nil

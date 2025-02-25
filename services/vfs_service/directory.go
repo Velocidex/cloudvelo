@@ -4,17 +4,15 @@ import (
 	"context"
 
 	"github.com/Velocidex/ordereddict"
-	"google.golang.org/protobuf/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
-	"www.velocidex.com/golang/velociraptor/api/tables"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
-	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This record is mapped to the results index (see
@@ -155,78 +153,5 @@ func (self *VFSService) ListDirectoryFiles(
 	config_obj *config_proto.Config,
 	in *api_proto.GetTableRequest) (*api_proto.GetTableResponse, error) {
 
-	downloads, stat, err := self.readDirectoryWithDownloads(
-		ctx, config_obj, in.ClientId, in.VfsComponents)
-	if err != nil {
-		return nil, err
-	}
-
-	table_request := proto.Clone(in).(*api_proto.GetTableRequest)
-	table_request.Artifact = stat.Artifact
-	if table_request.Artifact == "" {
-		table_request.Artifact = "System.VFS.ListDirectory"
-	}
-
-	// Transform the table into a subsection of the main table.
-	table_request.StartIdx = stat.StartIdx
-	table_request.EndIdx = stat.EndIdx
-
-	// Get the table possibly applying any table transformations.
-	result, err := tables.GetTable(ctx, config_obj, table_request)
-	if err != nil {
-		return nil, err
-	}
-
-	index_of_Name := -1
-	for idx, column_name := range result.Columns {
-		if column_name == "Name" {
-			index_of_Name = idx
-			break
-		}
-	}
-
-	// Should not happen - Name is missing from results.
-	if index_of_Name < 0 {
-		return result, nil
-	}
-
-	// Merge uploaded file info with the VFSListResponse.
-	lookup := make(map[string]*DownloadRow)
-	for _, download := range downloads {
-		components := download.Components
-		if len(components) == 0 {
-			continue
-		}
-		basename := components[len(components)-1]
-		lookup[basename] = download
-	}
-
-	for _, row := range result.Rows {
-		if len(row.Cell) <= index_of_Name {
-			continue
-		}
-
-		// Find the Name column entry in each cell.
-		name := row.Cell[index_of_Name]
-
-		// Insert a Download columns in the begining.
-		row.Cell = append([]string{""}, row.Cell...)
-
-		download, pres := lookup[name]
-		if !pres {
-			continue
-		}
-
-		row.Cell[0] = json.MustMarshalString(&flows_proto.VFSDownloadInfo{
-			Size:       download.Size,
-			Components: download.FSComponents,
-			Mtime:      download.Mtime,
-			SHA256:     download.Sha256,
-			MD5:        download.Md5,
-			InFlight:   download.InFlight,
-			FlowId:     download.FlowId,
-		})
-	}
-	result.Columns = append([]string{"Download"}, result.Columns...)
-	return result, nil
+	return nil, utils.NotImplementedError
 }

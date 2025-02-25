@@ -40,7 +40,7 @@ func NewServerCryptoManager(
 		return nil, err
 	}
 
-	base, err := client.NewCryptoManager(config_obj,
+	base, err := client.NewCryptoManager(ctx, config_obj,
 		crypto_utils.GetSubjectName(cert),
 		[]byte(config_obj.Frontend.PrivateKey), resolver,
 		logging.GetLogger(config_obj, &logging.FrontendComponent))

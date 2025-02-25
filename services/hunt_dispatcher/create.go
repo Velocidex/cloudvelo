@@ -1,24 +1,7 @@
 package hunt_dispatcher
 
-import (
-	"context"
-	"errors"
-	"path"
-	"time"
-
-	"google.golang.org/protobuf/encoding/protojson"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
-	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
-	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	"www.velocidex.com/golang/velociraptor/services"
-	"www.velocidex.com/golang/velociraptor/services/hunt_dispatcher"
-	"www.velocidex.com/golang/velociraptor/utils"
-	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
-	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
-)
-
-func (self HuntDispatcher) CreateHunt(
+/*
+func (self HuntDispatcher) XXXCreateHunt(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	acl_manager vql_subsystem.ACLManager,
@@ -133,3 +116,4 @@ func (self HuntDispatcher) CreateHunt(
 	// The actual hunt scheduling is done by the foreman.
 	return hunt, nil
 }
+*/

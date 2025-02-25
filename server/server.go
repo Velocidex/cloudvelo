@@ -53,7 +53,8 @@ func (self Communicator) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message_info, err := self.crypto_manager.Decrypt(serialized)
+	ctx := r.Context()
+	message_info, err := self.crypto_manager.Decrypt(ctx, serialized)
 	if err != nil {
 		// Just plain reject with a 403.
 		http.Error(w, "", http.StatusForbidden)
@@ -100,7 +101,8 @@ func (self Communicator) Receive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message_info, err := self.crypto_manager.Decrypt(body)
+	ctx := r.Context()
+	message_info, err := self.crypto_manager.Decrypt(ctx, body)
 	if err != nil {
 		// Just plain reject with a 403.
 		http.Error(w, "", http.StatusForbidden)

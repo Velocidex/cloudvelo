@@ -44,7 +44,8 @@ func (self *Communicator) verifyToken(r *http.Request) (org_id string, err error
 		return "", err
 	}
 
-	msg_info, err := self.crypto_manager.Decrypt(decoded)
+	ctx := r.Context()
+	msg_info, err := self.crypto_manager.Decrypt(ctx, decoded)
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +54,6 @@ func (self *Communicator) verifyToken(r *http.Request) (org_id string, err error
 }
 
 // Receive a POST from the client to start the upload.
-//
 func (self *Communicator) StartMultipartUpload(
 	w http.ResponseWriter, r *http.Request) {
 	org_id, err := self.verifyToken(r)

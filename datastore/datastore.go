@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/datastore"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/file_store/path_specs"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -170,7 +171,12 @@ func (self ElasticDatastore) ListChildren(
 	config_obj *config_proto.Config,
 	urn api.DSPathSpec) ([]api.DSPathSpec, error) {
 
-	dir := urn.AsDatastoreDirectory(config_obj)
+	db, err := datastore.GetDB(config_obj)
+	if err != nil {
+		return nil, err
+	}
+	dir := datastore.AsDatastoreDirectory(db, config_obj, urn)
+
 	hits, _, err := services.QueryElasticRaw(self.ctx, config_obj.OrgId,
 		"transient", json.Format(list_children_query, dir))
 	if err != nil {
@@ -186,7 +192,7 @@ func (self ElasticDatastore) ListChildren(
 		}
 
 		components := utils.SplitComponents(record.VFSPath)
-		path_spec := path_specs.DSFromGenericComponentList(components)
+		path_spec := path_specs.NewUnsafeDatastorePath(components...)
 		results = append(results, path_spec)
 	}
 

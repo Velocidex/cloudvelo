@@ -6,7 +6,6 @@ import (
 	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/velociraptor/acls"
-	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 	"www.velocidex.com/golang/vfilter"
@@ -92,11 +91,14 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 			return
 		}
 
+		opts := services.FlowSearchOptions{
+			BasicInformation: true,
+		}
+		opts.StartIdx = 0
+		opts.EndIdx = 100000
+
 		flow_chan, _, err := hunt_dispatcher.GetFlows(
-			ctx, config_obj, result_sets.ResultSetOptions{
-				StartIdx: 0,
-				EndIdx:   100000,
-			}, scope, arg.HuntId, 0)
+			ctx, config_obj, opts, scope, arg.HuntId, 0)
 		if err != nil {
 			scope.Log("hunt_delete: %s", err)
 			return
@@ -106,7 +108,10 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 
 			results, err := launcher.Storage().DeleteFlow(ctx, config_obj,
 				flow_details.Context.ClientId,
-				flow_details.Context.SessionId, principal, arg.ReallyDoIt)
+				flow_details.Context.SessionId, principal,
+				services.DeleteFlowOptions{
+					ReallyDoIt: arg.ReallyDoIt,
+				})
 			if err != nil {
 				scope.Log("hunt_delete: %v", err)
 				return

@@ -15,6 +15,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
+	"www.velocidex.com/golang/velociraptor/services/notebook"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -32,6 +33,8 @@ type NotebookRecord struct {
 }
 
 type NotebookStoreImpl struct {
+	notebook.NotebookStoreImpl
+
 	ctx        context.Context
 	config_obj *config_proto.Config
 }

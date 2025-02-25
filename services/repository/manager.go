@@ -207,8 +207,9 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	config_obj *config_proto.Config) error {
 
 	options := services.ArtifactOptions{
-		ValidateArtifact:  false,
-		ArtifactIsBuiltIn: true,
+		ValidateArtifact:     false,
+		ArtifactIsBuiltIn:    true,
+		ArtifactIsCompiledIn: true,
 	}
 
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
@@ -218,13 +219,6 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 		logger.Info("Built in artifacts loaded in %v", time.Now().Sub(now))
 	}()
 
-	assets.Init()
-
-	files, err := assets.WalkDirs("", false)
-	if err != nil {
-		return err
-	}
-
 	// Load all the built in artifacts into this in-memory repository
 	grepository, err := self.GetGlobalRepository(config_obj)
 	if err != nil {
@@ -232,8 +226,7 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	}
 
 	count := 0
-
-	for _, file := range files {
+	for file := range assets.Inventory {
 		if strings.HasPrefix(file, "artifacts/definitions") &&
 			strings.HasSuffix(file, "yaml") {
 			data, err := assets.ReadFile(file)
@@ -247,8 +240,7 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 
 			// Load the built in artifacts as a built in. NOTE: Built in
 			// artifacts can not be overwritten!
-			_, err = grepository.LoadYaml(
-				string(data), options)
+			_, err = grepository.LoadYaml(string(data), options)
 			if err != nil {
 				logger.Info("Can't parse asset %s: %s", file, err)
 				if options.ValidateArtifact {

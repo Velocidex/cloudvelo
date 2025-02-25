@@ -20,7 +20,7 @@ func (self HuntDispatcher) ModifyHuntObject(ctx context.Context, hunt_id string,
 
 	modification := cb(hunt)
 	if modification != services.HuntUnmodified {
-		err := self.SetHunt(hunt)
+		err := self.Store.SetHunt(ctx, hunt)
 		if err != nil {
 			return services.HuntUnmodified
 		}

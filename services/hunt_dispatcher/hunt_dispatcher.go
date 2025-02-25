@@ -12,6 +12,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/services/hunt_dispatcher"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -59,12 +60,12 @@ func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
 	return hunt_info, nil
 }
 
-type HuntDispatcher struct {
+type HuntStorageManagerImpl struct {
 	ctx        context.Context
 	config_obj *config_proto.Config
 }
 
-func (self HuntDispatcher) ApplyFuncOnHunts(
+func (self HuntStorageManagerImpl) ApplyFuncOnHunts(
 	ctx context.Context,
 	options services.HuntSearchOptions,
 	cb func(hunt *api_proto.Hunt) error) error {
@@ -111,11 +112,12 @@ func (self HuntDispatcher) ApplyFuncOnHunts(
 	return nil
 }
 
-func (self HuntDispatcher) GetLastTimestamp() uint64 {
+func (self HuntStorageManagerImpl) GetLastTimestamp() uint64 {
 	return 0
 }
 
-func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
+func (self HuntStorageManagerImpl) SetHunt(
+	ctx context.Context, hunt *api_proto.Hunt) error {
 	hunt_id := hunt.HuntId
 	if hunt_id == "" {
 		return errors.New("Invalid hunt")
@@ -147,45 +149,32 @@ func (self HuntDispatcher) SetHunt(hunt *api_proto.Hunt) error {
 		record)
 }
 
-func (self HuntDispatcher) GetHunt(
-	ctx context.Context, hunt_id string) (*api_proto.Hunt, bool) {
+func (self HuntStorageManagerImpl) GetHunt(
+	ctx context.Context, hunt_id string) (*api_proto.Hunt, error) {
 	serialized, err := cvelo_services.GetElasticRecord(context.Background(),
 		self.config_obj.OrgId, "persisted", hunt_id)
 	if err != nil {
-		return nil, false
+		return nil, utils.NotFoundError
 	}
 
 	hunt_entry := &HuntEntry{}
 	err = json.Unmarshal(serialized, hunt_entry)
 	if err != nil {
-		return nil, false
+		return nil, utils.NotFoundError
 	}
 
 	hunt_info, err := hunt_entry.GetHunt()
 	if err != nil {
-		return nil, false
+		return nil, utils.NotFoundError
 	}
 
 	hunt_info.Stats.AvailableDownloads, _ = availableHuntDownloadFiles(
 		self.config_obj, hunt_id)
 
-	return hunt_info, true
+	return hunt_info, nil
 }
 
-func (self HuntDispatcher) MutateHunt(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	mutation *api_proto.HuntMutation) error {
-	return errors.New("HuntDispatcher.HuntMutation Not implemented")
-}
-
-func (self HuntDispatcher) Refresh(
-	ctx context.Context,
-	config_obj *config_proto.Config) error {
-	return nil
-}
-
-func (self HuntDispatcher) Close(ctx context.Context) {}
+func (self HuntStorageManagerImpl) Close(ctx context.Context) {}
 
 // TODO add sort and from/size clause
 const (
@@ -241,27 +230,19 @@ const (
 )
 
 // TODO
-func (self *HuntDispatcher) GetHunts(ctx context.Context,
-	config_obj *config_proto.Config,
+func (self *HuntStorageManagerImpl) ListHunts(
+	ctx context.Context,
 	options result_sets.ResultSetOptions,
 	start_row, length int64) ([]*api_proto.Hunt, int64, error) {
-	return nil, 0, utils.NotImplementedError
-}
-
-// TODO: Deprecated...
-func (self HuntDispatcher) ListHunts(
-	ctx context.Context, config_obj *config_proto.Config,
-	in *api_proto.ListHuntsRequest) (
-	*api_proto.ListHuntsResponse, error) {
 
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, self.config_obj.OrgId,
-		"persisted", json.Format(getAllHuntsQuery, in.Offset, in.Count))
+		"persisted", json.Format(getAllHuntsQuery, start_row, length))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	result := &api_proto.ListHuntsResponse{}
+	var result []*api_proto.Hunt
 	for _, hit := range hits {
 		entry := &HuntEntry{}
 		err = json.Unmarshal(hit, entry)
@@ -274,17 +255,15 @@ func (self HuntDispatcher) ListHunts(
 			continue
 		}
 
-		if in.UserFilter != "" &&
-			in.UserFilter != hunt_info.Creator {
-			continue
-		}
-
-		if hunt_info.State != api_proto.Hunt_ARCHIVED {
-			result.Items = append(result.Items, hunt_info)
-		}
+		result = append(result, hunt_info)
 	}
 
-	return result, nil
+	return result, int64(len(result)), nil
+}
+
+type HuntDispatcher struct {
+	*hunt_dispatcher.HuntDispatcher
+	config_obj *config_proto.Config
 }
 
 func NewHuntDispatcher(
@@ -292,9 +271,11 @@ func NewHuntDispatcher(
 	wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (services.IHuntDispatcher, error) {
 	service := &HuntDispatcher{
-		ctx:        ctx,
 		config_obj: config_obj,
-	}
+		HuntDispatcher: &hunt_dispatcher.HuntDispatcher{
+			I_am_master: true,
+			Store:       NewHuntStorageManagerImpl(ctx, config_obj),
+		}}
 
 	return service, nil
 }

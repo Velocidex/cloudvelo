@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
-	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 var (
@@ -42,7 +43,7 @@ func (self ClientInfoQueuer) QueueMessageForClient(
 	// from persisted storage.
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
-		"persisted", services.DocIdRandom,
+		"persisted", cvelo_services.DocIdRandom,
 		&ClientTask{
 			ClientId:  client_id,
 			FlowId:    req.SessionId,
@@ -123,4 +124,11 @@ func (self ClientInfoBase) PeekClientTasks(
 		results = append(results, message)
 	}
 	return results, nil
+}
+
+func (self *ClientInfoBase) DeleteClient(
+	ctx context.Context,
+	client_id, principal string,
+	progress chan services.DeleteFlowResponse, really_do_it bool) error {
+	return utils.NotImplementedError
 }
