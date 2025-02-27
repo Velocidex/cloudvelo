@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 
 	cloud_notebooks "www.velocidex.com/golang/cloudvelo/services/notebook"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -43,7 +44,10 @@ func (self *InlineScheduler) Schedule(
 	}
 
 	// Just run the update inline
-	storage := cloud_notebooks.NewNotebookStore(ctx, org_config_obj)
+	wg := &sync.WaitGroup{}
+	//defer wg.Wait()
+
+	storage := cloud_notebooks.NewNotebookStore(ctx, wg, org_config_obj)
 
 	worker := &notebook.NotebookWorker{}
 	response, err := worker.ProcessUpdateRequest(

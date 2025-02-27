@@ -1,14 +1,12 @@
 package notebook
 
 import (
-	"context"
-
-	"www.velocidex.com/golang/velociraptor/file_store/api"
+	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 const (
-	query = `
+	query_for_shared_notebooks = `
 {
   "sort": [
   {
@@ -22,10 +20,29 @@ const (
             "should": [
               {"match": {"creator" : %q}},
               {"match": {"shared": %q}},
-              {"match": {"public": true}},
-              {"match": {"doc_type" : "notebooks"}}
+              {"match": {"public": true}}
            ]}
         },
+        {"match": {"doc_type" : "notebooks"}},
+        {"match": {"type": "User"}}
+      ]}
+  },
+  "size": %q,
+  "from": %q
+}
+`
+
+	// Very rarely used
+	query_for_all_notebooks = `
+{
+  "sort": [
+  {
+    "timestamp": {"order": "desc"}
+  }],
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"doc_type" : "notebooks"}},
         {"match": {"type": "User"}}
       ]}
   },
@@ -35,8 +52,10 @@ const (
 `
 )
 
-// Query the elastic backend to get all notebooks
-func (self *NotebookManager) GetSharedNotebooks(
-	ctx context.Context, user string) (api.FSPathSpec, error) {
-	return nil, utils.NotImplementedError
+func checkNotebookAccess(notebook *api_proto.NotebookMetadata, user string) bool {
+	if notebook.Public {
+		return true
+	}
+
+	return notebook.Creator == user || utils.InString(notebook.Collaborators, user)
 }

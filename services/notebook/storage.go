@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
@@ -15,33 +16,41 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
+	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/notebook"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type NotebookRecord struct {
-	NotebookId   string   `json:"notebook_id"`
-	CellId       string   `json:"cell_id"`
-	Notebook     string   `json:"notebook"`
-	NotebookCell string   `json:"notebook_cell"`
-	Creator      string   `json:"creator"`
-	Public       bool     `json:"public"`
-	SharedWith   []string `json:"shared"`
-	Timestamp    int64    `json:"timestamp"`
-	Type         string   `json:"type"`
-	DocType      string   `json:"doc_type"`
+	NotebookId        string   `json:"notebook_id"`
+	CellId            string   `json:"cell_id"`
+	AvailableVersions []string `json:"available_versions"`
+	CurrentVersion    string   `json:"current_version"`
+	Notebook          string   `json:"notebook"`
+	NotebookCell      string   `json:"notebook_cell"`
+	Creator           string   `json:"creator"`
+	Public            bool     `json:"public"`
+	SharedWith        []string `json:"shared"`
+	Timestamp         int64    `json:"timestamp"`
+	Type              string   `json:"type"`
+	DocType           string   `json:"doc_type"`
 }
 
 type NotebookStoreImpl struct {
-	notebook.NotebookStoreImpl
+	*notebook.NotebookStoreImpl
 
 	ctx        context.Context
 	config_obj *config_proto.Config
 }
 
 func NewNotebookStore(
-	ctx context.Context, config_obj *config_proto.Config) *NotebookStoreImpl {
-	return &NotebookStoreImpl{ctx: ctx, config_obj: config_obj}
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	config_obj *config_proto.Config) *NotebookStoreImpl {
+	base_store := notebook.MakeNotebookStore(config_obj)
+	return &NotebookStoreImpl{
+		NotebookStoreImpl: base_store,
+		ctx:               ctx,
+		config_obj:        config_obj}
 }
 
 func getType(notebook_id string) string {
@@ -102,15 +111,18 @@ func (self *NotebookStoreImpl) GetNotebook(notebook_id string) (
 func (self *NotebookStoreImpl) SetNotebookCell(
 	notebook_id string, in *api_proto.NotebookCell) error {
 
+	// Store the actual cell in a new document.
 	err := cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
-		"persisted", in.CellId,
+		"persisted", in.CellId+in.CurrentVersion,
 		&NotebookRecord{
-			NotebookId:   notebook_id,
-			CellId:       in.CellId,
-			Timestamp:    time.Now().Unix(),
-			NotebookCell: json.MustMarshalString(in),
-			DocType:      "notebooks",
+			NotebookId:        notebook_id,
+			CellId:            in.CellId,
+			AvailableVersions: in.AvailableVersions,
+			CurrentVersion:    in.CurrentVersion,
+			Timestamp:         time.Now().Unix(),
+			NotebookCell:      json.MustMarshalString(in),
+			DocType:           "notebooks",
 		})
 	if err != nil {
 		return err
@@ -124,16 +136,32 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 
 	// Update the cell's timestamp so the gui will refresh it.
 	new_cell_md := []*api_proto.NotebookCell{}
+	cell_summary := &api_proto.NotebookCell{
+		CellId:            in.CellId,
+		AvailableVersions: in.AvailableVersions,
+		CurrentVersion:    in.CurrentVersion,
+		Timestamp:         time.Now().Unix(),
+		Type:              in.Type,
+	}
+
+	existing := false
 	for _, cell_md := range notebook.CellMetadata {
+		// Replace the cell with the new one
 		if cell_md.CellId == in.CellId {
-			new_cell_md = append(new_cell_md, &api_proto.NotebookCell{
-				CellId:    in.CellId,
-				Timestamp: time.Now().Unix(),
-			})
+			new_cell_md = append(new_cell_md, cell_summary)
+			existing = true
 			continue
 		}
+		// Copy the old cell back
 		new_cell_md = append(new_cell_md, cell_md)
 	}
+
+	// This is a new cell add to the end.
+	if !existing {
+		new_cell_md = append(new_cell_md, cell_summary)
+	}
+
+	// Update the notebook record.
 	notebook.CellMetadata = new_cell_md
 
 	return self.SetNotebook(notebook)
@@ -143,8 +171,10 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 func (self *NotebookStoreImpl) GetNotebookCell(notebook_id, cell_id, version string) (
 	*api_proto.NotebookCell, error) {
 
+	// Get the cell's record.
 	serialized, err := cvelo_services.GetElasticRecord(
-		self.ctx, self.config_obj.OrgId, "persisted", cell_id)
+		self.ctx, self.config_obj.OrgId, "persisted",
+		cell_id+version)
 	if err != nil {
 		return nil, err
 	}
@@ -199,38 +229,23 @@ func (self *NotebookStoreImpl) UpdateShareIndex(
 	return nil
 }
 
-const (
-	all_notebook_query = `
-{
-  "sort": [
-  {
-    "timestamp": {"order": "desc"}
-  }],
-  "query": {
-    "bool": {
-      "must": [
-        {
-          "bool": {
-            "should": [
-              {"match": {"public": true}},
-              {"match": {"doc_type" : "notebooks"}}
-           ]}
-        },
-        {"match": {"type": "User"}}
-      ]}
-  },
-  "size": %q,
-  "from": %q
-}
-`
-)
-
-func (self *NotebookStoreImpl) GetAllNotebooks() (
+func (self *NotebookStoreImpl) GetAllNotebooks(opts services.NotebookSearchOptions) (
 	[]*api_proto.NotebookMetadata, error) {
+
+	var query string
+	count := 1000
+	offset := 0
+
+	if opts.Username != "" {
+		query = json.Format(query_for_shared_notebooks, opts.Username, opts.Username,
+			count, offset)
+	} else {
+		query = json.Format(query_for_all_notebooks, count, offset)
+	}
 
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		self.ctx, self.config_obj.OrgId, "persisted",
-		json.Format(all_notebook_query, 1000, 0))
+		json.Format(query, 1000, 0))
 	if err != nil {
 		return nil, err
 	}
@@ -249,17 +264,30 @@ func (self *NotebookStoreImpl) GetAllNotebooks() (
 			continue
 		}
 
-		if !item.Hidden {
-			result = append(result, item)
+		if item.Hidden {
+			continue
 		}
 
+		if opts.Timelines && len(item.Timelines) == 0 {
+			continue
+		}
+
+		if opts.Username != "" && !checkNotebookAccess(item, opts.Username) {
+			continue
+		}
+
+		result = append(result, item)
 	}
 	return result, nil
 }
 
-// TODO
 func (self *NotebookStoreImpl) RemoveNotebookCell(
 	ctx context.Context, config_obj *config_proto.Config,
 	notebook_id, cell_id, version string, output_chan chan *ordereddict.Dict) error {
-	return utils.NotImplementedError
+
+	// Notebook cells contain result sets which are stored in the
+	// transient index. Therefore we can not really delete them. We
+	// just delete the cell record instead from the persisted index.
+	return cvelo_services.DeleteDocument(ctx, config_obj.OrgId,
+		"persisted", cell_id+version, cvelo_services.AsyncDelete)
 }

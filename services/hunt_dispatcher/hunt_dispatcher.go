@@ -270,12 +270,13 @@ func NewHuntDispatcher(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (services.IHuntDispatcher, error) {
+
+	base_dispatcher := hunt_dispatcher.MakeHuntDispatcher(config_obj)
 	service := &HuntDispatcher{
-		config_obj: config_obj,
-		HuntDispatcher: &hunt_dispatcher.HuntDispatcher{
-			I_am_master: true,
-			Store:       NewHuntStorageManagerImpl(ctx, config_obj),
-		}}
+		config_obj:     config_obj,
+		HuntDispatcher: base_dispatcher,
+	}
+	service.HuntDispatcher.Store = NewHuntStorageManagerImpl(ctx, config_obj)
 
 	return service, nil
 }

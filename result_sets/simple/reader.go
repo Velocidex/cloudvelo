@@ -54,10 +54,9 @@ func (self *SimpleResultSetReader) SeekToRow(start int64) error {
 
 // Gets the elastic query for retriving the packet that has JSONL
 // encompassing the required row.
-func (self *SimpleResultSetReader) getPacket(row int64) (
-	*SimpleResultSetRecord, error) {
+func (self *SimpleResultSetReader) getPacket(
+	ctx context.Context, row int64) (*SimpleResultSetRecord, error) {
 
-	ctx := context.Background()
 	var artifact_clause, query string
 
 	if self.base_record.VFSPath != "" {
@@ -127,7 +126,7 @@ func (self *SimpleResultSetReader) Rows(
 				break
 			}
 
-			packet, err := self.getPacket(self.row)
+			packet, err := self.getPacket(ctx, self.row)
 			if err != nil {
 				return
 			}
@@ -186,7 +185,7 @@ func (self *SimpleResultSetReader) JSON(
 				break
 			}
 
-			packet, err := self.getPacket(self.row)
+			packet, err := self.getPacket(ctx, self.row)
 			if err != nil {
 				return
 			}

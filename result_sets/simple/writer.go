@@ -102,10 +102,9 @@ const getLargestRowId = `
 `
 
 func (self *ElasticSimpleResultSetWriter) getLastRow() error {
-	ctx := context.Background()
 	query := json.Format(getLargestRowId, self.log_path.AsClientPath())
 	hits, err := services.QueryElasticAggregations(
-		ctx, self.org_id, "transient", query)
+		self.ctx, self.org_id, "transient", query)
 
 	if err != nil {
 		return err

@@ -103,6 +103,10 @@ func (self ElasticDatastore) GetSubject(
 		return err
 	}
 
+	if len(hits) == 0 {
+		return utils.NotFoundError
+	}
+
 	record := &DatastoreRecord{
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}

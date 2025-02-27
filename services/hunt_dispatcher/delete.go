@@ -6,8 +6,9 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+// We do not keep a local index cache so there is no need to flush it.
 func (self *HuntStorageManagerImpl) FlushIndex(ctx context.Context) error {
-	return utils.NotImplementedError
+	return nil
 }
 
 func (self *HuntStorageManagerImpl) DeleteHunt(

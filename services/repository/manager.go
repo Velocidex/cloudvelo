@@ -227,7 +227,7 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 
 	count := 0
 	for file := range assets.Inventory {
-		if strings.HasPrefix(file, "artifacts/definitions") &&
+		if strings.HasPrefix(file, "/artifacts/definitions") &&
 			strings.HasSuffix(file, "yaml") {
 			data, err := assets.ReadFile(file)
 			if err != nil {

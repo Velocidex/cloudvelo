@@ -31,7 +31,7 @@ dump:
 	$(BINARY) $(CONFIG_ARGS) elastic dump -v
 
 debug_gui:
-	$(DLV) $(CONFIG_ARGS) gui -v --debug
+	$(DLV) $(CONFIG_ARGS) gui -v
 
 frontend:
 	$(BINARY) $(CONFIG_ARGS) frontend -v --debug

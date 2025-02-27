@@ -142,9 +142,10 @@ func (self *UserStorageManager) SetUser(
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"users", user_record.Name, &UserRecord{
+		"persisted", user_record.Name, &UserRecord{
 			Username: user_record.Name,
 			Record:   string(serialized),
+			DocType:  "users",
 		})
 }
 
@@ -219,17 +220,30 @@ func (self *UserStorageManager) SetUserOptions(ctx context.Context,
 
 	return cvelo_services.SetElasticIndex(ctx,
 		services.ROOT_ORG_ID,
-		"user_options", username, &UserGUIOptions{
+		"persisted", username+"_options", &UserGUIOptions{
 			Username:   username,
 			GUIOptions: string(serialized),
+			DocType:    "user_options",
 		})
 }
+
+const doc_type_query = `
+{
+  "query": {
+     "bool": {
+       "must": [{"match": {"_id": %q}}, {"match": {"doc_type": %q}}]
+      }
+  },
+  "sort": [{"timestamp": {"order": "desc"}}],
+  "size": 1
+}`
 
 func (self *UserStorageManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
 
-	serialized, err := cvelo_services.GetElasticRecord(ctx,
-		services.ROOT_ORG_ID, "user_options", username)
+	serialized, err := cvelo_services.GetElasticRecordByQuery(ctx,
+		services.ROOT_ORG_ID, "persisted",
+		json.Format(doc_type_query, username+"_options", "user_options"))
 	if err == os.ErrNotExist {
 		return &api_proto.SetGUIOptionsRequest{}, nil
 	}

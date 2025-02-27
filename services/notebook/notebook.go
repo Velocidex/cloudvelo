@@ -30,14 +30,6 @@ func NewNotebookManagerService(
 	config_obj *config_proto.Config) *NotebookManager {
 
 	service := NewNotebookManager(config_obj,
-		NewNotebookStoreImpl(ctx, config_obj))
+		NewNotebookStore(ctx, wg, config_obj))
 	return service
-}
-
-func NewNotebookStoreImpl(ctx context.Context,
-	config_obj *config_proto.Config) *NotebookStoreImpl {
-	return &NotebookStoreImpl{
-		ctx:        ctx,
-		config_obj: config_obj,
-	}
 }
