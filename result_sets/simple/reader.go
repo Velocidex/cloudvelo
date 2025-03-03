@@ -64,11 +64,10 @@ func (self *SimpleResultSetReader) getPacket(
 {"query": {"bool": {"must": [
   {"match": {"vfs_path": %q}},
   {"range": {"start_row": {"lte": %q}}},
-  {"range": {"end_row": {"gt": %q}}}%s
+  {"range": {"end_row": {"gt": %q}}}
 ]}}}`, self.base_record.VFSPath,
 			row,
-			row,
-			artifact_clause)
+			row)
 
 	} else {
 		if self.base_record.Artifact != "" {

@@ -10,10 +10,8 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/hunt_dispatcher"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type HuntEntry struct {
@@ -149,33 +147,6 @@ func (self HuntStorageManagerImpl) SetHunt(
 		record)
 }
 
-func (self HuntStorageManagerImpl) GetHunt(
-	ctx context.Context, hunt_id string) (*api_proto.Hunt, error) {
-	serialized, err := cvelo_services.GetElasticRecord(context.Background(),
-		self.config_obj.OrgId, "persisted", hunt_id)
-	if err != nil {
-		return nil, utils.NotFoundError
-	}
-
-	hunt_entry := &HuntEntry{}
-	err = json.Unmarshal(serialized, hunt_entry)
-	if err != nil {
-		return nil, utils.NotFoundError
-	}
-
-	hunt_info, err := hunt_entry.GetHunt()
-	if err != nil {
-		return nil, utils.NotFoundError
-	}
-
-	hunt_info.Stats.AvailableDownloads, _ = availableHuntDownloadFiles(
-		self.config_obj, hunt_id)
-
-	return hunt_info, nil
-}
-
-func (self HuntStorageManagerImpl) Close(ctx context.Context) {}
-
 // TODO add sort and from/size clause
 const (
 	getAllHuntsQuery = `
@@ -228,38 +199,6 @@ const (
 }
 `
 )
-
-// TODO
-func (self *HuntStorageManagerImpl) ListHunts(
-	ctx context.Context,
-	options result_sets.ResultSetOptions,
-	start_row, length int64) ([]*api_proto.Hunt, int64, error) {
-
-	hits, _, err := cvelo_services.QueryElasticRaw(
-		ctx, self.config_obj.OrgId,
-		"persisted", json.Format(getAllHuntsQuery, start_row, length))
-	if err != nil {
-		return nil, 0, err
-	}
-
-	var result []*api_proto.Hunt
-	for _, hit := range hits {
-		entry := &HuntEntry{}
-		err = json.Unmarshal(hit, entry)
-		if err != nil {
-			continue
-		}
-
-		hunt_info, err := entry.GetHunt()
-		if err != nil {
-			continue
-		}
-
-		result = append(result, hunt_info)
-	}
-
-	return result, int64(len(result)), nil
-}
 
 type HuntDispatcher struct {
 	*hunt_dispatcher.HuntDispatcher

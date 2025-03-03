@@ -115,5 +115,7 @@ Many VQL plugins produce references to files stored on the server. This accessor
 		return sm, err
 	}
 
+	services.AllowFrontendPlugins.Store(true)
+
 	return sm, server_builder.StartServer(sm.Ctx, sm.Wg)
 }

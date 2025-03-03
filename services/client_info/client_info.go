@@ -21,6 +21,7 @@ var (
 type ClientInfoManager struct {
 	ClientInfoBase
 	ClientInfoQueuer
+	config_obj *config_proto.Config
 }
 
 type ClientInfoBase struct {
@@ -200,6 +201,7 @@ func NewClientInfoManager(config_obj *config_proto.Config) (*ClientInfoManager, 
 	service := &ClientInfoManager{
 		ClientInfoBase:   NewClientInfoBase(config_obj),
 		ClientInfoQueuer: ClientInfoQueuer{config_obj: config_obj},
+		config_obj:       config_obj,
 	}
 	return service, nil
 }
