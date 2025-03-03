@@ -206,3 +206,7 @@ func (self ElasticDatastore) ListChildren(
 func (self ElasticDatastore) Debug(config_obj *config_proto.Config) {}
 
 func (self ElasticDatastore) Close() {}
+
+func (self ElasticDatastore) Healthy() error {
+	return nil
+}
