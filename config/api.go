@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/Velocidex/yaml/v2"
-	jsonpatch "github.com/evanphx/json-patch"
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	errors "github.com/pkg/errors"
 	"www.velocidex.com/golang/velociraptor/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"

@@ -9,9 +9,9 @@ require (
 	github.com/Velocidex/ttlcache/v2 v2.9.1-0.20240517145123-a3f45e86e130
 	github.com/Velocidex/yaml/v2 v2.2.8
 	github.com/alecthomas/assert v1.0.0
-	github.com/aws/aws-sdk-go v1.53.19
+	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2/config v1.27.6
-	github.com/evanphx/json-patch v4.5.0+incompatible
+	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/google/uuid v1.6.0
 	github.com/magefile/mage v1.15.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
@@ -111,7 +111,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dustmop/soup v1.1.2-0.20190516214245-38228baa104e // indirect
 	github.com/elastic/go-libaudit/v2 v2.4.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/geoffgarside/ber v1.1.0 // indirect
 	github.com/gizak/termui/v3 v3.1.0 // indirect
