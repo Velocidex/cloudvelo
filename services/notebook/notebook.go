@@ -5,31 +5,33 @@ import (
 	"sync"
 
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
+	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/notebook"
 )
 
+// The NotebookManager service is the main entry point to the
+// notebooks. It is composed by various storage related
+// implementations which can be locally overriden for cloud
+// environments.
 type NotebookManager struct {
 	*notebook.NotebookManager
 	config_obj *config_proto.Config
 }
 
-func NewNotebookManager(
-	config_obj *config_proto.Config,
-	storage notebook.NotebookStore) *NotebookManager {
-	result := &NotebookManager{
-		config_obj: config_obj,
-		NotebookManager: notebook.NewNotebookManager(
-			config_obj, storage),
-	}
-	return result
-}
-
 func NewNotebookManagerService(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) *NotebookManager {
+	config_obj *config_proto.Config) services.NotebookManager {
 
-	service := NewNotebookManager(config_obj,
-		NewNotebookStore(ctx, wg, config_obj))
-	return service
+	timeline_storer := NewSuperTimelineStorer(config_obj)
+	store := NewNotebookStore(ctx, wg, config_obj, timeline_storer)
+
+	// TODO: Replace these with local implementations.
+	annotator := NewSuperTimelineAnnotator(config_obj, timeline_storer)
+
+	notebook_service := notebook.NewNotebookManager(config_obj, store,
+		timeline_storer, &SuperTimelineReader{}, &SuperTimelineWriter{},
+		annotator)
+
+	return notebook_service
 }

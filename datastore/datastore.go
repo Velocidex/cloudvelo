@@ -20,7 +20,8 @@ type ElasticDatastore struct {
 
 const (
 	/**
-	This query has been added for the UX to return the download file associated with the given it.
+	  This query has been added for the UX to return the download file
+	  associated with the given it.
 	*/
 	list_children_query = `
 {"sort": {"timestamp": {"order": "desc"}},
@@ -32,8 +33,8 @@ const (
                     "prefix": {
                         "vfs_path": %q
                     }
-                	},
-					{
+                    },
+                    {
                     "match": {
                         "doc_type": "datastore"
                     }
@@ -63,9 +64,17 @@ const (
     }
 }
 `
-	/**This query has been updated due to the transient index being changed to a datastream. Previously the index item was updated in place until the zip was available for download.
+	/**
 
-	As we cannot update a datastream item in place, we have to take the most recent item (by setting size to 1 and order by timestamp) with the vfs path as the key**/
+	  This query has been updated due to the transient index being changed
+	  to a datastream. Previously the index item was updated in place until
+	  the zip was available for download.
+
+	  As we cannot update a datastream item in place, we have to take the
+	  most recent item (by setting size to 1 and order by timestamp) with
+	  the vfs path as the key
+
+	 **/
 	get_datastore_doc_query = `
 {"sort": {"timestamp": {"order": "desc"}},
  "size": 1,

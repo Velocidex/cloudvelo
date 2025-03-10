@@ -47,7 +47,9 @@ func (self *InlineScheduler) Schedule(
 	wg := &sync.WaitGroup{}
 	//defer wg.Wait()
 
-	storage := cloud_notebooks.NewNotebookStore(ctx, wg, org_config_obj)
+	timeline_storer := cloud_notebooks.NewSuperTimelineStorer(org_config_obj)
+	storage := cloud_notebooks.NewNotebookStore(
+		ctx, wg, org_config_obj, timeline_storer)
 
 	worker := &notebook.NotebookWorker{}
 	response, err := worker.ProcessUpdateRequest(

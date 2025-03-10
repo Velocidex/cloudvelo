@@ -10,10 +10,8 @@ import (
 func (self *NotebookStoreImpl) DeleteNotebook(ctx context.Context,
 	notebook_id string, progress chan vfilter.Row,
 	really_do_it bool) error {
-	err := self.NotebookStoreImpl.DeleteNotebook(ctx, notebook_id, progress, really_do_it)
-	if err != nil {
-		return err
-	}
+
+	// TODO - recursively delete all the notebook items.
 
 	if really_do_it {
 		return cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,

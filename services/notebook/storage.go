@@ -17,7 +17,8 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/services"
-	"www.velocidex.com/golang/velociraptor/services/notebook"
+	"www.velocidex.com/golang/velociraptor/timelines"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type NotebookRecord struct {
@@ -31,26 +32,31 @@ type NotebookRecord struct {
 	Public            bool     `json:"public"`
 	SharedWith        []string `json:"shared"`
 	Timestamp         int64    `json:"timestamp"`
-	Type              string   `json:"type"`
-	DocType           string   `json:"doc_type"`
+
+	// For timelines this contains the JSON encoded timeline.
+	Timeline          string `json:"timeline"`
+	SupertimelineName string `json:"supertimeline_name"`
+	Type              string `json:"type"`
+	DocType           string `json:"doc_type"`
 }
 
 type NotebookStoreImpl struct {
-	*notebook.NotebookStoreImpl
-
-	ctx        context.Context
-	config_obj *config_proto.Config
+	ctx                 context.Context
+	config_obj          *config_proto.Config
+	SuperTimelineStorer timelines.ISuperTimelineStorer
 }
 
 func NewNotebookStore(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	config_obj *config_proto.Config) *NotebookStoreImpl {
-	base_store := notebook.MakeNotebookStore(config_obj)
+	config_obj *config_proto.Config,
+	SuperTimelineStorer timelines.ISuperTimelineStorer,
+) *NotebookStoreImpl {
 	return &NotebookStoreImpl{
-		NotebookStoreImpl: base_store,
-		ctx:               ctx,
-		config_obj:        config_obj}
+		ctx:                 ctx,
+		config_obj:          config_obj,
+		SuperTimelineStorer: SuperTimelineStorer,
+	}
 }
 
 func getType(notebook_id string) string {
@@ -67,6 +73,10 @@ func getType(notebook_id string) string {
 	}
 
 	return "User"
+}
+
+func (self *NotebookStoreImpl) Version() int64 {
+	return utils.GetTime().Now().Unix()
 }
 
 func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error {
@@ -204,10 +214,6 @@ func (self *NotebookStoreImpl) StoreAttachment(notebook_id, filename string, dat
 	return full_path, err
 }
 
-func (self *NotebookStoreImpl) GetAvailableTimelines(notebook_id string) []string {
-	return nil
-}
-
 func (self *NotebookStoreImpl) GetAvailableDownloadFiles(
 	notebook_id string) (*api_proto.AvailableDownloads, error) {
 	return &api_proto.AvailableDownloads{}, nil
@@ -229,7 +235,55 @@ func (self *NotebookStoreImpl) UpdateShareIndex(
 	return nil
 }
 
-func (self *NotebookStoreImpl) GetAllNotebooks(opts services.NotebookSearchOptions) (
+const (
+	query_for_shared_notebooks = `
+{
+  "sort": [
+  {
+    "timestamp": {"order": "desc"}
+  }],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "bool": {
+            "should": [
+              {"match": {"creator" : %q}},
+              {"match": {"shared": %q}},
+              {"match": {"public": true}}
+           ]}
+        },
+        {"match": {"doc_type" : "notebooks"}},
+        {"match": {"type": "User"}}
+      ]}
+  },
+  "size": %q,
+  "from": %q
+}
+`
+
+	// Very rarely used
+	query_for_all_notebooks = `
+{
+  "sort": [
+  {
+    "timestamp": {"order": "desc"}
+  }],
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"doc_type" : "notebooks"}},
+        {"match": {"type": "User"}}
+      ]}
+  },
+  "size": %q,
+  "from": %q
+}
+`
+)
+
+func (self *NotebookStoreImpl) GetAllNotebooks(
+	ctx context.Context, opts services.NotebookSearchOptions) (
 	[]*api_proto.NotebookMetadata, error) {
 
 	var query string
@@ -268,12 +322,18 @@ func (self *NotebookStoreImpl) GetAllNotebooks(opts services.NotebookSearchOptio
 			continue
 		}
 
-		if opts.Timelines && len(item.Timelines) == 0 {
+		if opts.Username != "" && !checkNotebookAccess(item, opts.Username) {
 			continue
 		}
 
-		if opts.Username != "" && !checkNotebookAccess(item, opts.Username) {
-			continue
+		if opts.Timelines {
+			timelines, err := self.SuperTimelineStorer.List(ctx, item.NotebookId)
+			if err == nil {
+				for _, t := range timelines {
+					item.Timelines = append(item.Timelines, t.Name)
+				}
+
+			}
 		}
 
 		result = append(result, item)
