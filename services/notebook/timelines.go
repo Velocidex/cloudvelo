@@ -13,6 +13,7 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/services/notebook"
 	"www.velocidex.com/golang/velociraptor/timelines"
 	timelines_proto "www.velocidex.com/golang/velociraptor/timelines/proto"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -59,25 +60,12 @@ func (self *TimelineWriter) updateStats(timestamp time.Time) {
 func (self *TimelineWriter) Write(
 	timestamp time.Time, row *ordereddict.Dict) error {
 
-	record := NewRecord(self.notebook_id,
-		self.super_timeline, self.timeline, self.stats.Version, timestamp)
-
 	serialized, err := row.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	record.JSONData = string(serialized)
 
-	err = services.SetElasticIndex(self.ctx,
-		utils.GetOrgId(self.config_obj),
-		"transient", services.DocIdRandom, record)
-	if err != nil {
-		return err
-	}
-
-	self.updateStats(timestamp)
-
-	return nil
+	return self.WriteBuffer(timestamp, serialized)
 }
 
 func (self *TimelineWriter) WriteBuffer(
@@ -202,6 +190,8 @@ func (self *SuperTimelineReader) Read(ctx context.Context) <-chan timelines.Time
 	go func() {
 		defer close(output_chan)
 
+		deletions := make(map[string]bool)
+
 		start := self.timestamp.UnixNano()
 		query := json.Format(timeline_query,
 			strings.Join(component_query, ",\n"), start)
@@ -232,6 +222,29 @@ func (self *SuperTimelineReader) Read(ctx context.Context) <-chan timelines.Time
 				continue
 			}
 
+			// Because we write data to the transient index it can not
+			// be deleted. Instead we write a deletion event just
+			// before the deleted event and intentionally omit the
+			// event from reading.
+
+			// Identify the deletion events.
+			_, pres = row.Get("Deletion")
+			if pres {
+				guid, pres := row.GetString(notebook.AnnotationID)
+				if pres {
+					deletions[guid] = true
+				}
+			}
+
+			guid, pres := row.GetString(notebook.AnnotationID)
+			if pres {
+				// Drop deleted items.
+				_, pres = deletions[guid]
+				if pres {
+					continue
+				}
+			}
+
 			// Get the message
 			message_field := md.MessageColumn
 			if message_field == "" {
@@ -247,6 +260,11 @@ func (self *SuperTimelineReader) Read(ctx context.Context) <-chan timelines.Time
 				Row:     row,
 				Time:    time.Unix(0, record.Timestamp),
 				Message: message,
+			}
+
+			parts := strings.Split(record.VFSPath, "/")
+			if len(parts) > 2 {
+				item.Source = parts[len(parts)-2]
 			}
 
 			select {

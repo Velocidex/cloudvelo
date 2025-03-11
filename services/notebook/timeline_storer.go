@@ -176,10 +176,45 @@ func (self SuperTimelineStorer) GetAvailableTimelines(
 func (self SuperTimelineStorer) DeleteComponent(ctx context.Context,
 	notebook_id string, super_timeline, del_component string) error {
 
-	// TODO: Delete the actual timeline data.
-	doc_id := cvelo_services.MakeId(notebook_id + super_timeline)
-	return cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
-		"persisted", doc_id, cvelo_services.SyncDelete)
+	supertimeline, err := self.Get(ctx, notebook_id, super_timeline)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		supertimeline = &timelines_proto.SuperTimeline{}
+	}
+
+	new_timelines := make([]*timelines_proto.Timeline, 0, len(supertimeline.Timelines))
+	for _, t := range supertimeline.Timelines {
+		if t.Id == del_component {
+			continue
+		}
+		new_timelines = append(new_timelines, t)
+	}
+
+	supertimeline.Timelines = new_timelines
+
+	return self.Set(ctx, notebook_id, supertimeline)
+}
+
+func (self SuperTimelineStorer) GetTimeline(
+	ctx context.Context, notebook_id string,
+	super_timeline, component string) (*timelines_proto.Timeline, error) {
+
+	supertimeline, err := self.Get(ctx, notebook_id, super_timeline)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		supertimeline = &timelines_proto.SuperTimeline{}
+	}
+
+	for _, t := range supertimeline.Timelines {
+		if t.Id == component {
+			return t, nil
+		}
+	}
+	return nil, utils.Wrap(utils.NotFoundError, component)
 }
 
 // Add or update the super timeline record in the data store.
