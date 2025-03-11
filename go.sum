@@ -99,8 +99,8 @@ github.com/Velocidex/sigma-go v0.0.0-20241025122940-1b771d3d57a9 h1:YavusWZ+svpy
 github.com/Velocidex/sigma-go v0.0.0-20241025122940-1b771d3d57a9/go.mod h1:ukLFs2t1+ud7MC4oN+zImhtTRP/eQHaDL3TwLs58uUA=
 github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49 h1:TJVN1zYl5sKJUq571gYqU/5VqFIap9MUo2KNujc0fcg=
 github.com/Velocidex/survey v1.8.7-0.20190926071832-2ff99cc7aa49/go.mod h1:kfPUQ2gP0xtIydiR52dirNYt4OvCr+iZuepL4XaIk58=
-github.com/Velocidex/tracee_velociraptor v0.0.0-20241111012344-d72a7f2cb144 h1:eDr8kkCPy4lCYBSc+AyuNz8aML3fnDqvEz3VVW8hX6A=
-github.com/Velocidex/tracee_velociraptor v0.0.0-20241111012344-d72a7f2cb144/go.mod h1:DKcFdJ5IsrS+Dvl0mOGfsA2gTiIcxN5FEL599m3Qois=
+github.com/Velocidex/tracee_velociraptor v0.0.0-20250304130312-661b3fd25a3c h1:s4OAG1HOK0iSdFfVSCc1EfG1qPt9TSHR0KePsuLV7aE=
+github.com/Velocidex/tracee_velociraptor v0.0.0-20250304130312-661b3fd25a3c/go.mod h1:DKcFdJ5IsrS+Dvl0mOGfsA2gTiIcxN5FEL599m3Qois=
 github.com/Velocidex/ttlcache/v2 v2.9.1-0.20240517145123-a3f45e86e130 h1:+QujZ0D7KSy3WJVchkOhMkvAUab6/CIisO5LCoN48q4=
 github.com/Velocidex/ttlcache/v2 v2.9.1-0.20240517145123-a3f45e86e130/go.mod h1:3/pI9BBAF7gydBWvMVtV7W1qRwshEG9lBwed/d8xfFg=
 github.com/Velocidex/yaml/v2 v2.2.8 h1:GUrSy4SBJ6RjGt43k6MeBKtw2z/27gh4A3hfFmFY3No=
@@ -239,8 +239,6 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
-github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi/U=
-github.com/dimchansky/utfbom v1.1.1/go.mod h1:SxdoEBH5qIqFocHMyGOXVAybYJdr71b1Q/j0mACtrfE=
 github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
 github.com/dlclark/regexp2 v1.7.0 h1:7lJfhqlPssTb1WQx4yvTHN0uElPEv52sbaECrAQxjAo=
 github.com/dlclark/regexp2 v1.7.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=

@@ -61,7 +61,7 @@ require (
 	github.com/Velocidex/json v0.0.0-20220224052537-92f3c0326e5a // indirect
 	github.com/Velocidex/pkcs7 v0.0.0-20230220112103-d4ed02e1862a // indirect
 	github.com/Velocidex/sigma-go v0.0.0-20241025122940-1b771d3d57a9 // indirect
-	github.com/Velocidex/tracee_velociraptor v0.0.0-20241111012344-d72a7f2cb144 // indirect
+	github.com/Velocidex/tracee_velociraptor v0.0.0-20250304130312-661b3fd25a3c // indirect
 	github.com/Velocidex/zip v0.0.0-20250102162034-1a0ec0ec569c // indirect
 	github.com/VirusTotal/gyp v0.9.1-0.20231202132633-bb35dbf177a6 // indirect
 	github.com/alecthomas/chroma v0.7.3 // indirect
@@ -106,7 +106,6 @@ require (
 	github.com/crewjam/saml v0.4.14 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dustmop/soup v1.1.2-0.20190516214245-38228baa104e // indirect
