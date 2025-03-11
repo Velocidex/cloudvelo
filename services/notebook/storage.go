@@ -2,7 +2,6 @@ package notebook
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -12,10 +11,7 @@ import (
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	"www.velocidex.com/golang/velociraptor/file_store"
-	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/timelines"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -200,34 +196,6 @@ func (self *NotebookStoreImpl) GetNotebookCell(notebook_id, cell_id, version str
 	return result, err
 }
 
-func (self *NotebookStoreImpl) StoreAttachment(notebook_id, filename string, data []byte) (api.FSPathSpec, error) {
-	full_path := paths.NewNotebookPathManager(notebook_id).
-		Attachment(filename)
-	file_store_factory := file_store.GetFileStore(self.config_obj)
-	fd, err := file_store_factory.WriteFile(full_path)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	_, err = fd.Write(data)
-	return full_path, err
-}
-
-func (self *NotebookStoreImpl) GetAvailableDownloadFiles(
-	notebook_id string) (*api_proto.AvailableDownloads, error) {
-	return &api_proto.AvailableDownloads{}, nil
-}
-
-func (self *NotebookStoreImpl) RemoveAttachment(ctx context.Context, notebook_id string, components []string) error {
-	return errors.New("Not implemented")
-}
-
-func (self *NotebookStoreImpl) GetAvailableUploadFiles(notebook_id string) (
-	*api_proto.AvailableDownloads, error) {
-	return &api_proto.AvailableDownloads{}, nil
-}
-
 // We dont need to explicitely update the index - it is part of the
 // Elastic index anyway.
 func (self *NotebookStoreImpl) UpdateShareIndex(
@@ -348,6 +316,9 @@ func (self *NotebookStoreImpl) RemoveNotebookCell(
 	// Notebook cells contain result sets which are stored in the
 	// transient index. Therefore we can not really delete them. We
 	// just delete the cell record instead from the persisted index.
+
+	// TODO: We also probably need to delete the s3 objects or maybe
+	// we let them expire too?
 	return cvelo_services.DeleteDocument(ctx, config_obj.OrgId,
 		"persisted", cell_id+version, cvelo_services.AsyncDelete)
 }

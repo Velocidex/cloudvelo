@@ -26,12 +26,11 @@ func NewNotebookManagerService(
 	timeline_storer := NewSuperTimelineStorer(config_obj)
 	store := NewNotebookStore(ctx, wg, config_obj, timeline_storer)
 
-	// TODO: Replace these with local implementations.
 	annotator := NewSuperTimelineAnnotator(config_obj, timeline_storer)
 
 	notebook_service := notebook.NewNotebookManager(config_obj, store,
 		timeline_storer, &SuperTimelineReader{}, &SuperTimelineWriter{},
-		annotator)
+		annotator, NewAttachmentManager(config_obj, store))
 
 	return notebook_service
 }
