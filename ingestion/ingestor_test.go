@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
-	"github.com/sebdah/goldie"
 	"github.com/stretchr/testify/suite"
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
 	"www.velocidex.com/golang/cloudvelo/ingestion/testdata"
@@ -24,6 +23,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vtesting/assert"
+	"www.velocidex.com/golang/velociraptor/vtesting/goldie"
 )
 
 const (
@@ -184,7 +184,8 @@ func (self *IngestionTestSuite) TestListDirectory() {
 	assert.NoError(self.T(), err)
 
 	flow_details, err := launcher.GetFlowDetails(
-		self.Ctx, config_obj, client_id, flow_id)
+		self.Ctx, config_obj, services.GetFlowOptions{},
+		client_id, flow_id)
 	assert.NoError(self.T(), err)
 
 	self.golden.Set("System.VFS.ListDirectory FlowDetail",

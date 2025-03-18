@@ -8,7 +8,6 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
-	"github.com/sebdah/goldie"
 	"github.com/stretchr/testify/suite"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -20,6 +19,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
+	"www.velocidex.com/golang/velociraptor/vtesting/goldie"
 )
 
 var (
@@ -359,7 +359,7 @@ func (self *ForemanTestSuite) setupAllHunts() {
 
 	// Set the hunt directly in the database
 	for _, h := range hunts {
-		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).SetHunt(h)
+		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
 		assert.NoError(self.T(), err)
 	}
 }
@@ -661,7 +661,7 @@ func (self *ForemanTestSuite) setupOSHunts() {
 
 	// Set the hunt directly in the database
 	for _, h := range hunts {
-		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).SetHunt(h)
+		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
 		assert.NoError(self.T(), err)
 	}
 }

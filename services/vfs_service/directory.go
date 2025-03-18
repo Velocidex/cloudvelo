@@ -4,15 +4,19 @@ import (
 	"context"
 
 	"github.com/Velocidex/ordereddict"
+	"google.golang.org/protobuf/proto"
+	"www.velocidex.com/golang/cloudvelo/filestore"
+	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
+	"www.velocidex.com/golang/velociraptor/api/tables"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
+	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This record is mapped to the results index (see
@@ -153,5 +157,98 @@ func (self *VFSService) ListDirectoryFiles(
 	config_obj *config_proto.Config,
 	in *api_proto.GetTableRequest) (*api_proto.GetTableResponse, error) {
 
-	return nil, utils.NotImplementedError
+	downloads, stat, err := self.readDirectoryWithDownloads(
+		ctx, config_obj, in.ClientId, in.VfsComponents)
+	if err != nil {
+		return nil, err
+	}
+
+	table_request := proto.Clone(in).(*api_proto.GetTableRequest)
+	table_request.Artifact = stat.Artifact
+	if table_request.Artifact == "" {
+		table_request.Artifact = "System.VFS.ListDirectory"
+	}
+
+	// Transform the table into a subsection of the main table.
+	table_request.StartIdx = stat.StartIdx
+	table_request.EndIdx = stat.EndIdx
+
+	// Get the table possibly applying any table transformations.
+	result, err := tables.GetTable(ctx, config_obj, table_request, "")
+	if err != nil {
+		return nil, err
+	}
+
+	index_of_Name := -1
+	for idx, column_name := range result.Columns {
+		if column_name == "Name" {
+			index_of_Name = idx
+			break
+		}
+	}
+
+	// Should not happen - Name is missing from results.
+	if index_of_Name < 0 {
+		return result, nil
+	}
+
+	// Merge uploaded file info with the VFSListResponse.
+	lookup := make(map[string]*flows_proto.VFSDownloadInfo)
+	for _, download := range downloads {
+		components := download.Components
+		if len(components) == 0 {
+			continue
+		}
+		basename := components[len(components)-1]
+		lookup[basename] = &flows_proto.VFSDownloadInfo{
+			Size: download.Size,
+			Components: filestore.S3ComponentsForClientUpload(
+				&uploads.UploadRequest{
+					ClientId:   in.ClientId,
+					SessionId:  download.FlowId,
+					Accessor:   download.Accessor,
+					Components: download.Components,
+				}),
+			Mtime:    download.Mtime,
+			SHA256:   download.Sha256,
+			MD5:      download.Md5,
+			InFlight: download.InFlight,
+			FlowId:   download.FlowId,
+		}
+	}
+
+	for _, row := range result.Rows {
+		var row_data []interface{}
+		err := json.Unmarshal([]byte(row.Json), &row_data)
+		if err != nil {
+			continue
+		}
+
+		if len(row_data) <= index_of_Name {
+			continue
+		}
+
+		// Find the Name column entry in each cell.
+		name, ok := row_data[index_of_Name].(string)
+		if !ok || name == "" {
+			continue
+		}
+
+		// Insert a Download info column in the begining.
+		row_data = append([]interface{}{""}, row_data...)
+
+		download_info, pres := lookup[name]
+		if pres {
+			row_data[0] = download_info
+		}
+
+		serialized, err := json.Marshal(row_data)
+		if err != nil {
+			continue
+		}
+		row.Json = string(serialized)
+	}
+
+	result.Columns = append([]string{"Download"}, result.Columns...)
+	return result, nil
 }
