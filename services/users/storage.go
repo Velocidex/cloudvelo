@@ -70,7 +70,7 @@ func (self *UserStorageManager) GetUserWithHashes(ctx context.Context, username 
 	}
 
 	serialized, err := cvelo_services.GetElasticRecord(ctx,
-		services.ROOT_ORG_ID, "users", username)
+		services.ROOT_ORG_ID, "persisted", username)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (self *UserStorageManager) ListAllUsers(
 
 	hits, _, err := cvelo_services.QueryElasticRaw(
 		ctx, services.ROOT_ORG_ID,
-		"users", `{"query": {"match_all": {}}}`)
+		"persisted", `{"query": {"match_all": {}}}`)
 	if err != nil {
 		return nil, err
 	}

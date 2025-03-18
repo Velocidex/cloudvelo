@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -125,8 +126,7 @@ func (self SuperTimelineStorer) Set(
 
 	doc_id := cvelo_services.MakeId(notebook_id + timeline.Name)
 	return cvelo_services.SetElasticIndex(ctx,
-		self.config_obj.OrgId,
-		"persisted", doc_id, entry)
+		self.config_obj.OrgId, "persisted", doc_id, entry)
 }
 
 func (self SuperTimelineStorer) List(ctx context.Context,
@@ -142,7 +142,8 @@ func (self SuperTimelineStorer) List(ctx context.Context,
 		return nil, err
 	}
 
-	result := []*timelines_proto.SuperTimeline{}
+	// Deduplicate timelines
+	seen := ordereddict.NewDict()
 	for _, hit := range hits {
 		entry := &NotebookRecord{}
 		err = json.Unmarshal(hit, entry)
@@ -156,7 +157,20 @@ func (self SuperTimelineStorer) List(ctx context.Context,
 			continue
 		}
 
-		result = append(result, item)
+		seen.Update(item.Name, item)
+	}
+
+	result := []*timelines_proto.SuperTimeline{}
+	for _, k := range seen.Keys() {
+		v, pres := seen.Get(k)
+		if !pres {
+			continue
+		}
+
+		item, ok := v.(*timelines_proto.SuperTimeline)
+		if ok {
+			result = append(result, item)
+		}
 	}
 
 	return result, nil

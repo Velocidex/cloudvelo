@@ -42,6 +42,9 @@ type SimpleResultSetReader struct {
 	log_path           api.FSPathSpec
 	opts               result_sets.ResultSetOptions
 	base_record        *SimpleResultSetRecord
+	mtime              time.Time
+
+	stacker api.FSPathSpec
 }
 
 // TODO: for now seek position is approximate: we seek to the next
@@ -63,11 +66,11 @@ func (self *SimpleResultSetReader) getPacket(
 		query = json.Format(`
 {"query": {"bool": {"must": [
   {"match": {"vfs_path": %q}},
+  {"match": {"id": %q}},
+  {"match": {"type": "result_set"}},
   {"range": {"start_row": {"lte": %q}}},
   {"range": {"end_row": {"gt": %q}}}
-]}}}`, self.base_record.VFSPath,
-			row,
-			row)
+]}}}`, self.base_record.VFSPath, self.base_record.ID, row, row)
 
 	} else {
 		if self.base_record.Artifact != "" {
@@ -81,11 +84,14 @@ func (self *SimpleResultSetReader) getPacket(
   {"match": {"client_id": %q}},
   {"match": {"flow_id": %q}},
   {"match": {"type": %q}},
+  {"match": {"id": %q}},
+  {"match": {"type": "result_set"}},
   {"range": {"start_row": {"lte": %q}}},
   {"range": {"end_row": {"gt": %q}}}%s
 ]}}}`, self.base_record.ClientId,
 			self.base_record.FlowId,
 			self.base_record.Type,
+			self.base_record.ID,
 			row,
 			row,
 			artifact_clause)
@@ -222,14 +228,16 @@ func (self *SimpleResultSetReader) JSON(
 	return output_chan, nil
 }
 
-// TODO
 func (self *SimpleResultSetReader) MTime() time.Time {
-	return time.Time{}
+	return self.mtime
 }
 
-// TODO
 func (self *SimpleResultSetReader) Stacker() api.FSPathSpec {
-	return self.log_path
+	return self.stacker
+}
+
+func (self *SimpleResultSetReader) SetStacker(s api.FSPathSpec) {
+	self.stacker = s
 }
 
 func (self *SimpleResultSetReader) Close() {}
@@ -255,8 +263,10 @@ func getLastRecord(org_id string,
 {"sort": {"end_row": {"order": "desc"}},
  "size": 1,
  "query": {"bool": {"must": [
+   {"match": {"id": %q}},
+   {"match": {"type": "result_set"}},
    {"match": {"vfs_path": %q}}
- ]}}}`, base_record.VFSPath)
+ ]}}}`, base_record.ID, base_record.VFSPath)
 
 	} else {
 		if base_record.Artifact != "" {
@@ -268,10 +278,12 @@ func getLastRecord(org_id string,
 {"sort": {"end_row": {"order": "desc"}},
  "size": 1,
  "query": {"bool": {"must": [
+   {"match": {"id": %q}},
    {"match": {"client_id": %q}},
+   {"match": {"type": "result_set"}},
    {"match": {"flow_id": %q}},
    {"match": {"type": %q}}%s
- ]}}}`, base_record.ClientId,
+ ]}}}`, base_record.ID, base_record.ClientId,
 			base_record.FlowId,
 			base_record.Type,
 			artifact_clause)

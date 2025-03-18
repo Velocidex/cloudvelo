@@ -645,8 +645,14 @@ func QueryChan(
 	query = strings.TrimSpace(query)
 	var part_query string
 	if sort_field != "" {
-		part_query = json.Format(`{"sort":[{%q: "asc"}], "size":%q,`,
-			sort_field, page_size)
+		sense := "asc"
+		if sort_field[0] == '>' {
+			sense = "desc"
+			sort_field = sort_field[1:]
+		}
+
+		part_query = json.Format(`{"sort":[{%q: %q}], "size":%q,`,
+			sort_field, sense, page_size)
 	} else {
 		part_query = json.Format(`{"size":%q,`, page_size)
 	}

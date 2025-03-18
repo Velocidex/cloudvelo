@@ -22,7 +22,7 @@ require (
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.7.0
-	www.velocidex.com/golang/vfilter v0.0.0-20250206235203-35c537cb98b3
+	www.velocidex.com/golang/vfilter v0.0.0-20250318005910-d9b7fee2f648
 )
 
 require (
@@ -44,7 +44,7 @@ require (
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/WinPmem/go-winpmem v0.0.0-20240711041142-80f6ecbbeb7f // indirect
 	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
-	github.com/Velocidex/etw v0.0.0-20250211160625-cd32def93378 // indirect
+	github.com/Velocidex/etw v0.0.0-20250314035532-6115b05b9430 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-ewf v0.0.0-20240210123447-97dc81b7d8c3 // indirect
@@ -219,14 +219,14 @@ require (
 	go.starlark.net v0.0.0-20230925163745-10651d5192ab // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.169.0 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
@@ -247,7 +247,7 @@ require (
 	www.velocidex.com/golang/go-ntfs v0.2.1-0.20250215044736-81b32bb0b4d2 // indirect
 	www.velocidex.com/golang/go-pe v0.1.1-0.20250101153735-7a925ba8334b // indirect
 	www.velocidex.com/golang/go-prefetch v0.0.0-20240910051453-2385582c1c22 // indirect
-	www.velocidex.com/golang/oleparse v0.0.0-20230217092320-383a0121aafe // indirect
+	www.velocidex.com/golang/oleparse v0.0.0-20250312121321-f7c2b4ec0959 // indirect
 	www.velocidex.com/golang/regparser v0.0.0-20250203141505-31e704a67ef7 // indirect
 	www.velocidex.com/golang/vtypes v0.0.0-20240123105603-069d4a7f435c // indirect
 )

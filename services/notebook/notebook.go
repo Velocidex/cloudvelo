@@ -30,7 +30,7 @@ func NewNotebookManagerService(
 
 	notebook_service := notebook.NewNotebookManager(config_obj, store,
 		timeline_storer, &SuperTimelineReader{}, &SuperTimelineWriter{},
-		annotator, NewAttachmentManager(config_obj, store))
+		annotator, notebook.NewAttachmentManager(config_obj, store))
 
 	return notebook_service
 }

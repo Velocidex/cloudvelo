@@ -2,7 +2,6 @@ package simple
 
 import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This is the record we store in the elastic datastore. Simple
@@ -18,6 +17,7 @@ type SimpleResultSetRecord struct {
 	JSONData  string `json:"data"`
 	TotalRows uint64 `json:"total_rows"`
 	Timestamp int64  `json:"timestamp"`
+	ID        string `json:"id"`
 }
 
 // Examine the pathspec and construct a new Elastic record. Because
@@ -29,56 +29,10 @@ type SimpleResultSetRecord struct {
 
 // This code is basically the inverse of the path manager mechanism.
 func NewSimpleResultSetRecord(
-	log_path api.FSPathSpec) *SimpleResultSetRecord {
-	components := log_path.Components()
-
-	// Flow collection example /clients/C.929a6a92471631e5/artifacts/Windows.System.Services/F.C9A32IVCPINMG.json
-	if false && components[0] == "clients" {
-		client_id := components[1]
-		if components[2] == "artifacts" {
-			// Single artifact no source
-			if len(components) == 5 {
-				return &SimpleResultSetRecord{
-					Timestamp: utils.GetTime().Now().Unix(),
-					ClientId:  client_id,
-					FlowId:    components[4],
-					Artifact:  components[3],
-					Type:      "results",
-				}
-
-				// Artifact with source name
-			} else if len(components) == 6 {
-				return &SimpleResultSetRecord{
-					Timestamp: utils.GetTime().Now().Unix(),
-					ClientId:  client_id,
-					FlowId:    components[4],
-					Artifact:  components[3] + "/" + components[5],
-					Type:      "results",
-				}
-			}
-			// Collection logs
-		} else if components[2] == "collections" {
-			if components[4] == "logs" {
-				return &SimpleResultSetRecord{
-					Timestamp: utils.GetTime().Now().Unix(),
-					ClientId:  client_id,
-					FlowId:    components[3],
-					Type:      "logs",
-				}
-			}
-
-			if components[4] == "uploads" {
-				return &SimpleResultSetRecord{
-					Timestamp: utils.GetTime().Now().Unix(),
-					ClientId:  client_id,
-					FlowId:    components[3],
-					Type:      "uploads",
-				}
-			}
-		}
-	}
-
+	log_path api.FSPathSpec,
+	id string) *SimpleResultSetRecord {
 	return &SimpleResultSetRecord{
 		VFSPath: log_path.AsClientPath(),
+		ID:      id,
 	}
 }

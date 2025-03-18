@@ -2,7 +2,9 @@ package notebook
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -108,13 +110,14 @@ func (self *SuperTimelineWriter) AddChild(
 	timeline *timelines_proto.Timeline,
 	completer func()) (timelines.ITimelineWriter, error) {
 
+	// Create a new version for the timeline since we can not delete
+	// it.
+	timeline.Version = fmt.Sprintf("%v", utils.GetGUID())
+
 	res := &TimelineWriter{
-		ctx:        self.ctx,
-		config_obj: self.config_obj,
-		stats: &timelines_proto.Timeline{
-			Id:      timeline.Id,
-			Version: fmt.Sprintf("%v", utils.GetGUID()),
-		},
+		ctx:                 self.ctx,
+		config_obj:          self.config_obj,
+		stats:               timeline,
 		SuperTimelineStorer: self.SuperTimelineStorer,
 		notebook_id:         self.notebook_id,
 		super_timeline:      self.timeline,
@@ -300,7 +303,14 @@ func (self *SuperTimelineReader) New(
 
 	timeline, err := storer.Get(ctx, notebook_id, super_timeline)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			timeline = &timelines_proto.SuperTimeline{
+				Name: super_timeline,
+			}
+
+		} else {
+			return nil, err
+		}
 	}
 
 	metadata := make(map[string]*timelines_proto.Timeline)

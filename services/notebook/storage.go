@@ -295,10 +295,13 @@ func (self *NotebookStoreImpl) GetAllNotebooks(
 		}
 
 		if opts.Timelines {
+			utils.DlvBreak()
 			timelines, err := self.SuperTimelineStorer.List(ctx, item.NotebookId)
 			if err == nil {
 				for _, t := range timelines {
-					item.Timelines = append(item.Timelines, t.Name)
+					if !utils.InString(item.Timelines, t.Name) {
+						item.Timelines = append(item.Timelines, t.Name)
+					}
 				}
 
 			}

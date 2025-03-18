@@ -31,6 +31,9 @@
                 "hunt_id": {
                     "type": "keyword"
                 },
+                "notebook_id": {
+                    "type": "keyword"
+                },
                 "client_id": {
                     "type": "keyword"
                 },
