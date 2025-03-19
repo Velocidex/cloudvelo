@@ -7,11 +7,13 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/hunt_dispatcher"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type HuntEntry struct {
@@ -119,6 +121,27 @@ func (self HuntStorageManagerImpl) SetHunt(
 	hunt_id := hunt.HuntId
 	if hunt_id == "" {
 		return errors.New("Invalid hunt")
+	}
+
+	if hunt.StartRequest == nil ||
+		len(hunt.StartRequest.CompiledCollectorArgs) == 0 {
+		return utils.Wrap(utils.InvalidArgError, "Invalid hunt arg")
+	}
+
+	// We need to add a log message to hunt collections so the
+	// ingestor can identify them as such.
+	compiled := hunt.StartRequest.CompiledCollectorArgs
+	if compiled[0].QueryId != -1 {
+		compiled = append([]*actions_proto.VQLCollectorArgs{
+			{
+				QueryId:      -1,
+				TotalQueries: 1 + int64(len(compiled)),
+				Query: []*actions_proto.VQLRequest{
+					{VQL: `SELECT log(message="Starting Hunt") FROM scope()`},
+				},
+			},
+		}, compiled...)
+		hunt.StartRequest.CompiledCollectorArgs = compiled
 	}
 
 	serialized, err := protojson.Marshal(hunt)

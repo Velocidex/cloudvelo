@@ -217,7 +217,8 @@ func UpdateIndex(
 	defer Instrument("UpdateIndex")()
 	defer Debug("UpdateIndex %v %v", index, id)()
 	return retry(func() error {
-		return _UpdateIndex(ctx, org_id, index, id, query)
+		err := _UpdateIndex(ctx, org_id, index, id, query)
+		return err
 	})
 }
 

@@ -126,8 +126,12 @@ func (self *HuntStatsUpdater) Flush(ctx context.Context) error {
 	self.errors = 0
 	self.mu.Unlock()
 
-	return services.UpdateIndex(
+	err := services.UpdateIndex(
 		ctx, self.config_obj.OrgId, "persisted", hunt_id, query)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func StartHuntStatsUpdater(
