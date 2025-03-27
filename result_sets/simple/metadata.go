@@ -51,8 +51,16 @@ func GetResultSetMetadata(
 		return nil, err
 	}
 
+	// If there is no metadata record we just create one with an empty
+	// ID. This should be used to support legacy result sets without a
+	// metadata record.
 	if len(hits) == 0 {
-		return nil, utils.NotFoundError
+		return &ResultSetMetadataRecord{
+			Timestamp: utils.GetTime().Now().UnixNano(),
+			VFSPath:   base_record.VFSPath,
+			ID:        "",
+			Type:      "rs_metadata",
+		}, nil
 	}
 
 	record := &ResultSetMetadataRecord{}

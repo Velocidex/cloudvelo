@@ -1330,3 +1330,13 @@ func StartBulkIndexService(
 
 	return err
 }
+
+// There are now only two indexes:
+const (
+	// This index is for information that needs to be deleted and updated
+	PERSISTED = "persisted"
+
+	// This index will autodelete itself but can not be updated (it is
+	// implemented as a datastream)
+	TRANSIENT = "transient"
+)

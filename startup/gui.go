@@ -6,11 +6,13 @@ import (
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
+	"www.velocidex.com/golang/cloudvelo/services/scheduler"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	file_store_accessor "www.velocidex.com/golang/velociraptor/accessors/file_store"
 	"www.velocidex.com/golang/velociraptor/api"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/services/notebook"
 	"www.velocidex.com/golang/velociraptor/startup"
 )
 
@@ -106,6 +108,15 @@ Many VQL plugins produce references to files stored on the server. This accessor
 	}
 
 	services.AllowFrontendPlugins.Store(true)
+
+	// Start a new scheduler
+	services.RegisterScheduler(scheduler.NewElasticScheduler())
+
+	// Start notebook worker pool.
+	_, err = notebook.NewWorkerPool(sm.Ctx, config_obj.VeloConf(), 5)
+	if err != nil {
+		return nil, err
+	}
 
 	return sm, server_builder.StartServer(sm.Ctx, sm.Wg)
 }
