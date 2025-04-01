@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -122,6 +123,7 @@ func (self SuperTimelineStorer) Set(
 		SupertimelineName: timeline.Name,
 		DocType:           "Notebook",
 		Timeline:          string(serialized),
+		Timestamp:         time.Now().UnixNano(),
 	}
 
 	doc_id := cvelo_services.MakeId(notebook_id + timeline.Name)

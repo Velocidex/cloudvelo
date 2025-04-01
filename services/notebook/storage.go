@@ -84,7 +84,7 @@ func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error
 			Notebook:   json.MustMarshalString(in),
 			Creator:    in.Creator,
 			Public:     in.Public,
-			Timestamp:  time.Now().Unix(),
+			Timestamp:  time.Now().UnixNano(),
 			SharedWith: append([]string{},
 				in.Collaborators...),
 			Type:    getType(in.NotebookId),
@@ -126,7 +126,7 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 			CellId:            in.CellId,
 			AvailableVersions: in.AvailableVersions,
 			CurrentVersion:    in.CurrentVersion,
-			Timestamp:         time.Now().Unix(),
+			Timestamp:         time.Now().UnixNano(),
 			NotebookCell:      json.MustMarshalString(in),
 			DocType:           "notebooks",
 		})
@@ -146,7 +146,7 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 		CellId:            in.CellId,
 		AvailableVersions: in.AvailableVersions,
 		CurrentVersion:    in.CurrentVersion,
-		Timestamp:         time.Now().Unix(),
+		Timestamp:         time.Now().UnixNano(),
 		Type:              in.Type,
 	}
 

@@ -61,9 +61,9 @@ func (self ResultSetFactory) getFilteredReader(
 	}
 	transformed_result_set_record := NewSimpleResultSetRecord(
 		transformed_path, version)
-	log_result_set_record := NewSimpleResultSetRecord(log_path, version)
 
 	// Try to open the transformed result set if it is already cached.
+	log_result_set_record := NewSimpleResultSetRecord(log_path, version)
 	last_record, err := getLastRecord(config_obj.OrgId, log_result_set_record)
 	if err != nil {
 		// Original Result set is not found - just return an empty
@@ -181,7 +181,7 @@ func (self ResultSetFactory) getSortedReader(
 	// Try to open the transformed result set if it is already cached.
 	last_record, err := getLastRecord(
 		config_obj.OrgId, log_result_set_record)
-	if err != nil {
+	if err == nil {
 		res, err := self.NewResultSetReader(file_store_factory, log_path)
 		if err == nil {
 			res.SetStacker(stacker_path)

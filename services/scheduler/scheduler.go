@@ -40,7 +40,7 @@ import (
 type SchedulerRecordType struct {
 	Timestamp int64 `json:"timestamp"`
 	// A Unique ID for this job - will be placed into the result record.
-	ID    string `json:"id"`
+	ID    string `json:"key"`
 	Queue string `json:"name"`
 	Job   string `json:"data"`
 	OrgId string `json:"org_id"`
@@ -50,7 +50,7 @@ type SchedulerRecordType struct {
 
 type SchedulerResponseRecord struct {
 	Timestamp int64  `json:"timestamp"`
-	ID        string `json:"id"`
+	ID        string `json:"key"`
 	Type      string `json:"type"` // "scheduler_result"
 	Data      string `json:"data"`
 	Error     string `json:"state"`
@@ -96,7 +96,7 @@ func (self *ElasticScheduler) getOneJob(ctx context.Context,
     "source": "if (ctx._source.state == 'available') { ctx._source.state = params.id; }",
     "lang": "painless",
     "params": {
-       "id": %q
+       "key": %q
     }
   }
 }`, worker_id))
@@ -225,7 +225,11 @@ func (self *ElasticScheduler) Schedule(
 		// Now wait here for results.
 		for i := 0; i < 1000; i++ {
 			if i > 0 {
-				utils.SleepWithCtx(ctx, time.Millisecond*100)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(utils.Jitter(500 * time.Millisecond)):
+				}
 			}
 
 			hit, err := cvelo_services.GetElasticRecordByQuery(
@@ -235,7 +239,7 @@ func (self *ElasticScheduler) Schedule(
    "bool": {
      "must": [
        {"match": {"type": "scheduler_result"}},
-       {"match": {"id": %q}}
+       {"match": {"key": %q}}
      ]
   }
  },
