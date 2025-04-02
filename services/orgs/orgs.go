@@ -105,15 +105,24 @@ func (self *OrgManager) OrgIdByNonce(nonce string) (string, error) {
 	return result, nil
 }
 
-func (self *OrgManager) CreateNewOrg(name, id string) (
+func (self *OrgManager) CreateNewOrg(name, id, nonce string) (
 	*api_proto.OrgRecord, error) {
 
 	if id == "" {
 		id = NewOrgId()
+	} else {
+		// Org already exists, just provide the old one
+		record, err := self.GetOrg(id)
+		if err == nil {
+			return record, nil
+		}
 	}
 
-	org_context, err := self.makeNewOrgContext(
-		id, name, NewNonce())
+	if nonce == services.RandomNonce {
+		nonce = NewNonce()
+	}
+
+	org_context, err := self.makeNewOrgContext(id, name, nonce)
 	if err != nil {
 		return nil, err
 	}

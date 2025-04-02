@@ -37,6 +37,10 @@ func (self *ExportManager) SetContainerStats(
 	stats *api_proto.ContainerStats,
 	opts services.ContainerOptions) error {
 
+	if opts.ContainerFilename == nil {
+		return utils.InvalidArgError
+	}
+
 	serialized, err := json.Marshal(stats)
 	if err != nil {
 		return err

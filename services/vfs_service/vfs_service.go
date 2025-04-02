@@ -104,7 +104,8 @@ func (self *VFSService) WriteDownloadInfo(
 
 	dir_components := append([]string{client_id, accessor},
 		client_components[:len(client_components)-1]...)
-	file_components := append([]string{client_id, accessor},
+
+	file_components := append([]string{utils.ClientIdFromSource(client_id), accessor},
 		client_components...)
 
 	download_record := &DownloadRow{

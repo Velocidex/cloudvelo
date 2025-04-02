@@ -37,7 +37,7 @@ func (self Ingestor) HandleUploads(
 	}
 
 	upload_request := &uploads.UploadRequest{
-		ClientId:   message.Source,
+		ClientId:   utils.ClientIdFromSource(message.Source),
 		SessionId:  message.SessionId,
 		Accessor:   message.FileBuffer.Pathspec.Accessor,
 		Components: message.FileBuffer.Pathspec.Components,

@@ -119,6 +119,7 @@ GUI:
     password_salt: c85fecf44ca8c1352a2c9bf0987c01426f734fe7228a0d14611d35c9cda880cd
   initial_orgs:
   - org_id: O123
+    nonce: O123Nonce
     name: MyOrg
   authenticator:
     type: basic
