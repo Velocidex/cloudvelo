@@ -5,8 +5,6 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"google.golang.org/protobuf/proto"
-	"www.velocidex.com/golang/cloudvelo/filestore"
-	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/api/tables"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -201,19 +199,13 @@ func (self *VFSService) ListDirectoryFiles(
 		}
 		basename := components[len(components)-1]
 		lookup[basename] = &flows_proto.VFSDownloadInfo{
-			Size: download.Size,
-			Components: filestore.S3ComponentsForClientUpload(
-				&uploads.UploadRequest{
-					ClientId:   in.ClientId,
-					SessionId:  download.FlowId,
-					Accessor:   download.Accessor,
-					Components: download.Components,
-				}),
-			Mtime:    download.Mtime,
-			SHA256:   download.Sha256,
-			MD5:      download.Md5,
-			InFlight: download.InFlight,
-			FlowId:   download.FlowId,
+			Size:       download.Size,
+			Components: download.FSComponents,
+			Mtime:      download.Mtime,
+			SHA256:     download.Sha256,
+			MD5:        download.Md5,
+			InFlight:   download.InFlight,
+			FlowId:     download.FlowId,
 		}
 	}
 
