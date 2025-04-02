@@ -201,7 +201,7 @@ func (self *VFSService) ListDirectoryFiles(
 		lookup[basename] = &flows_proto.VFSDownloadInfo{
 			Size:       download.Size,
 			Components: download.FSComponents,
-			Mtime:      download.Mtime,
+			Mtime:      download.Mtime * 1000000,
 			SHA256:     download.Sha256,
 			MD5:        download.Md5,
 			InFlight:   download.InFlight,
