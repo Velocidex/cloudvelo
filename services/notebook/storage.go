@@ -76,6 +76,9 @@ func (self *NotebookStoreImpl) Version() int64 {
 }
 
 func (self *NotebookStoreImpl) SetNotebook(in *api_proto.NotebookMetadata) error {
+
+	in.ModifiedTime = utils.GetTime().Now().Unix()
+
 	return cvelo_services.SetElasticIndex(self.ctx,
 		self.config_obj.OrgId,
 		"persisted", in.NotebookId,
