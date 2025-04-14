@@ -84,9 +84,11 @@ func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
 
 // Provide a hint to the writer that the next JSONL batch starts at
 // this row count.
-func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) {
+func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) error {
 	self.start_row = start_row
 	self.truncated = true
+
+	return nil
 }
 
 const getLargestRowId = `
