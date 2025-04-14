@@ -76,7 +76,6 @@ func (self *FlowStorageManager) WriteTask(
 		cvelo_services.DocIdRandom, record)
 }
 
-// Not used - opensearch is handled with Launcher.GetFlows() directly.
 func (self *FlowStorageManager) ListFlows(
 	ctx context.Context,
 	config_obj *config_proto.Config,

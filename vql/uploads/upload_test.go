@@ -9,7 +9,6 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/sebdah/goldie"
 	"github.com/stretchr/testify/suite"
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
 	"www.velocidex.com/golang/cloudvelo/filestore"
@@ -32,6 +31,7 @@ import (
 	velo_uploads "www.velocidex.com/golang/velociraptor/uploads"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 	"www.velocidex.com/golang/velociraptor/vtesting/assert"
+	"www.velocidex.com/golang/velociraptor/vtesting/goldie"
 
 	_ "www.velocidex.com/golang/cloudvelo/vql_plugins"
 	_ "www.velocidex.com/golang/velociraptor/accessors/data"

@@ -19,6 +19,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
+	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 	"www.velocidex.com/golang/velociraptor/vtesting/goldie"
 )
 
@@ -357,9 +358,26 @@ func (self *ForemanTestSuite) setupAllHunts() {
 	hunt_service, err := services.GetHuntDispatcher(config_obj)
 	assert.NoError(self.T(), err)
 
+	launcher, err := services.GetLauncher(config_obj)
+	assert.NoError(self.T(), err)
+
+	manager, err := services.GetRepositoryManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	repository, err := manager.GetGlobalRepository(config_obj)
+	assert.NoError(self.T(), err)
+
 	// Set the hunt directly in the database
 	for _, h := range hunts {
-		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
+		compiled, err := launcher.CompileCollectorArgs(
+			self.Ctx, config_obj, acl_managers.NullACLManager{},
+			repository, services.CompilerOptions{},
+			h.StartRequest)
+		assert.NoError(self.T(), err)
+
+		h.StartRequest.CompiledCollectorArgs = compiled
+
+		err = hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
 		assert.NoError(self.T(), err)
 	}
 }
@@ -659,9 +677,26 @@ func (self *ForemanTestSuite) setupOSHunts() {
 	hunt_service, err := services.GetHuntDispatcher(config_obj)
 	assert.NoError(self.T(), err)
 
+	launcher, err := services.GetLauncher(config_obj)
+	assert.NoError(self.T(), err)
+
+	manager, err := services.GetRepositoryManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	repository, err := manager.GetGlobalRepository(config_obj)
+	assert.NoError(self.T(), err)
+
 	// Set the hunt directly in the database
 	for _, h := range hunts {
-		err := hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
+		compiled, err := launcher.CompileCollectorArgs(
+			self.Ctx, config_obj, acl_managers.NullACLManager{},
+			repository, services.CompilerOptions{},
+			h.StartRequest)
+		assert.NoError(self.T(), err)
+
+		h.StartRequest.CompiledCollectorArgs = compiled
+
+		err = hunt_service.(*hunt_dispatcher.HuntDispatcher).Store.SetHunt(self.Ctx, h)
 		assert.NoError(self.T(), err)
 	}
 }

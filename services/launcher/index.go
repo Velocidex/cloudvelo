@@ -55,6 +55,8 @@ func (self *FlowStorageManager) buildIndex(
 		return err
 	}
 
+	seen := make(map[string]bool)
+
 	var flows []*flows_proto.ArtifactCollectorContext
 	for _, record := range records {
 		item := &cvelo_schema_api.ArtifactCollectorRecord{}
@@ -62,6 +64,13 @@ func (self *FlowStorageManager) buildIndex(
 		if err != nil {
 			continue
 		}
+
+		_, pres := seen[item.SessionId]
+		if pres {
+			continue
+		}
+
+		seen[item.SessionId] = true
 
 		flow_context, err := item.ToProto()
 		if err != nil {

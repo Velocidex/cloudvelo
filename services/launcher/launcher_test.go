@@ -17,6 +17,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/velociraptor/vql/acl_managers"
 	"www.velocidex.com/golang/velociraptor/vtesting"
 )
@@ -34,7 +35,7 @@ const (
   "query": {
     "bool": {
       "must": [
- 		 {"match": {"doc_type" : "task"}},		
+ 		 {"match": {"doc_type" : "task"}},
          {"match": {"client_id" : %q}}
       ]}
   }
@@ -54,7 +55,7 @@ func (self *LauncherTestSuite) TestLauncher() {
 	launcher, err := services.GetLauncher(config_obj)
 	assert.NoError(self.T(), err)
 
-	launcher.SetFlowIdForTests(set_flow_id)
+	closer := utils.SetFlowIdForTests(set_flow_id)
 
 	repository_manager, err := services.GetRepositoryManager(config_obj)
 	assert.NoError(self.T(), err)
@@ -99,7 +100,7 @@ sources:
 	assert.Equal(self.T(), flow_id, flows.Items[0].SessionId)
 
 	details, err := launcher.GetFlowDetails(self.Ctx, config_obj,
-		client_id, flow_id)
+		services.GetFlowOptions{}, client_id, flow_id)
 	assert.NoError(self.T(), err)
 
 	// Make sure the flow is in the running state
@@ -146,7 +147,7 @@ sources:
 
 	// Make sure the collection is marked as cancelled now.
 	details, err = launcher.GetFlowDetails(self.Ctx, config_obj,
-		client_id, flow_id)
+		services.GetFlowOptions{}, client_id, flow_id)
 	assert.NoError(self.T(), err)
 
 	// Make sure the flow is in the error state
@@ -155,7 +156,11 @@ sources:
 		details.Context.State)
 
 	// Create a second collection
-	launcher.SetFlowIdForTests(set_flow_id + "second")
+	closer()
+
+	closer = utils.SetFlowIdForTests(set_flow_id + "second")
+	defer closer()
+
 	flow_id, err = launcher.ScheduleArtifactCollection(
 		self.Ctx, config_obj, acl_manager,
 		repository, &flows_proto.ArtifactCollectorArgs{

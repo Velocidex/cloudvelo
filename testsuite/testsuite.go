@@ -92,7 +92,7 @@ func (self *CloudTestSuite) TearDownTest() {
 }
 
 func (self *CloudTestSuite) SetupTest() {
-	self.time_closer = utils.MockTime(&utils.IncClock{NowTime: 1661391000})
+	self.time_closer = utils.MockTime(&utils.IncClock{NowTime: 1744634710})
 
 	self.Ctx, self.cancel = context.WithTimeout(context.Background(),
 		time.Second*60)
@@ -111,7 +111,7 @@ func (self *CloudTestSuite) SetupTest() {
 	err = schema.Delete(self.Ctx, config_obj.VeloConf(), test_org, schema.NO_FILTER)
 	assert.NoError(self.T(), err)
 
-	_, err = org_manager.CreateNewOrg("test", test_org)
+	_, err = org_manager.CreateNewOrg("test", test_org, services.RandomNonce)
 	assert.NoError(self.T(), err)
 
 	self.Sm = sm
