@@ -17,6 +17,10 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+const (
+	TAGS_ID = "index_tags"
+)
+
 func (self *HuntStorageManagerImpl) ListHunts(
 	ctx context.Context,
 	options result_sets.ResultSetOptions,
@@ -78,8 +82,20 @@ func (self *HuntStorageManagerImpl) ListHunts(
 
 func (self *HuntStorageManagerImpl) GetTags(
 	ctx context.Context) (res []string) {
-	// Fixme
-	return nil
+
+	hit, err := cvelo_services.GetElasticRecord(ctx,
+		self.config_obj.OrgId, "persisted", TAGS_ID)
+	if err != nil {
+		return nil
+	}
+
+	record := &HuntEntry{}
+	err = json.Unmarshal(hit, record)
+	if err != nil {
+		return nil
+	}
+
+	return record.Labels
 }
 
 func (self *HuntStorageManagerImpl) Refresh(ctx context.Context,
@@ -89,7 +105,7 @@ func (self *HuntStorageManagerImpl) Refresh(ctx context.Context,
 
 func (self HuntStorageManagerImpl) GetHunt(
 	ctx context.Context, hunt_id string) (*api_proto.Hunt, error) {
-	serialized, err := cvelo_services.GetElasticRecord(context.Background(),
+	serialized, err := cvelo_services.GetElasticRecord(ctx,
 		self.config_obj.OrgId, "persisted", hunt_id)
 	if err != nil {
 		return nil, utils.NotFoundError

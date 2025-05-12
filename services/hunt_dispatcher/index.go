@@ -54,6 +54,8 @@ func (self *HuntStorageManagerImpl) FlushIndex(
 	}
 	defer rs_writer.Close()
 
+	seen_tags := make(map[string]bool)
+
 	for _, hit := range hits {
 		entry := &HuntEntry{}
 		err = json.Unmarshal(hit, entry)
@@ -64,6 +66,10 @@ func (self *HuntStorageManagerImpl) FlushIndex(
 		hunt_info, err := entry.GetHunt()
 		if err != nil {
 			continue
+		}
+
+		for _, tag := range hunt_info.Tags {
+			seen_tags[tag] = true
 		}
 
 		rs_writer.Write(ordereddict.NewDict().
@@ -78,5 +84,11 @@ func (self *HuntStorageManagerImpl) FlushIndex(
 			Set("Hunt", entry.Hunt))
 	}
 
-	return nil
+	record := &HuntEntry{}
+	for tag := range seen_tags {
+		record.Labels = append(record.Labels, tag)
+	}
+
+	return cvelo_services.SetElasticIndex(ctx,
+		self.config_obj.OrgId, "persisted", TAGS_ID, record)
 }

@@ -17,15 +17,16 @@ import (
 )
 
 type HuntEntry struct {
-	HuntId    string `json:"hunt_id"`
-	Timestamp int64  `json:"timestamp"`
-	Expires   uint64 `json:"expires"`
-	Scheduled uint64 `json:"scheduled"`
-	Completed uint64 `json:"completed"`
-	Errors    uint64 `json:"errors"`
-	Hunt      string `json:"hunt"`
-	State     string `json:"state"`
-	DocType   string `json:"doc_type"`
+	HuntId    string   `json:"hunt_id"`
+	Timestamp int64    `json:"timestamp"`
+	Expires   uint64   `json:"expires"`
+	Scheduled uint64   `json:"scheduled"`
+	Completed uint64   `json:"completed"`
+	Errors    uint64   `json:"errors"`
+	Hunt      string   `json:"hunt"`
+	State     string   `json:"state"`
+	DocType   string   `json:"doc_type"`
+	Labels    []string `json:"labels"`
 }
 
 func (self *HuntEntry) GetHunt() (*api_proto.Hunt, error) {
@@ -156,6 +157,7 @@ func (self HuntStorageManagerImpl) SetHunt(
 		Hunt:      string(serialized),
 		State:     hunt.State.String(),
 		DocType:   "hunts",
+		Labels:    hunt.Tags,
 	}
 
 	if hunt.Stats != nil {

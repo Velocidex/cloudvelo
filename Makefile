@@ -30,6 +30,9 @@ gui:
 dump:
 	$(BINARY) $(CONFIG_ARGS) elastic dump -v
 
+dump_persisted:
+	$(BINARY) $(CONFIG_ARGS) elastic dump --index="persisted" -v --org_id O123
+
 debug_gui:
 	$(DLV) $(CONFIG_ARGS) gui -v
 

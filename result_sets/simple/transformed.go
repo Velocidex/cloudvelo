@@ -176,13 +176,13 @@ func (self ResultSetFactory) getSortedReader(
 
 	transformed_result_set_record := NewSimpleResultSetRecord(
 		transformed_path, version)
-	log_result_set_record := NewSimpleResultSetRecord(log_path, version)
+	log_result_set_record := NewSimpleResultSetRecord(transformed_path, version)
 
 	// Try to open the transformed result set if it is already cached.
 	last_record, err := getLastRecord(
 		config_obj.OrgId, log_result_set_record)
 	if err == nil {
-		res, err := self.NewResultSetReader(file_store_factory, log_path)
+		res, err := self.NewResultSetReader(file_store_factory, transformed_path)
 		if err == nil {
 			res.SetStacker(stacker_path)
 		}

@@ -17,12 +17,11 @@ require (
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
-	github.com/sebdah/goldie v1.0.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.7.0
-	www.velocidex.com/golang/vfilter v0.0.0-20250413064725-2a34ff8237ca
+	www.velocidex.com/golang/vfilter v0.0.0-20250506071806-b4ce88fa0048
 )
 
 require (
@@ -43,18 +42,18 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
 	github.com/Velocidex/WinPmem/go-winpmem v0.0.0-20240711041142-80f6ecbbeb7f // indirect
-	github.com/Velocidex/amsi v0.0.0-20200608120838-e5d93b76f119 // indirect
+	github.com/Velocidex/amsi v0.0.0-20250418124629-ea341d1aa3f2 // indirect
 	github.com/Velocidex/etw v0.0.0-20250314035532-6115b05b9430 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
 	github.com/Velocidex/go-elasticsearch/v7 v7.3.1-0.20191001125819-fee0ef9cac6b // indirect
 	github.com/Velocidex/go-ewf v0.0.0-20240210123447-97dc81b7d8c3 // indirect
-	github.com/Velocidex/go-ext4 v0.0.0-20250118151314-92624304aad4 // indirect
+	github.com/Velocidex/go-ext4 v0.0.0-20250510085914-b0b955af0359 // indirect
 	github.com/Velocidex/go-fat v0.0.0-20230923165230-3e6c4265297a // indirect
 	github.com/Velocidex/go-journalctl v0.0.0-20241004063153-cc1c858415bd // indirect
 	github.com/Velocidex/go-magic v0.0.0-20250203094020-32f94b14f00f // indirect
 	github.com/Velocidex/go-mscfb v0.0.0-20240618091452-31f4ccc54002 // indirect
-	github.com/Velocidex/go-vhdx v0.0.0-20240601014259-b204818c95fd // indirect
-	github.com/Velocidex/go-vmdk v0.0.0-20241202015615-d508d852d5e1 // indirect
+	github.com/Velocidex/go-vhdx v0.0.0-20250511013458-5cba970cdeda // indirect
+	github.com/Velocidex/go-vmdk v0.0.0-20250505140221-bd4633ce2fbf // indirect
 	github.com/Velocidex/go-yara v1.1.10-0.20240309155455-3f491847cec9 // indirect
 	github.com/Velocidex/grok v0.0.1 // indirect
 	github.com/Velocidex/grpc-go-pool v1.2.2-0.20241016164850-ff0cb80037a8 // indirect
@@ -135,10 +134,10 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/gorilla/csrf v1.6.2 // indirect
+	github.com/gorilla/csrf v1.7.3 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
-	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/websocket v1.5.2-0.20240215025916-695e9095ce87 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -223,10 +222,10 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
 	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.169.0 // indirect

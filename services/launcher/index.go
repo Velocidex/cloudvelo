@@ -43,6 +43,14 @@ const (
 `
 )
 
+func (self *FlowStorageManager) WriteFlowIndex(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	flow *flows_proto.ArtifactCollectorContext) error {
+
+	return self.buildIndex(ctx, config_obj, flow.ClientId)
+}
+
 func (self *FlowStorageManager) buildIndex(
 	ctx context.Context,
 	config_obj *config_proto.Config,
