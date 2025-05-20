@@ -134,7 +134,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/gorilla/csrf v1.7.3 // indirect
+	github.com/gorilla/csrf v1.7.2 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
