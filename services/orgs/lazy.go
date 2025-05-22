@@ -10,6 +10,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
 	"www.velocidex.com/golang/cloudvelo/services/exports"
+	"www.velocidex.com/golang/cloudvelo/services/frontend"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/services/indexing"
 	"www.velocidex.com/golang/cloudvelo/services/inventory"
@@ -46,7 +47,7 @@ type LazyServiceContainer struct {
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
-	return nil, errors.New("LazyServiceContainer.FrontendManager is Not implemented")
+	return frontend.FrontendService{}, nil
 }
 
 func (self *LazyServiceContainer) ExportManager() (services.ExportManager, error) {

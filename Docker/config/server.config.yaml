@@ -62,6 +62,9 @@ API:
   bind_scheme: tcp
   pinned_gw_name: GRPC_GW
 GUI:
+  public_url: http://localhost:3000/app/index.html
+  trusted_origins:
+    - localhost:3000
   bind_address: 0.0.0.0
   bind_port: 8889
   gw_certificate: |
