@@ -63,6 +63,8 @@ API:
   pinned_gw_name: GRPC_GW
 GUI:
   public_url: http://localhost:3000/app/index.html
+
+  # Support the vite dev console.
   trusted_origins:
     - localhost:3000
   bind_address: 0.0.0.0
