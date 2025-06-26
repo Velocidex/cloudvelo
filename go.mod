@@ -21,7 +21,7 @@ require (
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	www.velocidex.com/golang/velociraptor v0.7.0
-	www.velocidex.com/golang/vfilter v0.0.0-20250520023105-e30ee3b29709
+	www.velocidex.com/golang/vfilter v0.0.0-20250616120118-735d22402249
 )
 
 require (
@@ -41,7 +41,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/Showmax/go-fqdn v1.0.0 // indirect
-	github.com/Velocidex/WinPmem/go-winpmem v0.0.0-20240711041142-80f6ecbbeb7f // indirect
+	github.com/Velocidex/WinPmem/go-winpmem v0.0.0-20250618151512-1385e105b127 // indirect
 	github.com/Velocidex/amsi v0.0.0-20250418124629-ea341d1aa3f2 // indirect
 	github.com/Velocidex/etw v0.0.0-20250314035532-6115b05b9430 // indirect
 	github.com/Velocidex/file-rotatelogs v0.0.0-20211221020724-d12e4dae4e11 // indirect
@@ -60,7 +60,7 @@ require (
 	github.com/Velocidex/json v0.0.0-20220224052537-92f3c0326e5a // indirect
 	github.com/Velocidex/pkcs7 v0.0.0-20230220112103-d4ed02e1862a // indirect
 	github.com/Velocidex/sigma-go v0.0.0-20241025122940-1b771d3d57a9 // indirect
-	github.com/Velocidex/tracee_velociraptor v0.0.0-20250304130312-661b3fd25a3c // indirect
+	github.com/Velocidex/tracee_velociraptor v0.0.0-20250620124218-01f48d6fc3a1 // indirect
 	github.com/Velocidex/zip v0.0.0-20250102162034-1a0ec0ec569c // indirect
 	github.com/VirusTotal/gyp v0.9.1-0.20231202132633-bb35dbf177a6 // indirect
 	github.com/alecthomas/chroma v0.7.3 // indirect
@@ -96,8 +96,9 @@ require (
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
+	github.com/cavaliergopher/cpio v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cilium/ebpf v0.16.0 // indirect
+	github.com/cilium/ebpf v0.18.0 // indirect
 	github.com/clayscode/Go-Splunk-HTTP/splunk/v2 v2.0.1-0.20221027171526-76a36be4fa02 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
@@ -130,6 +131,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
+	github.com/google/rpmpack v0.5.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -156,7 +158,8 @@ require (
 	github.com/juju/ratelimit v1.0.1 // indirect
 	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/leodido/go-syslog v1.0.1 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
@@ -207,7 +210,10 @@ require (
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
+	github.com/xor-gate/ar v0.0.0-20170530204233-5c72ae81e2b7 // indirect
+	github.com/xor-gate/debpkg v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -219,14 +225,14 @@ require (
 	go.starlark.net v0.0.0-20230925163745-10651d5192ab // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
-	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.169.0 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect

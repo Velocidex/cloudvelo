@@ -56,6 +56,7 @@ var (
 
 type Foreman struct {
 	last_run_time time.Time
+	next_run_time time.Time
 }
 
 func (self Foreman) stopHunt(
@@ -430,7 +431,7 @@ const (
         {
           "range": {
             "ping": {
-              "gt": %q
+              "gt": "%q"
             }
           }
         },
@@ -713,6 +714,8 @@ func (self *Foreman) Start(
 
 	// Run once inline to trap any errors.
 	self.last_run_time = utils.GetTime().Now()
+	self.next_run_time = self.last_run_time
+
 	err := self.RunOnce(ctx, config_obj)
 	if err != nil {
 		return err
@@ -729,13 +732,17 @@ func (self *Foreman) Start(
 				return
 
 			case <-time.After(time.Duration(config_obj.Cloud.ForemanIntervalSeconds) * time.Second):
+				// Set the next time to be now so we do not have an
+				// overlap where changes can race this loop.
+				self.next_run_time = utils.GetTime().Now()
+
 				err := self.RunOnce(ctx, config_obj)
 				if err != nil {
 					logger.Error("Foreman: %v", err)
 				} else {
 					runCounter.Inc()
 				}
-				self.last_run_time = utils.GetTime().Now()
+				self.last_run_time = self.next_run_time
 			}
 		}
 	}()

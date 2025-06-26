@@ -58,7 +58,7 @@ func GetClientUpdateEventTableMessage(
 	labels []string) *crypto_proto.VeloMessage {
 
 	result := &actions_proto.VQLEventTable{
-		Version: state.Version,
+		Version: uint64(utils.GetTime().Now().UnixNano()),
 	}
 
 	if state.Artifacts == nil {

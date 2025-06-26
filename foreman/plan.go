@@ -157,10 +157,9 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 				org_config_obj.OrgId,
 				"persisted", client_id+"_last_event_version",
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
-					ClientId: client_id,
-					LastEventTableVersion: self.
-						current_monitoring_state.Version,
-					DocType: "clients",
+					ClientId:              client_id,
+					LastEventTableVersion: uint64(utils.GetTime().Now().UnixNano()),
+					DocType:               "clients",
 				})
 		}
 

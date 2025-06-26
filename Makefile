@@ -12,7 +12,7 @@ all:
 	go run make.go -v Auto
 
 debug_client:
-	$(DLV) client -v $(CLIENT_CONFIG_ARGS)
+	$(DLV) client -v $(CLIENT_CONFIG_ARGS) --debug --debug_port 6061
 
 .PHONY: client
 client:
