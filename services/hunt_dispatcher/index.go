@@ -6,6 +6,7 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
@@ -65,6 +66,10 @@ func (self *HuntStorageManagerImpl) FlushIndex(
 
 		hunt_info, err := entry.GetHunt()
 		if err != nil {
+			continue
+		}
+
+		if hunt_info.State == api_proto.Hunt_ARCHIVED {
 			continue
 		}
 
