@@ -26,7 +26,9 @@ type ClientRecord struct {
 	System        string `json:"system,omitempty"`
 
 	// Populated by the client's install time.
-	FirstSeenAt     uint64 `json:"first_seen_at,omitempty"`
+
+	// Must be present! Used by search index for all verb.
+	FirstSeenAt     uint64 `json:"first_seen_at"`
 	LastInterrogate string `json:"last_interrogate,omitempty"`
 
 	// Stored in '<client id>_ping'

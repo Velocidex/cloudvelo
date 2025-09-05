@@ -7,6 +7,7 @@
   "client_id": "C.1352adc54e292a23",
   "hostname": "devbox",
   "system": "linux",
+  "first_seen_at": 0,
   "type": "main",
   "doc_type": "clients"
  }

@@ -30,6 +30,10 @@ var (
 	elastic_command_dump = elastic_command.Command(
 		"dump", "Dump the entire index - probably only useful for debugging")
 
+	elastic_command_dump_count = elastic_command_dump.Flag(
+		"dump_count", "Dump the index using a counted method - probably only useful for debugging").
+		Uint64()
+
 	elastic_command_dump_index = elastic_command_dump.Flag(
 		"index", "Name of index to dump").Default("transient").String()
 
@@ -97,12 +101,33 @@ func doDumpElastic() error {
 	}
 	scope := vql_subsystem.MakeScope()
 
-	rows, err := services.QueryChan(ctx, config_obj.VeloConf(), 1000,
-		*elastic_command_dump_org_id,
-		*elastic_command_dump_index,
-		`{"query": {"match_all" : {}}}`, *elastic_command_dump_sort)
-	if err != nil {
-		return err
+	var rows chan json.RawMessage
+	if *elastic_command_dump_count > 0 {
+		hits, _, err := services.QueryElasticRaw(ctx,
+			*elastic_command_dump_org_id,
+			*elastic_command_dump_index,
+			json.Format(`{"size": %q, "query": {"match_all" : {}}}`,
+				*elastic_command_dump_count))
+		if err != nil {
+			return err
+		}
+
+		rows = make(chan json.RawMessage)
+		go func() {
+			defer close(rows)
+			for _, hit := range hits {
+				rows <- hit
+			}
+		}()
+
+	} else {
+		rows, err = services.QueryChan(ctx, config_obj.VeloConf(), 1000,
+			*elastic_command_dump_org_id,
+			*elastic_command_dump_index,
+			`{"query": {"match_all" : {}}}`, *elastic_command_dump_sort)
+		if err != nil {
+			return err
+		}
 	}
 
 	count := 0

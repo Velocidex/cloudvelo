@@ -25,6 +25,7 @@ type UserGUIOptions struct {
 	Username   string `json:"username"`
 	GUIOptions string `json:"gui_options"` // An endoded api_proto.SetGUIOptionsRequest
 	DocType    string `json:"doc_type"`
+	Type       string `json:"type"`
 }
 
 func StartUserManager(

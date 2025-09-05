@@ -210,7 +210,16 @@ func (self *UserStorageManager) SetUserOptions(ctx context.Context,
 		old_options.Options = options.Options
 	}
 
-	old_options.DefaultPassword = options.DefaultPassword
+	if options.DefaultPassword != "" {
+		// Means to reset the password.
+		if options.DefaultPassword == "-" {
+			old_options.DefaultPassword = ""
+		} else {
+			// Set the password to something.
+			old_options.DefaultPassword = options.DefaultPassword
+		}
+	}
+
 	old_options.DefaultDownloadsLock = options.DefaultDownloadsLock
 
 	serialized, err := protojson.Marshal(old_options)
@@ -223,6 +232,7 @@ func (self *UserStorageManager) SetUserOptions(ctx context.Context,
 		"persisted", username+"_options", &UserGUIOptions{
 			Username:   username,
 			GUIOptions: string(serialized),
+			Type:       "user_options",
 			DocType:    "user_options",
 		})
 }
