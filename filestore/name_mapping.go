@@ -24,19 +24,12 @@ var (
 func PathspecToKey(config_obj *config.Config,
 	path_spec api.FSPathSpec) string {
 
-	base_path := path_spec.
-		SetType(api.PATH_TYPE_FILESTORE_ANY)
+	parts := []string{"orgs", utils.NormalizedOrgId(config_obj.OrgId)}
+	for _, component := range path_spec.Components() {
+		parts = append(parts, utils.SanitizeString(component))
+	}
 
-	key := strings.TrimPrefix(
-		base_path.AsFilestoreFilename(&config_proto.Config{
-			Datastore: &config_proto.DatastoreConfig{
-				FilestoreDirectory: "orgs/" +
-					utils.NormalizedOrgId(config_obj.OrgId),
-			},
-		}), "/")
-
-	key += api.GetExtensionForFilestore(path_spec)
-	return key
+	return strings.Join(parts, "/") + api.GetExtensionForFilestore(path_spec)
 }
 
 // Build an S3 key from a client upload request.

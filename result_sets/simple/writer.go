@@ -32,6 +32,8 @@ type ElasticSimpleResultSetWriter struct {
 
 	// If this is set writes will be syncrounous
 	sync bool
+
+	version string
 }
 
 // Not currently implemented but in future will be used to update
@@ -43,11 +45,14 @@ func (self *ElasticSimpleResultSetWriter) Update(uint64, *ordereddict.Dict) erro
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	serialized []byte, total_rows uint64) {
 
-	record := NewSimpleResultSetRecord(self.log_path)
+	record := NewSimpleResultSetRecord(self.log_path, self.version)
 	record.JSONData = string(serialized)
 	record.StartRow = self.start_row
 	record.EndRow = self.start_row + int64(total_rows)
 	record.Timestamp = utils.GetTime().Now().Unix()
+	record.ID = self.version
+	record.Type = "result_set"
+
 	self.start_row = record.EndRow
 	record.TotalRows = uint64(self.start_row)
 
@@ -79,9 +84,11 @@ func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
 
 // Provide a hint to the writer that the next JSONL batch starts at
 // this row count.
-func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) {
+func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) error {
 	self.start_row = start_row
 	self.truncated = true
+
+	return nil
 }
 
 const getLargestRowId = `
@@ -89,6 +96,8 @@ const getLargestRowId = `
   "query": {
      "bool": {
        "must": [
+            {"match": {"type": "result_set"}},
+            {"match": {"id": %q}},
             {"match": {"vfs_path": %q}}
        ]}
   },
@@ -102,10 +111,11 @@ const getLargestRowId = `
 `
 
 func (self *ElasticSimpleResultSetWriter) getLastRow() error {
-	ctx := context.Background()
-	query := json.Format(getLargestRowId, self.log_path.AsClientPath())
+	query := json.Format(getLargestRowId,
+		self.version, self.log_path.AsClientPath())
+
 	hits, err := services.QueryElasticAggregations(
-		ctx, self.org_id, "transient", query)
+		self.ctx, self.org_id, "transient", query)
 
 	if err != nil {
 		return err

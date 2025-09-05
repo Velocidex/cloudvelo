@@ -126,8 +126,12 @@ func (self *HuntStatsUpdater) Flush(ctx context.Context) error {
 	self.errors = 0
 	self.mu.Unlock()
 
-	return services.UpdateIndex(
+	err := services.UpdateIndex(
 		ctx, self.config_obj.OrgId, "persisted", hunt_id, query)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func StartHuntStatsUpdater(
@@ -144,12 +148,13 @@ func StartHuntStatsUpdater(
 	// Flush the stat records every second
 	HuntStatsManager.lru.SetTTL(time.Second)
 	HuntStatsManager.lru.SetExpirationCallback(
-		func(hunt_id string, value interface{}) {
+		func(hunt_id string, value interface{}) error {
 			updater := value.(*HuntStatsUpdater)
 			err := updater.Flush(ctx)
 			if err != nil {
 				logger.Error("HuntStatsUpdater: %v", err)
 			}
+			return nil
 		})
 
 	// Handle shutdown

@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/cloudvelo/filestore"
@@ -41,6 +42,9 @@ type SimpleResultSetReader struct {
 	log_path           api.FSPathSpec
 	opts               result_sets.ResultSetOptions
 	base_record        *SimpleResultSetRecord
+	mtime              time.Time
+
+	stacker api.FSPathSpec
 }
 
 // TODO: for now seek position is approximate: we seek to the next
@@ -53,22 +57,20 @@ func (self *SimpleResultSetReader) SeekToRow(start int64) error {
 
 // Gets the elastic query for retriving the packet that has JSONL
 // encompassing the required row.
-func (self *SimpleResultSetReader) getPacket(row int64) (
-	*SimpleResultSetRecord, error) {
+func (self *SimpleResultSetReader) getPacket(
+	ctx context.Context, row int64) (*SimpleResultSetRecord, error) {
 
-	ctx := context.Background()
 	var artifact_clause, query string
 
 	if self.base_record.VFSPath != "" {
 		query = json.Format(`
 {"query": {"bool": {"must": [
   {"match": {"vfs_path": %q}},
+  {"match": {"id": %q}},
+  {"match": {"type": "result_set"}},
   {"range": {"start_row": {"lte": %q}}},
-  {"range": {"end_row": {"gt": %q}}}%s
-]}}}`, self.base_record.VFSPath,
-			row,
-			row,
-			artifact_clause)
+  {"range": {"end_row": {"gt": %q}}}
+]}}}`, self.base_record.VFSPath, self.base_record.ID, row, row)
 
 	} else {
 		if self.base_record.Artifact != "" {
@@ -82,11 +84,14 @@ func (self *SimpleResultSetReader) getPacket(row int64) (
   {"match": {"client_id": %q}},
   {"match": {"flow_id": %q}},
   {"match": {"type": %q}},
+  {"match": {"id": %q}},
+  {"match": {"type": "result_set"}},
   {"range": {"start_row": {"lte": %q}}},
   {"range": {"end_row": {"gt": %q}}}%s
 ]}}}`, self.base_record.ClientId,
 			self.base_record.FlowId,
 			self.base_record.Type,
+			self.base_record.ID,
 			row,
 			row,
 			artifact_clause)
@@ -126,7 +131,7 @@ func (self *SimpleResultSetReader) Rows(
 				break
 			}
 
-			packet, err := self.getPacket(self.row)
+			packet, err := self.getPacket(ctx, self.row)
 			if err != nil {
 				return
 			}
@@ -185,7 +190,7 @@ func (self *SimpleResultSetReader) JSON(
 				break
 			}
 
-			packet, err := self.getPacket(self.row)
+			packet, err := self.getPacket(ctx, self.row)
 			if err != nil {
 				return
 			}
@@ -223,6 +228,18 @@ func (self *SimpleResultSetReader) JSON(
 	return output_chan, nil
 }
 
+func (self *SimpleResultSetReader) MTime() time.Time {
+	return self.mtime
+}
+
+func (self *SimpleResultSetReader) Stacker() api.FSPathSpec {
+	return self.stacker
+}
+
+func (self *SimpleResultSetReader) SetStacker(s api.FSPathSpec) {
+	self.stacker = s
+}
+
 func (self *SimpleResultSetReader) Close() {}
 
 // Figure out how many rows are in this collection in total.
@@ -246,8 +263,10 @@ func getLastRecord(org_id string,
 {"sort": {"end_row": {"order": "desc"}},
  "size": 1,
  "query": {"bool": {"must": [
+   {"match": {"id": %q}},
+   {"match": {"type": "result_set"}},
    {"match": {"vfs_path": %q}}
- ]}}}`, base_record.VFSPath)
+ ]}}}`, base_record.ID, base_record.VFSPath)
 
 	} else {
 		if base_record.Artifact != "" {
@@ -259,10 +278,12 @@ func getLastRecord(org_id string,
 {"sort": {"end_row": {"order": "desc"}},
  "size": 1,
  "query": {"bool": {"must": [
+   {"match": {"id": %q}},
    {"match": {"client_id": %q}},
+   {"match": {"type": "result_set"}},
    {"match": {"flow_id": %q}},
    {"match": {"type": %q}}%s
- ]}}}`, base_record.ClientId,
+ ]}}}`, base_record.ID, base_record.ClientId,
 			base_record.FlowId,
 			base_record.Type,
 			artifact_clause)

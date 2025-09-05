@@ -97,7 +97,9 @@ func (self Ingestor) HandleSystemVfsUpload(
 
 	for scanner.Scan() {
 		serialized := scanner.Text()
-		row := &cvelo_vfs_service.DownloadRow{}
+		row := &cvelo_vfs_service.DownloadRow{
+			FlowId: message.SessionId,
+		}
 		err := json.Unmarshal([]byte(serialized), row)
 		if err != nil {
 			return err
@@ -115,7 +117,7 @@ func (self Ingestor) HandleSystemVfsUpload(
 			// Record where the actual file was stored.
 			row.FSComponents = filestore.S3ComponentsForClientUpload(
 				&uploads.UploadRequest{
-					ClientId:   message.Source,
+					ClientId:   utils.ClientIdFromSource(message.Source),
 					SessionId:  message.SessionId,
 					Accessor:   accessor,
 					Components: row.Components,

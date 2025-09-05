@@ -66,13 +66,13 @@ func (self *Plan) scheduleRequestOnClients(
 	org_config_obj *config_proto.Config,
 	request *flows_proto.ArtifactCollectorArgs, clients []string) error {
 	// Try to schedule the hunt efficiently
-	laucher_manager, err := services.GetLauncher(org_config_obj)
+	launcher_manager, err := services.GetLauncher(org_config_obj)
 	if err != nil {
 		return err
 	}
 
 	// If the launcher support bulk scheduling do this.
-	multi_launcher, ok := laucher_manager.(cvelo_services.MultiLauncher)
+	multi_launcher, ok := launcher_manager.(cvelo_services.MultiLauncher)
 	if ok {
 		request_copy := proto.Clone(request).(*flows_proto.ArtifactCollectorArgs)
 		if request_copy == nil {
@@ -87,7 +87,7 @@ func (self *Plan) scheduleRequestOnClients(
 	for _, client_id := range clients {
 		request_copy := proto.Clone(request).(*flows_proto.ArtifactCollectorArgs)
 		request_copy.ClientId = client_id
-		_, err := laucher_manager.WriteArtifactCollectionRecord(
+		_, err := launcher_manager.WriteArtifactCollectionRecord(
 			ctx, org_config_obj, request_copy,
 			request_copy.CompiledCollectorArgs,
 			func(task *crypto_proto.VeloMessage) {
@@ -157,10 +157,9 @@ func (self *Plan) ExecuteClientMonitoringUpdate(
 				org_config_obj.OrgId,
 				"persisted", client_id+"_last_event_version",
 				cvelo_services.BulkUpdateIndex, &api.ClientRecord{
-					ClientId: client_id,
-					LastEventTableVersion: self.
-						current_monitoring_state.Version,
-					DocType: "clients",
+					ClientId:              client_id,
+					LastEventTableVersion: uint64(utils.GetTime().Now().UnixNano()),
+					DocType:               "clients",
 				})
 		}
 

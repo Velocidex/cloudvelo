@@ -106,7 +106,7 @@ const (
    "bool": {
      "must": [
        %s, {"match": {
-                "doc_type": "clients"
+                "type": "main"
            }}]
    }
 }
@@ -119,7 +119,7 @@ const (
  }],
  "query": {"bool": {"must": [%s,{
                     "match": {
-                        "doc_type": "clients"
+                        "type": "main"
                     }
                 }]}}
  %s

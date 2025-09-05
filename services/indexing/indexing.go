@@ -12,7 +12,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
-	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 type ElasticIndexRecord struct {
@@ -43,6 +43,12 @@ func (self Indexer) SetIndex(client_id, term string) error {
 // Clear a search term on a client
 func (self Indexer) UnsetIndex(client_id, term string) error {
 	return errors.New("Indexer.UnsetIndex Not implemented")
+}
+
+func (self Indexer) RebuildIndex(
+	ctx context.Context,
+	config_obj *config_proto.Config) error {
+	return nil
 }
 
 func (self Indexer) getIndexRecords(
@@ -160,7 +166,7 @@ func (self Indexer) FastGetApiClient(
 	}
 
 	if len(records) == 0 {
-		return nil, services.NotFoundError
+		return nil, utils.NotFoundError
 	}
 
 	return _makeApiClient(records[0]), nil

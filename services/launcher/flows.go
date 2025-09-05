@@ -1,20 +1,11 @@
 package launcher
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"sort"
 
-	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
-	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
-	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
-	"www.velocidex.com/golang/velociraptor/json"
-	"www.velocidex.com/golang/velociraptor/result_sets"
-	"www.velocidex.com/golang/velociraptor/services/launcher"
 )
 
 var (
@@ -25,26 +16,6 @@ var (
 const (
 	prefixQuery = `{"prefix": {"id": "%v"}}`
 	regexQuery  = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
-
-	getCollectionsQuery = `{
-  "query": {
-    "bool": {
-      "must": [
-        {
-          "match": {
-            "doc_type": "collection"
-          }
-        }, {
-          "match": {
-            "client_id": %q
-          }
-        }
-      ]
-    }
-  },
-  "size": 10000
-}
-`
 
 	getFlowsQuery = `
 {
@@ -65,58 +36,6 @@ const (
 }
 `
 )
-
-func (self Launcher) GetFlows(
-	ctx context.Context,
-	config_obj *config_proto.Config,
-	client_id string,
-	options result_sets.ResultSetOptions,
-	offset int64, length int64) (*api_proto.ApiFlowResponse, error) {
-
-	lookup := make(map[string]*flows_proto.ArtifactCollectorContext)
-
-	query := fmt.Sprintf(getCollectionsQuery, client_id)
-	records, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "transient", query)
-	if err != nil {
-		return nil, err
-	}
-
-	// Read all the records and merge them into unique records.
-	for _, record := range records {
-		item := &cvelo_schema_api.ArtifactCollectorRecord{}
-		err = json.Unmarshal(record, &item)
-		if err != nil {
-			continue
-		}
-
-		stats_context, err := item.ToProto()
-		if err != nil {
-			continue
-		}
-
-		collection_context, pres := lookup[item.SessionId]
-		if !pres {
-			lookup[item.SessionId] = stats_context
-			continue
-		}
-		lookup[item.SessionId] = mergeRecords(collection_context, stats_context)
-	}
-
-	// Return the results in the required order
-	result := &api_proto.ApiFlowResponse{
-		Total: uint64(len(lookup)),
-	}
-	for _, record := range lookup {
-		launcher.UpdateFlowStats(record)
-		result.Items = append(result.Items, record)
-	}
-
-	sort.Slice(result.Items, func(i, j int) bool {
-		return result.Items[i].SessionId > result.Items[j].SessionId
-	})
-	return result, nil
-}
 
 // Are any queries currenrly running.
 func is_running(context *flows_proto.ArtifactCollectorContext) bool {

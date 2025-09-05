@@ -4,7 +4,6 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/paths"
-	"www.velocidex.com/golang/velociraptor/reporting"
 )
 
 // availableHuntDownloadFiles returns the prepared zip downloads available to
@@ -16,5 +15,5 @@ func availableHuntDownloadFiles(config_obj *config_proto.Config,
 	download_file := hunt_path_manager.GetHuntDownloadsFile(false, "", false)
 	download_path := download_file.Dir()
 
-	return reporting.GetAvailableDownloadFiles(config_obj, download_path)
+	return GetAvailableDownloadFiles(config_obj, download_path)
 }

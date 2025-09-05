@@ -23,9 +23,14 @@ func (self ResultSetFactory) NewResultSetReaderWithOptions(
 	log_path api.FSPathSpec,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
+	existing_md, err := GetResultSetMetadata(ctx, config_obj, log_path)
+	if err != nil {
+		return nil, err
+	}
+
 	// First do the filtering and then do the sorting.
-	return self.getFilteredReader(ctx, config_obj, file_store_factory,
-		log_path, options)
+	return self.getFilteredReader(
+		ctx, config_obj, file_store_factory, log_path, existing_md.ID, options)
 }
 
 func (self ResultSetFactory) getFilteredReader(
@@ -33,13 +38,14 @@ func (self ResultSetFactory) getFilteredReader(
 	config_obj *config_proto.Config,
 	file_store_factory api.FileStore,
 	log_path api.FSPathSpec,
+	version string,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
 	// No filter required.
 	if options.FilterColumn == "" ||
 		options.FilterRegex == nil {
 		return self.getSortedReader(ctx, config_obj, file_store_factory,
-			log_path, options)
+			log_path, version, options)
 	}
 
 	transformed_path := log_path
@@ -48,15 +54,17 @@ func (self ResultSetFactory) getFilteredReader(
 			fmt.Sprintf("Range %d-%d", options.StartIdx, options.EndIdx))
 	}
 	transformed_path = transformed_path.AddUnsafeChild(
-		"filter", options.FilterRegex.String())
+		"filter", options.FilterColumn, options.FilterRegex.String())
 
+	if options.FilterExclude {
+		transformed_path = transformed_path.AddChild("exclude")
+	}
 	transformed_result_set_record := NewSimpleResultSetRecord(
-		transformed_path)
-	log_result_set_record := NewSimpleResultSetRecord(log_path)
+		transformed_path, version)
 
 	// Try to open the transformed result set if it is already cached.
-	last_record, err := getLastRecord(
-		config_obj.OrgId, log_result_set_record)
+	log_result_set_record := NewSimpleResultSetRecord(log_path, version)
+	last_record, err := getLastRecord(config_obj.OrgId, log_result_set_record)
 	if err != nil {
 		// Original Result set is not found - just return an empty
 		// one.
@@ -69,7 +77,7 @@ func (self ResultSetFactory) getFilteredReader(
 		// Existing result is still valid, lets use it.
 		transformed_last_record.Timestamp > last_record.Timestamp {
 		return self.getSortedReader(ctx, config_obj,
-			file_store_factory, transformed_path, options)
+			file_store_factory, transformed_path, version, options)
 	}
 
 	// Nope - we have to build the new cache from the original table.
@@ -111,7 +119,10 @@ outer:
 			value, pres := row.Get(options.FilterColumn)
 			if pres {
 				value_str := utils.ToString(value)
-				if options.FilterRegex.FindStringIndex(value_str) != nil {
+				matched := options.FilterRegex.FindStringIndex(value_str) != nil
+
+				if (options.FilterExclude && !matched) ||
+					(!options.FilterExclude && matched) {
 					writer.Write(row)
 				}
 			}
@@ -127,7 +138,7 @@ outer:
 	options.EndIdx = 0
 
 	return self.getSortedReader(ctx, config_obj, file_store_factory,
-		transformed_path, options)
+		transformed_path, version, options)
 }
 
 func (self ResultSetFactory) getSortedReader(
@@ -135,6 +146,7 @@ func (self ResultSetFactory) getSortedReader(
 	config_obj *config_proto.Config,
 	file_store_factory api.FileStore,
 	log_path api.FSPathSpec,
+	version string,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
 	// No sorting required.
@@ -160,15 +172,21 @@ func (self ResultSetFactory) getSortedReader(
 			"sorted", options.SortColumn, "desc")
 	}
 
+	stacker_path := transformed_path.AddChild("stack")
+
 	transformed_result_set_record := NewSimpleResultSetRecord(
-		transformed_path)
-	log_result_set_record := NewSimpleResultSetRecord(log_path)
+		transformed_path, version)
+	log_result_set_record := NewSimpleResultSetRecord(transformed_path, version)
 
 	// Try to open the transformed result set if it is already cached.
 	last_record, err := getLastRecord(
 		config_obj.OrgId, log_result_set_record)
-	if err != nil {
-		return self.NewResultSetReader(file_store_factory, log_path)
+	if err == nil {
+		res, err := self.NewResultSetReader(file_store_factory, transformed_path)
+		if err == nil {
+			res.SetStacker(stacker_path)
+		}
+		return res, err
 	}
 
 	transformed_last_record, err := getLastRecord(
@@ -176,8 +194,11 @@ func (self ResultSetFactory) getSortedReader(
 	if err == nil &&
 		// Existing result is still valid, lets use it.
 		transformed_last_record.Timestamp > last_record.Timestamp {
-		return self.NewResultSetReader(
-			file_store_factory, transformed_path)
+		res, err := self.NewResultSetReader(file_store_factory, transformed_path)
+		if err == nil {
+			res.SetStacker(stacker_path)
+		}
+		return res, err
 	}
 
 	// Nope - we have to build the new cache from the original table.
@@ -201,13 +222,23 @@ func (self ResultSetFactory) getSortedReader(
 		return nil, err
 	}
 
-	sorter_input_chan := make(chan vfilter.Row)
-	sorted_chan := sorter.MergeSorter{10000}.Sort(
-		ctx, scope, sorter_input_chan,
-		options.SortColumn, options.SortAsc)
-
 	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
+
+	sorter_input_chan := make(chan vfilter.Row)
+
+	sorted_chan, closer, err := simple.NewStacker(sub_ctx, scope,
+		stacker_path,
+		file_store_factory, self,
+		sorter.MergeSorter{10000}.Sort(
+			ctx, scope, sorter_input_chan,
+			options.SortColumn, options.SortAsc),
+		options.SortColumn)
+	if err != nil {
+		return nil, err
+	}
+
+	defer closer()
 
 	// Now write into the sorter and read the sorted results.
 	go func() {
@@ -238,7 +269,13 @@ func (self ResultSetFactory) getSortedReader(
 	// Close synchronously to flush the data
 	writer.Close()
 
-	return self.NewResultSetReader(file_store_factory, transformed_path)
+	result, err := self.NewResultSetReader(file_store_factory, transformed_path)
+	if err != nil {
+		return nil, err
+	}
+
+	result.SetStacker(stacker_path)
+	return result, nil
 }
 
 func getExpiry(config_obj *config_proto.Config) time.Duration {

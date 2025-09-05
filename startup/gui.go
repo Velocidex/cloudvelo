@@ -6,13 +6,14 @@ import (
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
+	"www.velocidex.com/golang/cloudvelo/services/scheduler"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	file_store_accessor "www.velocidex.com/golang/velociraptor/accessors/file_store"
 	"www.velocidex.com/golang/velociraptor/api"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
-	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
+	"www.velocidex.com/golang/velociraptor/services/notebook"
+	"www.velocidex.com/golang/velociraptor/startup"
 )
 
 // StartFrontendServices starts the binary as a frontend:
@@ -100,19 +101,21 @@ Many VQL plugins produce references to files stored on the server. This accessor
 		}
 	}
 
-	logger := logging.GetLogger(
-		config_obj.VeloConf(), &logging.FrontendComponent)
-	logger.Info("Restricting VQL plugins to set %v and functions to set %v\n",
-		allowed_plugins, allowed_functions)
-	logger.Info("Restricting VQL accessors to %v\n", allowed_accessors)
-
-	err = vql_subsystem.EnforceVQLAllowList(allowed_plugins, allowed_functions)
+	// Potentially restrict server functionality.
+	err = startup.MaybeEnforceAllowLists(config_obj.VeloConf())
 	if err != nil {
 		return sm, err
 	}
-	err = accessors.EnforceAccessorAllowList(allowed_accessors)
+
+	services.AllowFrontendPlugins.Store(true)
+
+	// Start a new scheduler
+	services.RegisterScheduler(scheduler.NewElasticScheduler())
+
+	// Start notebook worker pool.
+	_, err = notebook.NewWorkerPool(sm.Ctx, config_obj.VeloConf(), 5)
 	if err != nil {
-		return sm, err
+		return nil, err
 	}
 
 	return sm, server_builder.StartServer(sm.Ctx, sm.Wg)

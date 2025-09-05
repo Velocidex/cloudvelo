@@ -3,6 +3,8 @@ package launcher
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -10,8 +12,10 @@ import (
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
+	"www.velocidex.com/golang/velociraptor/file_store"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
@@ -29,7 +33,8 @@ func (self *FlowStorageManager) WriteFlow(
 	completion func()) error {
 
 	defer func() {
-		if completion != nil {
+		if completion != nil &&
+			!utils.CompareFuncs(completion, utils.SyncCompleter) {
 			completion()
 		}
 	}()
@@ -71,14 +76,55 @@ func (self *FlowStorageManager) WriteTask(
 		cvelo_services.DocIdRandom, record)
 }
 
-// Not used - opensearch is handled with Launcher.GetFlows() directly.
 func (self *FlowStorageManager) ListFlows(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string,
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) ([]*services.FlowSummary, int64, error) {
-	return nil, 0, nil
+
+	err := self.buildIndex(ctx, config_obj, client_id)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := []*services.FlowSummary{}
+	client_path_manager := paths.NewClientPathManager(client_id)
+	file_store_factory := file_store.GetFileStore(config_obj)
+	rs_reader, err := result_sets.NewResultSetReaderWithOptions(
+		ctx, config_obj, file_store_factory,
+		client_path_manager.FlowIndex(), options)
+	if err != nil || rs_reader.TotalRows() <= 0 {
+		return result, 0, nil
+	}
+
+	err = rs_reader.SeekToRow(offset)
+	if errors.Is(err, io.EOF) {
+		return result, 0, nil
+	}
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("SeekToRow %v %w", offset, err)
+	}
+
+	// Highly optimized reader for speed.
+	json_chan, err := rs_reader.JSON(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("JSON %w", err)
+	}
+
+	for serialized := range json_chan {
+		summary := &services.FlowSummary{}
+		err = json.Unmarshal(serialized, summary)
+		if err == nil {
+			result = append(result, summary)
+		}
+		if int64(len(result)) >= length {
+			break
+		}
+	}
+
+	return result, rs_reader.TotalRows(), nil
 }
 
 const (

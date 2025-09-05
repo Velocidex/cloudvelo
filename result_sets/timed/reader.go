@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
-	"www.velocidex.com/golang/cloudvelo/config"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
@@ -19,7 +19,7 @@ type TimedResultSetReader struct {
 	cancel     func()
 
 	path_manager api.PathManager
-	config_obj   *config.Config
+	config_obj   *config_proto.Config
 }
 
 func (self *TimedResultSetReader) GetAvailableFiles(
@@ -97,12 +97,12 @@ func (self *TimedResultSetReader) Rows(
 		self.cancel = cancel
 
 		hits_chan, err := cvelo_services.QueryChan(
-			subctx, self.config_obj.VeloConf(), 1000,
+			subctx, self.config_obj, 1000,
 			self.config_obj.OrgId, "transient", query,
 			"timestamp")
 		if err != nil {
 			logger := logging.GetLogger(
-				self.config_obj.VeloConf(), &logging.FrontendComponent)
+				self.config_obj, &logging.FrontendComponent)
 			logger.Error("Reading %v: %v",
 				self.path_manager, err)
 			return

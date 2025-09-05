@@ -247,6 +247,15 @@ func (self *ClientMonitoringManager) compileState(
 	return nil
 }
 
+func (self *ClientMonitoringManager) GetClientSpec(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id string) (res []*flows_proto.ArtifactSpec) {
+
+	// TODO
+	return nil
+}
+
 func NewClientMonitoringService(
 	ctx context.Context,
 	wg *sync.WaitGroup,

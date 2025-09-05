@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"www.velocidex.com/golang/cloudvelo/startup"
-	"www.velocidex.com/golang/velociraptor/gui/velociraptor"
 )
 
 var (
@@ -16,9 +15,6 @@ func doGUI() error {
 	if err != nil {
 		return fmt.Errorf("loading config file: %w", err)
 	}
-
-	// Load the GUI assets
-	velociraptor.Init()
 
 	ctx, cancel := install_sig_handler()
 	defer cancel()

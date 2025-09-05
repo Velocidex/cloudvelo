@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -24,10 +21,10 @@ import (
 	requestsigner "github.com/opensearch-project/opensearch-go/v2/signer/awsv2"
 	cloud_velo_config "www.velocidex.com/golang/cloudvelo/config"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
-	"www.velocidex.com/golang/velociraptor/crypto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/utils"
+	"www.velocidex.com/golang/velociraptor/vql/networking"
 )
 
 type BulkUpdateType string
@@ -217,7 +214,8 @@ func UpdateIndex(
 	defer Instrument("UpdateIndex")()
 	defer Debug("UpdateIndex %v %v", index, id)()
 	return retry(func() error {
-		return _UpdateIndex(ctx, org_id, index, id, query)
+		err := _UpdateIndex(ctx, org_id, index, id, query)
+		return err
 	})
 }
 
@@ -645,8 +643,14 @@ func QueryChan(
 	query = strings.TrimSpace(query)
 	var part_query string
 	if sort_field != "" {
-		part_query = json.Format(`{"sort":[{%q: "asc"}], "size":%q,`,
-			sort_field, page_size)
+		sense := "asc"
+		if sort_field[0] == '>' {
+			sense = "desc"
+			sort_field = sort_field[1:]
+		}
+
+		part_query = json.Format(`{"sort":[{%q: %q}], "size":%q,`,
+			sort_field, sense, page_size)
 	} else {
 		part_query = json.Format(`{"size":%q,`, page_size)
 	}
@@ -1092,23 +1096,13 @@ func StartElasticSearchService(ctx context.Context, config_obj *cloud_velo_confi
 }
 
 func createOpenSearchClientFromConfig(ctx context.Context, config_obj *cloud_velo_config.Config, openSearchConfigs opensearch.Config) (*opensearch.Client, error) {
-	CA_Pool := x509.NewCertPool()
-	crypto.AddPublicRoots(CA_Pool)
 
-	if config_obj.Cloud.RootCerts != "" &&
-		!CA_Pool.AppendCertsFromPEM([]byte(config_obj.Cloud.RootCerts)) {
-		return nil, errors.New("cloud ingestion: Unable to add root certs")
-	}
+	var err error
 
-	openSearchConfigs.Transport = &http.Transport{
-		MaxIdleConnsPerHost:   10,
-		ResponseHeaderTimeout: 100 * time.Second,
-		TLSClientConfig: &tls.Config{
-			ClientSessionCache: tls.NewLRUClientSessionCache(100),
-			RootCAs:            CA_Pool,
-			InsecureSkipVerify: config_obj.Cloud.DisableSSLSecurity,
-		},
-		//DisableCompression: true,
+	openSearchConfigs.Transport, err = networking.GetHttpTransport(
+		config_obj.VeloConf().Client, config_obj.Cloud.RootCerts)
+	if err != nil {
+		return nil, err
 	}
 
 	if config_obj.Cloud.Username != "" && config_obj.Cloud.Password != "" {
@@ -1323,3 +1317,13 @@ func StartBulkIndexService(
 
 	return err
 }
+
+// There are now only two indexes:
+const (
+	// This index is for information that needs to be deleted and updated
+	PERSISTED = "persisted"
+
+	// This index will autodelete itself but can not be updated (it is
+	// implemented as a datastream)
+	TRANSIENT = "transient"
+)

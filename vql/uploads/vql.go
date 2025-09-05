@@ -83,14 +83,14 @@ func (self *UploadFunction) Call(ctx context.Context,
 		return vfilter.Null{}
 	}
 
-	mtime, err := functions.TimeFromAny(scope, arg.Mtime)
+	mtime, err := functions.TimeFromAny(ctx, scope, arg.Mtime)
 	if err != nil {
 		mtime = stat.ModTime()
 	}
 
-	atime, _ := functions.TimeFromAny(scope, arg.Atime)
-	ctime, _ := functions.TimeFromAny(scope, arg.Ctime)
-	btime, _ := functions.TimeFromAny(scope, arg.Btime)
+	atime, _ := functions.TimeFromAny(ctx, scope, arg.Atime)
+	ctime, _ := functions.TimeFromAny(ctx, scope, arg.Ctime)
+	btime, _ := functions.TimeFromAny(ctx, scope, arg.Btime)
 
 	upload_response, err := self.Upload(
 		ctx, config_obj,
@@ -140,7 +140,7 @@ func (self UploadFunction) Upload(
 		}
 
 		return uploader.Upload(ctx, scope, ospath, accessor, name,
-			size, mtime, atime, ctime, btime, reader)
+			size, mtime, atime, ctime, btime, 0644, reader)
 	}
 
 	// If we get here we have a specialized uploader factory

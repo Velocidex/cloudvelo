@@ -5,6 +5,8 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"google.golang.org/protobuf/proto"
+	"www.velocidex.com/golang/cloudvelo/filestore"
+	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/api/tables"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -15,6 +17,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 // This record is mapped to the results index (see
@@ -172,7 +175,7 @@ func (self *VFSService) ListDirectoryFiles(
 	table_request.EndIdx = stat.EndIdx
 
 	// Get the table possibly applying any table transformations.
-	result, err := tables.GetTable(ctx, config_obj, table_request)
+	result, err := tables.GetTable(ctx, config_obj, table_request, "")
 	if err != nil {
 		return nil, err
 	}
@@ -191,42 +194,62 @@ func (self *VFSService) ListDirectoryFiles(
 	}
 
 	// Merge uploaded file info with the VFSListResponse.
-	lookup := make(map[string]*DownloadRow)
+	lookup := make(map[string]*flows_proto.VFSDownloadInfo)
 	for _, download := range downloads {
 		components := download.Components
 		if len(components) == 0 {
 			continue
 		}
 		basename := components[len(components)-1]
-		lookup[basename] = download
+		lookup[basename] = &flows_proto.VFSDownloadInfo{
+			Size: download.Size,
+			Components: filestore.S3ComponentsForClientUpload(
+				&uploads.UploadRequest{
+					ClientId:   utils.ClientIdFromSource(in.ClientId),
+					SessionId:  download.FlowId,
+					Accessor:   download.Accessor,
+					Components: download.Components,
+				}),
+			Mtime:    download.Mtime * 1000000,
+			SHA256:   download.Sha256,
+			MD5:      download.Md5,
+			InFlight: download.InFlight,
+			FlowId:   download.FlowId,
+		}
 	}
 
 	for _, row := range result.Rows {
-		if len(row.Cell) <= index_of_Name {
+		var row_data []interface{}
+		err := json.Unmarshal([]byte(row.Json), &row_data)
+		if err != nil {
+			continue
+		}
+
+		if len(row_data) <= index_of_Name {
 			continue
 		}
 
 		// Find the Name column entry in each cell.
-		name := row.Cell[index_of_Name]
-
-		// Insert a Download columns in the begining.
-		row.Cell = append([]string{""}, row.Cell...)
-
-		download, pres := lookup[name]
-		if !pres {
+		name, ok := row_data[index_of_Name].(string)
+		if !ok || name == "" {
 			continue
 		}
 
-		row.Cell[0] = json.MustMarshalString(&flows_proto.VFSDownloadInfo{
-			Size:       download.Size,
-			Components: download.FSComponents,
-			Mtime:      download.Mtime,
-			SHA256:     download.Sha256,
-			MD5:        download.Md5,
-			InFlight:   download.InFlight,
-			FlowId:     download.FlowId,
-		})
+		// Insert a Download info column in the begining.
+		row_data = append([]interface{}{""}, row_data...)
+
+		download_info, pres := lookup[name]
+		if pres {
+			row_data[0] = download_info
+		}
+
+		serialized, err := json.Marshal(row_data)
+		if err != nil {
+			continue
+		}
+		row.Json = string(serialized)
 	}
+
 	result.Columns = append([]string{"Download"}, result.Columns...)
 	return result, nil
 }

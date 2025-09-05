@@ -31,7 +31,7 @@ func (self *SanityChecks) CheckRootOrg(
 		for _, org := range config_obj.GUI.InitialOrgs {
 			logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 			logger.Info("<green>Creating initial org for</> %v", org.Name)
-			_, err := org_manager.CreateNewOrg(org.Name, org.OrgId)
+			_, err := org_manager.CreateNewOrg(org.Name, org.OrgId, services.RandomNonce)
 			if err != nil {
 				return err
 			}

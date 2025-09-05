@@ -1,4 +1,5 @@
-//+build mage
+//go:build mage
+// +build mage
 
 /*
    Velociraptor - Dig Deeper
@@ -29,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Velocidex/fileb0x/runner"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"www.velocidex.com/golang/cloudvelo/constants"
@@ -475,18 +477,9 @@ func hash() string {
 	return hash
 }
 
+// Build the asset by linking directly to fileb0x
 func fileb0x(asset string) error {
-	err := sh.Run("fileb0x", asset)
-	if err != nil {
-		err = sh.Run(mg.GoCmd(), "install", "github.com/Velocidex/fileb0x@d54f4040016051dd9657ce04d0ae6f31eab99bc6")
-		if err != nil {
-			return err
-		}
-
-		err = sh.Run("fileb0x", asset)
-	}
-
-	return err
+	return runner.Process(asset)
 }
 
 func ensure_assets() error {

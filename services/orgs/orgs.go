@@ -83,7 +83,7 @@ func (self *OrgManager) GetOrg(org_id string) (*api_proto.OrgRecord, error) {
 
 	result, pres := self.orgs[org_id]
 	if !pres {
-		return nil, services.NotFoundError
+		return nil, utils.NotFoundError
 	}
 	return result.record.OrgRecord, nil
 }
@@ -100,20 +100,29 @@ func (self *OrgManager) OrgIdByNonce(nonce string) (string, error) {
 
 	result, pres := self.org_id_by_nonce[nonce]
 	if !pres {
-		return "", services.NotFoundError
+		return "", utils.NotFoundError
 	}
 	return result, nil
 }
 
-func (self *OrgManager) CreateNewOrg(name, id string) (
+func (self *OrgManager) CreateNewOrg(name, id, nonce string) (
 	*api_proto.OrgRecord, error) {
 
 	if id == "" {
 		id = NewOrgId()
+	} else {
+		// Org already exists, just provide the old one
+		record, err := self.GetOrg(id)
+		if err == nil {
+			return record, nil
+		}
 	}
 
-	org_context, err := self.makeNewOrgContext(
-		id, name, NewNonce())
+	if nonce == services.RandomNonce {
+		nonce = NewNonce()
+	}
+
+	org_context, err := self.makeNewOrgContext(id, name, nonce)
 	if err != nil {
 		return nil, err
 	}

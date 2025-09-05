@@ -9,25 +9,6 @@ import (
 	"www.velocidex.com/golang/velociraptor/services"
 )
 
-func (self HuntDispatcher) ModifyHuntObject(ctx context.Context, hunt_id string,
-	cb func(hunt *api_proto.Hunt) services.HuntModificationAction,
-) services.HuntModificationAction {
-
-	hunt, pres := self.GetHunt(hunt_id)
-	if !pres {
-		return services.HuntUnmodified
-	}
-
-	modification := cb(hunt)
-	if modification != services.HuntUnmodified {
-		err := self.SetHunt(hunt)
-		if err != nil {
-			return services.HuntUnmodified
-		}
-	}
-	return modification
-}
-
 func (self *HuntDispatcher) ModifyHunt(
 	ctx context.Context,
 	config_obj *config_proto.Config,

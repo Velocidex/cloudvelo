@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
-	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/services"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths/artifacts"
@@ -72,10 +72,10 @@ func NewTimedResultSetRecord(
 }
 
 type ElasticTimedResultSetWriter struct {
-	file_store_factory api.FileStore
-	path_manager       api.PathManager
-	opts               *json.EncOpts
-	ctx                context.Context
+	config_obj   *config_proto.Config
+	path_manager api.PathManager
+	opts         *json.EncOpts
+	ctx          context.Context
 }
 
 func (self ElasticTimedResultSetWriter) WriteJSONL(
@@ -85,7 +85,7 @@ func (self ElasticTimedResultSetWriter) WriteJSONL(
 	record.JSONData = string(serialized)
 
 	services.SetElasticIndex(self.ctx,
-		filestore.GetOrgId(self.file_store_factory),
+		utils.GetOrgId(self.config_obj),
 		"transient", services.DocIdRandom, record)
 }
 
@@ -107,15 +107,15 @@ func (self ElasticTimedResultSetWriter) Close() {
 }
 
 func NewTimedResultSetWriter(
-	file_store_factory api.FileStore,
+	config_obj *config_proto.Config,
 	path_manager api.PathManager,
 	opts *json.EncOpts,
 	completion func()) (result_sets.TimedResultSetWriter, error) {
 
 	return &ElasticTimedResultSetWriter{
-		file_store_factory: file_store_factory,
-		path_manager:       path_manager,
-		opts:               opts,
-		ctx:                context.Background(),
+		config_obj:   config_obj,
+		path_manager: path_manager,
+		opts:         opts,
+		ctx:          context.Background(),
 	}, nil
 }

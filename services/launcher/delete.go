@@ -23,7 +23,7 @@ func (self *FlowStorageManager) DeleteFlow(
 	config_obj *config_proto.Config,
 	client_id string, flow_id string,
 	principal string,
-	really_do_it bool) ([]*services.DeleteFlowResponse, error) {
+	options services.DeleteFlowOptions) ([]*services.DeleteFlowResponse, error) {
 
 	launcher, err := services.GetLauncher(config_obj)
 	if err != nil {
@@ -31,7 +31,8 @@ func (self *FlowStorageManager) DeleteFlow(
 	}
 
 	collection_details, err := launcher.GetFlowDetails(
-		ctx, config_obj, client_id, flow_id)
+		ctx, config_obj, services.GetFlowOptions{},
+		client_id, flow_id)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func (self *FlowStorageManager) DeleteFlow(
 
 	upload_metadata_path := flow_path_manager.UploadMetadata()
 	r := &reporter{
-		really_do_it: really_do_it,
+		really_do_it: options.ReallyDoIt,
 		ctx:          ctx,
 		config_obj:   config_obj,
 		seen:         make(map[string]bool),
@@ -64,7 +65,7 @@ func (self *FlowStorageManager) DeleteFlow(
 
 				r.delete_index("Upload", "vfs", "vfs_path", pathspec.AsClientPath())
 
-				if really_do_it {
+				if options.ReallyDoIt {
 					fmt.Println("Deleting file: ", pathspec)
 					err = file_store_factory.Delete(pathspec)
 					if err != nil {

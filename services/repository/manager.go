@@ -58,6 +58,12 @@ type RepositoryManager struct {
 	ctx        context.Context
 }
 
+func (self *RepositoryManager) ReformatVQL(
+	ctx context.Context, artifact_yaml string) (string, error) {
+
+	return (&repository.RepositoryManager{}).ReformatVQL(ctx, artifact_yaml)
+}
+
 // New Repository is called to create a new temporary repository
 func (self *RepositoryManager) NewRepository() services.Repository {
 	return &repository.Repository{
@@ -201,8 +207,9 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	config_obj *config_proto.Config) error {
 
 	options := services.ArtifactOptions{
-		ValidateArtifact:  false,
-		ArtifactIsBuiltIn: true,
+		ValidateArtifact:     false,
+		ArtifactIsBuiltIn:    true,
+		ArtifactIsCompiledIn: true,
 	}
 
 	logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
@@ -212,13 +219,6 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 		logger.Info("Built in artifacts loaded in %v", time.Now().Sub(now))
 	}()
 
-	assets.Init()
-
-	files, err := assets.WalkDirs("", false)
-	if err != nil {
-		return err
-	}
-
 	// Load all the built in artifacts into this in-memory repository
 	grepository, err := self.GetGlobalRepository(config_obj)
 	if err != nil {
@@ -226,9 +226,8 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	}
 
 	count := 0
-
-	for _, file := range files {
-		if strings.HasPrefix(file, "artifacts/definitions") &&
+	for file := range assets.Inventory {
+		if strings.HasPrefix(file, "/artifacts/definitions") &&
 			strings.HasSuffix(file, "yaml") {
 			data, err := assets.ReadFile(file)
 			if err != nil {
@@ -241,8 +240,7 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 
 			// Load the built in artifacts as a built in. NOTE: Built in
 			// artifacts can not be overwritten!
-			_, err = grepository.LoadYaml(
-				string(data), options)
+			_, err = grepository.LoadYaml(string(data), options)
 			if err != nil {
 				logger.Info("Can't parse asset %s: %s", file, err)
 				if options.ValidateArtifact {
@@ -255,6 +253,12 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 	}
 
 	return nil
+}
+
+func (self *RepositoryManager) SetArtifactMetadata(
+	ctx context.Context, config_obj *config_proto.Config,
+	principal, name string, metadata *artifacts_proto.ArtifactMetadata) error {
+	return errors.New("RepositoryManager.SetArtifactMetadata not implemented")
 }
 
 func LoadOverridenArtifacts(

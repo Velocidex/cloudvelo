@@ -9,6 +9,8 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/acl_manager"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
 	"www.velocidex.com/golang/cloudvelo/services/client_monitoring"
+	"www.velocidex.com/golang/cloudvelo/services/exports"
+	"www.velocidex.com/golang/cloudvelo/services/frontend"
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/services/indexing"
 	"www.velocidex.com/golang/cloudvelo/services/inventory"
@@ -45,7 +47,19 @@ type LazyServiceContainer struct {
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
-	return nil, errors.New("LazyServiceContainer.FrontendManager is Not implemented")
+	return frontend.FrontendService{}, nil
+}
+
+func (self *LazyServiceContainer) ExportManager() (services.ExportManager, error) {
+	return exports.NewExportManager(self.config_obj)
+}
+
+func (self *LazyServiceContainer) BackupService() (services.BackupService, error) {
+	return nil, errors.New("LazyServiceContainer.BackupService is Not implemented")
+}
+
+func (self *LazyServiceContainer) SecretsService() (services.SecretsService, error) {
+	return nil, errors.New("LazyServiceContainer.SecretsService is Not implemented")
 }
 
 func (self *LazyServiceContainer) AuditManager() (services.AuditManager, error) {
@@ -82,6 +96,10 @@ func (self *LazyServiceContainer) HuntDispatcher() (services.IHuntDispatcher, er
 
 func (self *LazyServiceContainer) Indexer() (services.Indexer, error) {
 	return indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+}
+
+func (self *LazyServiceContainer) Scheduler() (services.Scheduler, error) {
+	return services.GetSchedulerService(self.config_obj)
 }
 
 func (self *LazyServiceContainer) RepositoryManager() (services.RepositoryManager, error) {

@@ -90,12 +90,28 @@ func (self DeleteHuntPlugin) Call(ctx context.Context,
 			scope.Log("hunt_delete: %s", err)
 			return
 		}
-		for flow_details := range hunt_dispatcher.GetFlows(
-			ctx, config_obj, scope, arg.HuntId, 0) {
+
+		opts := services.FlowSearchOptions{
+			BasicInformation: true,
+		}
+		opts.StartIdx = 0
+		opts.EndIdx = 100000
+
+		flow_chan, _, err := hunt_dispatcher.GetFlows(
+			ctx, config_obj, opts, scope, arg.HuntId, 0)
+		if err != nil {
+			scope.Log("hunt_delete: %s", err)
+			return
+		}
+
+		for flow_details := range flow_chan {
 
 			results, err := launcher.Storage().DeleteFlow(ctx, config_obj,
 				flow_details.Context.ClientId,
-				flow_details.Context.SessionId, principal, arg.ReallyDoIt)
+				flow_details.Context.SessionId, principal,
+				services.DeleteFlowOptions{
+					ReallyDoIt: arg.ReallyDoIt,
+				})
 			if err != nil {
 				scope.Log("hunt_delete: %v", err)
 				return

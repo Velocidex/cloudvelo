@@ -12,6 +12,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/writeback"
+	"www.velocidex.com/golang/velociraptor/utils/tempfile"
 )
 
 // StartClientServices starts the various services needed by the
@@ -39,7 +40,7 @@ func StartClientServices(
 		return nil, fmt.Errorf("Invalid config: %w", err)
 	}
 
-	executor.SetTempfile(config_obj)
+	tempfile.SetTempfile(config_obj)
 
 	writeback_service := writeback.GetWritebackService()
 	writeback, err := writeback_service.GetWriteback(config_obj)
