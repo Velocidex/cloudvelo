@@ -8,7 +8,7 @@
         "actions": [
           {
             "rollover": {
-              "min_index_age": "14d"
+              "min_index_age": "5d"
             }
           }
         ],
@@ -16,7 +16,7 @@
           {
             "state_name": "delete",
             "conditions": {
-              "min_index_age": "28d"
+              "min_index_age": "15d"
             }
           }
         ]
