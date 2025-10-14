@@ -3,6 +3,7 @@ package simple
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
@@ -79,6 +80,7 @@ func (self ResultSetFactory) NewResultSetReader(
 	return &SimpleResultSetReader{
 		file_store_factory: file_store_factory,
 		log_path:           log_path,
+		mtime:              time.Unix(0, existing_md.Timestamp),
 		base_record:        NewSimpleResultSetRecord(log_path, existing_md.ID),
 	}, nil
 }

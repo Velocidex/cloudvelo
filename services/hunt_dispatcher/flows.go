@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"time"
 
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
@@ -29,6 +30,19 @@ const (
   }
 }
 `
+	getLatestHuntFlowForHuntId = `{
+  "sort": [{
+     "timestamp": { "order": "desc" }
+  }],
+  "size": 1,
+  "query": {
+    "bool": {
+      "must": [
+         {"match": {"hunt_id" : %q}},
+         {"match": {"doc_type" : "hunt_flow"}}
+      ]}
+  }
+}`
 )
 
 type HuntFlowEntry struct {
@@ -42,19 +56,45 @@ type HuntFlowEntry struct {
 }
 
 func (self *HuntDispatcher) syncFlowTables(
-	ctx context.Context, config_obj *config_proto.Config, hunt_id string) error {
+	ctx context.Context, config_obj *config_proto.Config,
+	hunt_id string) error {
 
-	count := 0
-
+	file_store_factory := file_store.GetFileStore(config_obj)
 	hunt_path_manager := paths.NewHuntPathManager(hunt_id)
 	table_to_query := hunt_path_manager.EnrichedClients()
+
+	// First get the latest hunt_flow document. This indicates the
+	// last time the hunt was seen.
+	hit, err := cvelo_services.GetElasticRecordByQuery(ctx,
+		config_obj.OrgId, cvelo_services.TRANSIENT, json.Format(
+			getLatestHuntFlowForHuntId, hunt_id))
+	if err == nil && len(hit) > 1 {
+		entry := &HuntFlowEntry{}
+		err = json.Unmarshal(hit, entry)
+		if err == nil {
+			last_modified := time.Unix(entry.Timestamp, 0)
+
+			// Now check the last modified time of the result set.
+			rs_reader, err := result_sets.NewResultSetReader(
+				file_store_factory, table_to_query)
+			if err == nil && rs_reader.MTime().After(last_modified) {
+
+				// Skip the update if the result set is newer than the
+				// last_modified record.
+				return nil
+			}
+
+		}
+	}
+
+	count := 0
+	seen := make(map[string]bool)
 
 	laucher_manager, err := services.GetLauncher(config_obj)
 	if err != nil {
 		return err
 	}
 
-	file_store_factory := file_store.GetFileStore(config_obj)
 	rs_writer, err := result_sets.NewResultSetWriter(file_store_factory,
 		table_to_query, json.DefaultEncOpts(),
 		utils.SyncCompleter, result_sets.TruncateMode)
@@ -66,7 +106,7 @@ func (self *HuntDispatcher) syncFlowTables(
 	query := json.Format(getHuntsFlowsQuery, 0, hunt_id)
 	hits, err := cvelo_services.QueryChan(
 		ctx, config_obj, 1000, self.config_obj.OrgId,
-		"transient", query, "timestamp")
+		cvelo_services.TRANSIENT, query, "timestamp")
 	if err != nil {
 		return err
 	}
@@ -77,6 +117,11 @@ func (self *HuntDispatcher) syncFlowTables(
 		if err != nil {
 			continue
 		}
+
+		if seen[entry.FlowId] {
+			continue
+		}
+		seen[entry.FlowId] = true
 
 		flow, err := laucher_manager.GetFlowDetails(
 			ctx, config_obj, services.GetFlowOptions{},
