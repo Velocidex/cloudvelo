@@ -44,6 +44,8 @@ type LazyServiceContainer struct {
 	// consumers and producers so it needs to keep state. This is used
 	// by the generate() VQL function.
 	broadcast services.BroadcastService
+
+	journal services.JournalService
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -117,8 +119,18 @@ func (self *LazyServiceContainer) Labeler() (services.Labeler, error) {
 	return labeler.NewLabelerService(self.ctx, self.wg, self.config_obj)
 }
 
-func (self *LazyServiceContainer) Journal() (services.JournalService, error) {
-	return journal.NewJournalService(self.ctx, self.wg, self.config_obj)
+func (self *LazyServiceContainer) Journal() (res services.JournalService, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.journal == nil {
+		self.journal, err = journal.NewJournalService(self.ctx, self.wg, self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.journal, nil
 }
 
 func (self *LazyServiceContainer) ClientInfoManager() (services.ClientInfoManager, error) {

@@ -100,5 +100,16 @@ func (self Ingestor) maybeHandleHuntFlowStats(
 		ingestor_services.HuntStatsManager.Update(hunt_id).IncCompleted()
 	}
 
-	return nil
+	hunt_flow_entry := &hunt_dispatcher.HuntFlowEntry{
+		HuntId:    hunt_id,
+		ClientId:  collection_context.ClientId,
+		FlowId:    collection_context.SessionId,
+		Timestamp: velo_utils.GetTime().Now().Unix(),
+		Status:    "updated",
+		DocType:   "hunt_flow",
+	}
+	return services.SetElasticIndex(ctx,
+		config_obj.OrgId,
+		"transient", services.DocIdRandom,
+		hunt_flow_entry)
 }
