@@ -51,6 +51,7 @@ type ClientRecord struct {
 	Labels             []string `json:"labels,omitempty"`
 	LowerLabels        []string `json:"lower_labels,omitempty"`
 	DocType            string   `json:"doc_type"`
+	Timestamp          uint64   `json:"timestamp"`
 }
 
 func ToClientInfo(record *ClientRecord) *services.ClientInfo {
