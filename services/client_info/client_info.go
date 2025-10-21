@@ -11,6 +11,7 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/services"
+	"www.velocidex.com/golang/velociraptor/utils"
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 )
 
@@ -99,6 +100,7 @@ func (self *ClientInfoBase) ListClients(ctx context.Context) <-chan string {
 
 func (self *ClientInfoBase) Set(
 	ctx context.Context, client_info *services.ClientInfo) error {
+	now := utils.GetTime().Now().Unix()
 
 	return cvelo_services.SetElasticIndex(ctx,
 		self.config_obj.OrgId,
@@ -113,13 +115,16 @@ func (self *ClientInfoBase) Set(
 			LastHuntTimestamp:     client_info.LastHuntTimestamp,
 			LastEventTableVersion: client_info.LastEventTableVersion,
 			DocType:               "clients",
+			Timestamp:             uint64(now),
 		})
 }
 
 func (self ClientInfoBase) Remove(
 	ctx context.Context, client_id string) {
-	cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
-		"persisted", client_id, true)
+	for _, suffix := range []string{"", "_ping", "_hunts", "_labels"} {
+		cvelo_services.DeleteDocument(ctx, self.config_obj.OrgId,
+			"persisted", client_id+suffix, true)
+	}
 }
 
 // Get a single entry from a client id

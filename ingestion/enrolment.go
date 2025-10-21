@@ -8,6 +8,7 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
+	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 func (self Ingestor) HandleEnrolment(
@@ -56,6 +57,7 @@ func (self Ingestor) HandleInterrogation(
 			Type:            "interrogation",
 			LastInterrogate: message.SessionId,
 			DocType:         "clients",
+			Timestamp:       uint64(utils.GetTime().Now().Unix()),
 		})
 	return nil
 }

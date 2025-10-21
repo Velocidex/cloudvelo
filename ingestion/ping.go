@@ -20,10 +20,11 @@ func (self Ingestor) HandlePing(
 		config_obj.OrgId,
 		"persisted", message.Source+"_ping",
 		&api.ClientRecord{
-			ClientId: message.Source,
-			Type:     "ping",
-			Ping:     uint64(utils.GetTime().Now().UnixNano()),
-			DocType:  "clients",
+			ClientId:  message.Source,
+			Type:      "ping",
+			Ping:      uint64(utils.GetTime().Now().UnixNano()),
+			DocType:   "clients",
+			Timestamp: uint64(utils.GetTime().Now().Unix()),
 		})
 	if err == nil ||
 		strings.Contains(err.Error(), "document_missing_exception") {

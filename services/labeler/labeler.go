@@ -115,6 +115,7 @@ func (self Labeler) SetClientLabel(
 			LowerLabels:        []string{strings.ToLower(label)},
 			LastLabelTimestamp: uint64(utils.GetTime().Now().UnixNano()),
 			DocType:            "clients",
+			Timestamp:          uint64(utils.GetTime().Now().Unix()),
 		})
 }
 

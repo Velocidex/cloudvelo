@@ -9,6 +9,7 @@
   "system": "linux",
   "first_seen_at": 0,
   "type": "main",
-  "doc_type": "clients"
+  "doc_type": "clients",
+  "timestamp": 1661385600
  }
 }
