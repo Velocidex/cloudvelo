@@ -56,7 +56,7 @@ func GetResultSetMetadata(
 	// metadata record.
 	if len(hits) == 0 {
 		return &ResultSetMetadataRecord{
-			Timestamp: utils.GetTime().Now().UnixNano(),
+			Timestamp: 0,
 			VFSPath:   base_record.VFSPath,
 			ID:        "",
 			Type:      "rs_metadata",
