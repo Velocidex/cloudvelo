@@ -118,10 +118,10 @@ func (self *HuntDispatcher) syncFlowTables(
 			continue
 		}
 
-		if seen[entry.FlowId] {
+		if seen[entry.FlowId+entry.ClientId] {
 			continue
 		}
-		seen[entry.FlowId] = true
+		seen[entry.FlowId+entry.ClientId] = true
 
 		flow, err := laucher_manager.GetFlowDetails(
 			ctx, config_obj, services.GetFlowOptions{},
