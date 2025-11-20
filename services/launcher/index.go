@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -48,6 +49,9 @@ func (self *FlowStorageManager) WriteFlowIndex(
 	config_obj *config_proto.Config,
 	flow *flows_proto.ArtifactCollectorContext) error {
 
+	// The index of flows in the GUI.
+	defer cvelo_services.Count("WriteFlowIndex")
+
 	return self.buildIndex(ctx, config_obj, flow.ClientId)
 }
 
@@ -55,6 +59,13 @@ func (self *FlowStorageManager) buildIndex(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string) error {
+
+	cvelo_services.Count("FlowStorageManager: buildIndex")
+
+	// Do not allow the index rebuild to be cancelled or we will end
+	// up with a broken index.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
 	query := fmt.Sprintf(getCollectionsQuery, client_id)
 	records, _, err := cvelo_services.QueryElasticRaw(ctx,

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +45,10 @@ const (
 	DocIdRandom                                = ""
 	PrimaryOpenSearch OpenSearchClusterOptions = iota + 1
 	SecondaryOpenSearch
+
+	// Levels of debug to match with debug_filter regexp.
+	DEBUG_ELASTIC    = "ELASTIC"
+	DEBUG_RESULT_SET = "RESULT_SET"
 )
 
 var (
@@ -55,7 +60,8 @@ var (
 
 	TRUE = true
 
-	logger *logging.LogContext
+	logger_filter *regexp.Regexp
+	logger        *logging.LogContext
 
 	bulk_indexer *BulkIndexer
 
@@ -65,10 +71,15 @@ var (
 
 // The logger is normally installed in the start up sequence with
 // SetDebugLogger() below.
-func Debug(format string, args ...interface{}) func() {
+func Debug(source string, format string, args ...interface{}) func() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	should_log := logger != nil && logger_filter.MatchString(source)
+
 	start := time.Now()
 	return func() {
-		if logger != nil {
+		if should_log {
 			args = append(args, time.Now().Sub(start))
 			logger.Debug(format+" in %v", args...)
 		}
@@ -137,7 +148,7 @@ func DeleteDocument(
 
 	defer Instrument("DeleteDocument")()
 
-	defer Debug("DeleteDocument %v", id)()
+	defer Debug(DEBUG_ELASTIC, "DeleteDocument %v", id)()
 	client, err := GetElasticClient(org_id)
 	if err != nil {
 		return err
@@ -212,7 +223,7 @@ func FlushIndex(
 func UpdateIndex(
 	ctx context.Context, org_id, index, id string, query string) error {
 	defer Instrument("UpdateIndex")()
-	defer Debug("UpdateIndex %v %v", index, id)()
+	defer Debug(DEBUG_ELASTIC, "UpdateIndex %v %v", index, id)()
 	return retry(func() error {
 		err := _UpdateIndex(ctx, org_id, index, id, query)
 		return err
@@ -322,7 +333,7 @@ func PutTemplate(
 func SetElasticIndexAsync(org_id, index, id string,
 	action BulkUpdateType, record interface{}) error {
 
-	defer Debug("SetElasticIndexAsync %v %v", index, id)()
+	defer Debug(DEBUG_ELASTIC, "SetElasticIndexAsync %v %v", index, id)()
 
 	mu.Lock()
 	l_bulk_indexer := bulk_indexer
@@ -351,7 +362,7 @@ func SetElasticIndexAsync(org_id, index, id string,
 func SetElasticIndex(ctx context.Context,
 	org_id, index, id string, record interface{}) error {
 	defer Instrument("SetElasticIndex")()
-	defer Debug("SetElasticIndex %v %v", index, id)()
+	defer Debug(DEBUG_ELASTIC, "SetElasticIndex %v %v", index, id)()
 
 	return retry(func() error {
 		return _SetElasticIndex(ctx, org_id, index, id, record)
@@ -434,7 +445,7 @@ type _ElasticResponse struct {
 // Gets a single elastic record by id.
 func GetElasticRecordByQuery(
 	ctx context.Context, org_id, index_suffix, query string) (json.RawMessage, error) {
-	defer Debug("GetElasticRecordByQuery %v %v", index_suffix, query)()
+	defer Debug(DEBUG_ELASTIC, "GetElasticRecordByQuery %v %v", index_suffix, query)()
 	defer Instrument("GetElasticRecordByQuery")()
 
 	client, err := GetElasticClient(org_id)
@@ -487,7 +498,7 @@ func GetElasticRecordByQuery(
 // Gets a single elastic record by id.
 func GetElasticRecord(
 	ctx context.Context, org_id, index, id string) (json.RawMessage, error) {
-	defer Debug("GetElasticRecord %v %v", index, id)()
+	defer Debug(DEBUG_ELASTIC, "GetElasticRecord %v %v", index, id)()
 	defer Instrument("GetElasticRecord")()
 
 	client, err := GetElasticClient(org_id)
@@ -560,9 +571,9 @@ func GetMultipleElasticRecords(
 	}
 
 	if len(ids) > 4 {
-		defer Debug("GetMultipleElasticRecords %v %v ...", index, ids[:4])()
+		defer Debug(DEBUG_ELASTIC, "GetMultipleElasticRecords %v %v ...", index, ids[:4])()
 	} else {
-		defer Debug("GetMultipleElasticRecords %v %v", index, ids)()
+		defer Debug(DEBUG_ELASTIC, "GetMultipleElasticRecords %v %v", index, ids)()
 	}
 
 	client, err := GetElasticClient(org_id)
@@ -636,7 +647,7 @@ func QueryChan(
 	org_id, index, query, sort_field string) (
 	chan json.RawMessage, error) {
 
-	defer Debug("QueryChan %v", index)()
+	defer Debug(DEBUG_ELASTIC, "QueryChan %v", index)()
 
 	output_chan := make(chan json.RawMessage)
 
@@ -701,6 +712,12 @@ func QueryChan(
 				}
 			}
 
+			// The last page is short so this means it is the last
+			// page.
+			if len(part) < page_size {
+				break
+			}
+
 			// Form the next query using the search_after value.
 			part_query := json.Format(`
 {"sort":[{%q: "asc"}], "size":%q,"search_after": [%q],`,
@@ -756,7 +773,7 @@ func QueryElasticAggregations(
 	ctx context.Context, org_id, index, query string) ([]string, error) {
 
 	defer Instrument("QueryElasticAggregations")()
-	defer Debug("QueryElasticAggregations %v", index)()
+	defer Debug(DEBUG_ELASTIC, "QueryElasticAggregations %v", index)()
 
 	es, err := GetElasticClient(org_id)
 	if err != nil {
@@ -818,7 +835,7 @@ func QueryElasticRaw(
 	org_id, index, query string) ([]json.RawMessage, int, error) {
 
 	defer Instrument("QueryElasticRaw")()
-	defer Debug("QueryElasticRaw %v", index)()
+	defer Debug(DEBUG_ELASTIC, "QueryElasticRaw %v", query)()
 
 	es, err := GetElasticClient(org_id)
 	if err != nil {
@@ -1050,10 +1067,11 @@ func SetElasticClient(clientKey OpenSearchClusterOptions, c *opensearch.Client) 
 	elasticClients[clientKey] = c
 }
 
-func SetDebugLogger(config_obj *config_proto.Config) {
+func SetDebugLogger(config_obj *config_proto.Config, filter *regexp.Regexp) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	logger_filter = filter
 	logger = logging.GetLogger(config_obj, &logging.FrontendComponent)
 }
 
@@ -1163,7 +1181,7 @@ func makeReadElasticError(data []byte) error {
 		// Now that indexes are created from the templates, a missing
 		// index means that it was not written to yet.
 		//return os.ErrNotExist
-		Debug("ElasticError: %v\n", response)()
+		Debug(DEBUG_ELASTIC, "ElasticError: %v\n", response)()
 
 		return nil
 	}

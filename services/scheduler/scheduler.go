@@ -77,6 +77,8 @@ type ElasticScheduler struct{}
 func (self *ElasticScheduler) getOneJob(ctx context.Context,
 	worker_id, queue string) (*services.SchedulerJob, error) {
 
+	cvelo_services.Count("ElasticScheduler: getOneJob")
+
 	// Schedulers are global across all orgs.
 	org_id := services.ROOT_ORG_ID
 

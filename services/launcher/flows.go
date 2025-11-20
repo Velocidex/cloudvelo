@@ -16,25 +16,6 @@ var (
 const (
 	prefixQuery = `{"prefix": {"id": "%v"}}`
 	regexQuery  = `{"regexp": {"id": "%v[_task|_stats|_stats_completed|_completed]*"}}`
-
-	getFlowsQuery = `
-{
-  "sort": [{
-    "session_id": {"order": "desc"}
-  }],
-  "query": {
-     "bool": {
-       "must": [
-           {"match": {"client_id" : %q}},
-           {"match": {"type": "main"}},
-           {"match": {"doc_type": "collection"}}
-       ]}
-  },
-  "_source": true,
-  "from": %q,
-  "size": %q
-}
-`
 )
 
 // Are any queries currenrly running.

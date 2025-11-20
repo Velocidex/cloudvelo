@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -83,18 +84,47 @@ func (self *FlowStorageManager) ListFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) ([]*services.FlowSummary, int64, error) {
 
-	err := self.buildIndex(ctx, config_obj, client_id)
-	if err != nil {
-		return nil, 0, err
-	}
+	fmt.Printf("ListFlows %v %v/%v\n", client_id, offset, length)
+
+	ctx = context.Background()
+
+	cvelo_services.Count("ListFlows")
 
 	result := []*services.FlowSummary{}
 	client_path_manager := paths.NewClientPathManager(client_id)
 	file_store_factory := file_store.GetFileStore(config_obj)
+
+	// Try to open the result set.
 	rs_reader, err := result_sets.NewResultSetReaderWithOptions(
 		ctx, config_obj, file_store_factory,
 		client_path_manager.FlowIndex(), options)
-	if err != nil || rs_reader.TotalRows() <= 0 {
+
+	now := utils.GetTime().Now()
+
+	// Index does not exist yet.
+	if err != nil || rs_reader.TotalRows() <= 0 ||
+
+		// Index is too old.
+		now.Sub(rs_reader.MTime()) > 5*time.Minute {
+
+		if rs_reader != nil {
+			fmt.Printf("Rebuilding index for %v: %v vs %v\n",
+				client_id, rs_reader.MTime(), now)
+		}
+
+		// Force a rebuild of the index.
+		err := self.buildIndex(context.Background(), config_obj, client_id)
+		if err != nil {
+			return nil, 0, fmt.Errorf("buildIndex: %w", err)
+		}
+
+		// Try to open it again.
+		rs_reader, err = result_sets.NewResultSetReaderWithOptions(
+			ctx, config_obj, file_store_factory,
+			client_path_manager.FlowIndex(), options)
+	}
+
+	if err != nil || rs_reader == nil || rs_reader.TotalRows() <= 0 {
 		return result, 0, nil
 	}
 
@@ -166,6 +196,8 @@ func (self *FlowStorageManager) LoadCollectionContext(
 	if flow_id == "" || client_id == "" {
 		return &flows_proto.ArtifactCollectorContext{}, nil
 	}
+
+	defer cvelo_services.Count("LoadCollectionContext")
 
 	hit_chan, err := cvelo_services.QueryChan(ctx,
 		config_obj, 1000, config_obj.OrgId, "transient",

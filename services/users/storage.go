@@ -180,6 +180,8 @@ func (self *UserStorageManager) ListAllUsers(
 func (self *UserStorageManager) SetUserOptions(ctx context.Context,
 	username string, options *api_proto.SetGUIOptionsRequest) error {
 
+	cvelo_services.Count("SetUserOptions")
+
 	// Merge the old options with the new options
 	old_options, err := self.GetUserOptions(ctx, username)
 	if err != nil {
@@ -250,6 +252,8 @@ const doc_type_query = `
 
 func (self *UserStorageManager) GetUserOptions(ctx context.Context, username string) (
 	*api_proto.SetGUIOptionsRequest, error) {
+
+	cvelo_services.Count("GetUserOptions")
 
 	serialized, err := cvelo_services.GetElasticRecordByQuery(ctx,
 		services.ROOT_ORG_ID, "persisted",

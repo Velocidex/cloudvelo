@@ -46,6 +46,8 @@ type LazyServiceContainer struct {
 	broadcast services.BroadcastService
 
 	journal services.JournalService
+
+	client_info services.ClientInfoManager
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -133,8 +135,19 @@ func (self *LazyServiceContainer) Journal() (res services.JournalService, err er
 	return self.journal, nil
 }
 
-func (self *LazyServiceContainer) ClientInfoManager() (services.ClientInfoManager, error) {
-	return client_info.NewClientInfoManager(self.config_obj)
+func (self *LazyServiceContainer) ClientInfoManager() (res services.ClientInfoManager, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.client_info == nil {
+		self.client_info, err = client_info.NewClientInfoManager(
+			self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.client_info, nil
 }
 
 func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {

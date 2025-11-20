@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
+	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -119,8 +120,7 @@ func (self Indexer) SearchIndexWithPrefix(
 
 		case "label":
 			terms := json.Format(fieldSearchQuery, "labels", term)
-			query := json.Format(
-				searchlabel, terms)
+			query := json.Format(searchlabel, terms)
 			self.getIndexRecords(ctx, config_obj, query, output_chan)
 			return
 
@@ -158,6 +158,8 @@ func (self Indexer) FastGetApiClient(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id string) (*api_proto.ApiClient, error) {
+
+	defer services.Count("FastGetApiClient")
 
 	records, err := cvelo_api.GetMultipleClients(
 		ctx, config_obj, []string{client_id})

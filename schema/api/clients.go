@@ -76,6 +76,8 @@ func GetMultipleClients(
 	config_obj *config_proto.Config,
 	client_ids []string) ([]*ClientRecord, error) {
 
+	cvelo_services.Count("GetMultipleClients")
+
 	terms := make([]string, 0, 2*len(client_ids))
 	for _, i := range client_ids {
 		terms = append(terms, i)

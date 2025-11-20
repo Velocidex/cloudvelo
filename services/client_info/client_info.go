@@ -76,6 +76,8 @@ func (self *ClientInfoBase) Modify(ctx context.Context, client_id string,
 func (self *ClientInfoBase) ListClients(ctx context.Context) <-chan string {
 	output_chan := make(chan string)
 
+	cvelo_services.Count("ListClients")
+
 	go func() {
 		defer close(output_chan)
 
@@ -100,6 +102,9 @@ func (self *ClientInfoBase) ListClients(ctx context.Context) <-chan string {
 
 func (self *ClientInfoBase) Set(
 	ctx context.Context, client_info *services.ClientInfo) error {
+
+	defer cvelo_services.Count("SetClient")
+
 	now := utils.GetTime().Now().Unix()
 
 	return cvelo_services.SetElasticIndex(ctx,
@@ -131,6 +136,8 @@ func (self ClientInfoBase) Remove(
 func (self ClientInfoBase) Get(
 	ctx context.Context, client_id string) (
 	*services.ClientInfo, error) {
+
+	defer cvelo_services.Count("GetClient")
 
 	hits, err := api.GetMultipleClients(
 		ctx, self.config_obj, []string{client_id})

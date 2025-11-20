@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
+	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/result_sets"
@@ -23,14 +24,19 @@ func (self ResultSetFactory) NewResultSetReaderWithOptions(
 	log_path api.FSPathSpec,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
-	existing_md, err := GetResultSetMetadata(ctx, config_obj, log_path)
+	cvelo_services.Count("NewResultSetWriterWithOptions")
+
+	base_reader, err := self.NewResultSetReader(file_store_factory, log_path)
 	if err != nil {
+		// The base result set does not exist. We dont care about any
+		// transformations.
 		return nil, err
 	}
 
 	// First do the filtering and then do the sorting.
 	return self.getFilteredReader(
-		ctx, config_obj, file_store_factory, log_path, existing_md.ID, options)
+		ctx, config_obj, file_store_factory,
+		log_path, base_reader, options)
 }
 
 func (self ResultSetFactory) getFilteredReader(
@@ -38,14 +44,14 @@ func (self ResultSetFactory) getFilteredReader(
 	config_obj *config_proto.Config,
 	file_store_factory api.FileStore,
 	log_path api.FSPathSpec,
-	version string,
+	base_reader result_sets.ResultSetReader,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
 	// No filter required.
 	if options.FilterColumn == "" ||
 		options.FilterRegex == nil {
 		return self.getSortedReader(ctx, config_obj, file_store_factory,
-			log_path, version, options)
+			log_path, base_reader, options)
 	}
 
 	transformed_path := log_path
@@ -59,35 +65,17 @@ func (self ResultSetFactory) getFilteredReader(
 	if options.FilterExclude {
 		transformed_path = transformed_path.AddChild("exclude")
 	}
-	transformed_result_set_record := NewSimpleResultSetRecord(
-		transformed_path, version)
 
-	// Try to open the transformed result set if it is already cached.
-	log_result_set_record := NewSimpleResultSetRecord(log_path, version)
-	last_record, err := getLastRecord(config_obj.OrgId, log_result_set_record)
-	if err != nil {
-		// Original Result set is not found - just return an empty
-		// one.
-		return self.NewResultSetReader(file_store_factory, log_path)
+	// Do we have a cached transformed result set? If yes and it is
+	// newer than the base result set, then just use it.
+	transformed_reader, err := self.NewResultSetReader(file_store_factory, transformed_path)
+	if err == nil && transformed_reader.MTime().After(base_reader.MTime()) {
+		return self.getSortedReader(ctx, config_obj, file_store_factory,
+			transformed_path, transformed_reader, options)
 	}
 
-	transformed_last_record, err := getLastRecord(
-		config_obj.OrgId, transformed_result_set_record)
-	if err == nil &&
-		// Existing result is still valid, lets use it.
-		transformed_last_record.Timestamp > last_record.Timestamp {
-		return self.getSortedReader(ctx, config_obj,
-			file_store_factory, transformed_path, version, options)
-	}
-
-	// Nope - we have to build the new cache from the original table.
-	reader, err := self.NewResultSetReader(file_store_factory, log_path)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	reader, err = simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
+	base_reader, err = simple.WrapReaderForRange(
+		base_reader, options.StartIdx, options.EndIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,11 +88,11 @@ func (self ResultSetFactory) getFilteredReader(
 		return nil, err
 	}
 
-	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
+	sub_ctx, sub_cancel := utils.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	// Filter the table with the regex
-	row_chan := reader.Rows(sub_ctx)
+	row_chan := base_reader.Rows(sub_ctx)
 outer:
 
 	for {
@@ -137,8 +125,15 @@ outer:
 	options.StartIdx = 0
 	options.EndIdx = 0
 
+	// Reopen the result set
+	transformed_reader, err = self.NewResultSetReader(
+		file_store_factory, transformed_path)
+	if err != nil {
+		return nil, err
+	}
+
 	return self.getSortedReader(ctx, config_obj, file_store_factory,
-		transformed_path, version, options)
+		transformed_path, transformed_reader, options)
 }
 
 func (self ResultSetFactory) getSortedReader(
@@ -146,16 +141,12 @@ func (self ResultSetFactory) getSortedReader(
 	config_obj *config_proto.Config,
 	file_store_factory api.FileStore,
 	log_path api.FSPathSpec,
-	version string,
+	base_reader result_sets.ResultSetReader,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
 	// No sorting required.
 	if options.SortColumn == "" {
-		reader, err := self.NewResultSetReader(file_store_factory, log_path)
-		if err != nil {
-			return nil, err
-		}
-		return simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
+		return simple.WrapReaderForRange(base_reader, options.StartIdx, options.EndIdx)
 	}
 
 	transformed_path := log_path
@@ -172,44 +163,19 @@ func (self ResultSetFactory) getSortedReader(
 			"sorted", options.SortColumn, "desc")
 	}
 
+	// Do we have a cached transformed result set? If yes and it is
+	// newer than the base result set, then just use it.
+	transformed_reader, err := self.NewResultSetReader(file_store_factory, transformed_path)
+	if err == nil && transformed_reader.MTime().After(base_reader.MTime()) {
+		return simple.WrapReaderForRange(transformed_reader, options.StartIdx, options.EndIdx)
+	}
+
 	stacker_path := transformed_path.AddChild("stack")
-
-	transformed_result_set_record := NewSimpleResultSetRecord(
-		transformed_path, version)
-	log_result_set_record := NewSimpleResultSetRecord(transformed_path, version)
-
-	// Try to open the transformed result set if it is already cached.
-	last_record, err := getLastRecord(
-		config_obj.OrgId, log_result_set_record)
-	if err == nil {
-		res, err := self.NewResultSetReader(file_store_factory, transformed_path)
-		if err == nil {
-			res.SetStacker(stacker_path)
-		}
-		return res, err
-	}
-
-	transformed_last_record, err := getLastRecord(
-		config_obj.OrgId, transformed_result_set_record)
-	if err == nil &&
-		// Existing result is still valid, lets use it.
-		transformed_last_record.Timestamp > last_record.Timestamp {
-		res, err := self.NewResultSetReader(file_store_factory, transformed_path)
-		if err == nil {
-			res.SetStacker(stacker_path)
-		}
-		return res, err
-	}
 
 	// Nope - we have to build the new cache from the original table.
 	scope := vql_subsystem.MakeScope()
-	reader, err := self.NewResultSetReader(file_store_factory, log_path)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
 
-	reader, err = simple.WrapReaderForRange(reader, options.StartIdx, options.EndIdx)
+	reader, err := simple.WrapReaderForRange(base_reader, options.StartIdx, options.EndIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +188,7 @@ func (self ResultSetFactory) getSortedReader(
 		return nil, err
 	}
 
-	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
+	sub_ctx, sub_cancel := utils.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	sorter_input_chan := make(chan vfilter.Row)
@@ -269,6 +235,7 @@ func (self ResultSetFactory) getSortedReader(
 	// Close synchronously to flush the data
 	writer.Close()
 
+	// Reopen the result set and return it.
 	result, err := self.NewResultSetReader(file_store_factory, transformed_path)
 	if err != nil {
 		return nil, err
