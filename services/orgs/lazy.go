@@ -48,6 +48,8 @@ type LazyServiceContainer struct {
 	journal services.JournalService
 
 	client_info services.ClientInfoManager
+
+	launcher services.Launcher
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -90,8 +92,18 @@ func (self *LazyServiceContainer) NotebookManager() (services.NotebookManager, e
 	return notebook.NewNotebookManagerService(self.ctx, self.wg, self.config_obj), nil
 }
 
-func (self *LazyServiceContainer) Launcher() (services.Launcher, error) {
-	return launcher.NewLauncherService(self.ctx, self.wg, self.config_obj)
+func (self *LazyServiceContainer) Launcher() (res services.Launcher, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.launcher == nil {
+		self.launcher, err = launcher.NewLauncherService(self.ctx, self.wg, self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.launcher, nil
 }
 
 func (self *LazyServiceContainer) HuntDispatcher() (services.IHuntDispatcher, error) {

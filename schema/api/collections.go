@@ -38,6 +38,10 @@ func (self *ArtifactCollectorRecord) ToProto() (
 		result.ClientId = self.ClientId
 	}
 
+	if result.SessionId == "" {
+		result.SessionId = self.SessionId
+	}
+
 	return result, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"www.velocidex.com/golang/cloudvelo/utils"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
@@ -20,7 +21,9 @@ func NewLauncherService(
 	config_obj *config_proto.Config) (services.Launcher, error) {
 
 	launcher_service := &launcher.Launcher{
-		Storage_: &FlowStorageManager{},
+		Storage_: &FlowStorageManager{
+			cache: utils.NewCache(),
+		},
 	}
 
 	return &Launcher{

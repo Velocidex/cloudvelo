@@ -24,7 +24,7 @@ func (self ResultSetFactory) NewResultSetReaderWithOptions(
 	log_path api.FSPathSpec,
 	options result_sets.ResultSetOptions) (result_sets.ResultSetReader, error) {
 
-	cvelo_services.Count("NewResultSetWriterWithOptions")
+	cvelo_services.Count("NewResultSetReaderWithOptions")
 
 	base_reader, err := self.NewResultSetReader(file_store_factory, log_path)
 	if err != nil {

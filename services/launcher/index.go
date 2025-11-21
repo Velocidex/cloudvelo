@@ -2,7 +2,6 @@ package launcher
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/services/launcher"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -31,15 +31,10 @@ const (
           "match": {
             "client_id": %q
           }
-        }, {
-          "match": {
-            "type": "main"
-          }
         }
       ]
     }
-  },
-  "size": 10000
+  }
 }
 `
 )
@@ -67,36 +62,42 @@ func (self *FlowStorageManager) buildIndex(
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	query := fmt.Sprintf(getCollectionsQuery, client_id)
-	records, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "transient", query)
+	hit_chan, err := cvelo_services.QueryChan(ctx,
+		config_obj, 1000, config_obj.OrgId, cvelo_services.TRANSIENT,
+		json.Format(getCollectionsQuery, client_id), "timestamp")
 	if err != nil {
 		return err
 	}
 
-	seen := make(map[string]bool)
+	seen := make(map[string]*flows_proto.ArtifactCollectorContext)
+
+	for hit := range hit_chan {
+		record := &cvelo_schema_api.ArtifactCollectorRecord{}
+		err = json.Unmarshal(hit, record)
+		if err != nil {
+			continue
+		}
+
+		item, err := record.ToProto()
+		if err != nil {
+			continue
+		}
+
+		existing_record, pres := seen[item.SessionId]
+		if !pres {
+			existing_record = &flows_proto.ArtifactCollectorContext{
+				ClientId:  record.ClientId,
+				SessionId: record.SessionId,
+			}
+		}
+
+		seen[item.SessionId] = mergeRecords(existing_record, item)
+	}
 
 	var flows []*flows_proto.ArtifactCollectorContext
-	for _, record := range records {
-		item := &cvelo_schema_api.ArtifactCollectorRecord{}
-		err = json.Unmarshal(record, &item)
-		if err != nil {
-			continue
-		}
-
-		_, pres := seen[item.SessionId]
-		if pres {
-			continue
-		}
-
-		seen[item.SessionId] = true
-
-		flow_context, err := item.ToProto()
-		if err != nil {
-			continue
-		}
-
-		flows = append(flows, flow_context)
+	for _, v := range seen {
+		launcher.UpdateFlowStats(v)
+		flows = append(flows, v)
 	}
 
 	sort.Slice(flows, func(i, j int) bool {
@@ -122,7 +123,8 @@ func (self *FlowStorageManager) buildIndex(
 			Set("FlowId", flow.SessionId).
 			Set("Artifacts", flow.Request.Artifacts).
 			Set("Created", flow.StartTime).
-			Set("Creator", flow.Request.Creator)
+			Set("Creator", flow.Request.Creator).
+			Set("_Flow", flow)
 
 		rs_writer.Write(summary)
 	}
