@@ -30,6 +30,7 @@ type ResultSetMetadataRecord struct {
 	VFSPath   string `json:"vfs_path"`
 	ID        string `json:"id"`
 	EndRow    int64  `json:"end_row"`
+	TotalRows int64  `json:"total_rows"`
 	Type      string `json:"type"`
 }
 

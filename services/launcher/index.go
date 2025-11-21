@@ -129,3 +129,62 @@ func (self *FlowStorageManager) buildIndex(
 
 	return nil
 }
+
+const getLatestFlowRecord = `
+{
+  "sort": [
+   {"timestamp": {"order": "desc"}}
+  ],
+  "query": {
+     "bool": {
+       "must": [
+         {"match": {"client_id" : %q}},
+         {"match": {"doc_type" : "collection"}}
+      ]}
+  },
+  "size": 1
+}
+`
+
+// We only need to rebuild the index if the latest flow document is
+// newer than the index.
+func (self *FlowStorageManager) shouldRebuildIndex(
+	ctx context.Context, config_obj *config_proto.Config,
+	client_id string,
+
+	// The rs reader of the index.
+	rs_reader result_sets.ResultSetReader) bool {
+
+	if rs_reader == nil || rs_reader.TotalRows() <= 0 {
+		return true
+	}
+
+	// Within 1 minute we do not rebuild the index - we are ok with
+	// the index being 1 minute out.
+	now := utils.GetTime().Now()
+	if now.Sub(rs_reader.MTime()) < time.Minute {
+		return false
+	}
+
+	hit, err := cvelo_services.GetElasticRecordByQuery(ctx,
+		config_obj.OrgId, cvelo_services.TRANSIENT, json.Format(
+			getLatestFlowRecord, client_id))
+
+	// If there are no flows at all in this client, we dont need to
+	// build any indexes.
+	if err != nil || len(hit) == 0 {
+		return false
+	}
+
+	item := &cvelo_schema_api.ArtifactCollectorRecord{}
+	err = json.Unmarshal(hit, item)
+	if err == nil {
+		last_modified := time.Unix(0, item.Timestamp)
+		if rs_reader.MTime().After(last_modified) {
+			// Skip the update if the result set is newer than the
+			// last_modified record.
+			return false
+		}
+	}
+	return true
+}

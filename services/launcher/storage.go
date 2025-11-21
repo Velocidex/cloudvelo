@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -84,10 +83,6 @@ func (self *FlowStorageManager) ListFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) ([]*services.FlowSummary, int64, error) {
 
-	fmt.Printf("ListFlows %v %v/%v\n", client_id, offset, length)
-
-	ctx = context.Background()
-
 	cvelo_services.Count("ListFlows")
 
 	result := []*services.FlowSummary{}
@@ -99,26 +94,17 @@ func (self *FlowStorageManager) ListFlows(
 		ctx, config_obj, file_store_factory,
 		client_path_manager.FlowIndex(), options)
 
-	now := utils.GetTime().Now()
-
 	// Index does not exist yet.
-	if err != nil || rs_reader.TotalRows() <= 0 ||
-
-		// Index is too old.
-		now.Sub(rs_reader.MTime()) > 5*time.Minute {
-
-		if rs_reader != nil {
-			fmt.Printf("Rebuilding index for %v: %v vs %v\n",
-				client_id, rs_reader.MTime(), now)
-		}
+	if err != nil || self.shouldRebuildIndex(
+		ctx, config_obj, client_id, rs_reader) {
 
 		// Force a rebuild of the index.
-		err := self.buildIndex(context.Background(), config_obj, client_id)
-		if err != nil {
+		err1 := self.buildIndex(ctx, config_obj, client_id)
+		if err1 != nil {
 			return nil, 0, fmt.Errorf("buildIndex: %w", err)
 		}
 
-		// Try to open it again.
+		// Try to open it again. Hopefully it works now.
 		rs_reader, err = result_sets.NewResultSetReaderWithOptions(
 			ctx, config_obj, file_store_factory,
 			client_path_manager.FlowIndex(), options)

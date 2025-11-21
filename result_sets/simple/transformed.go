@@ -117,6 +117,11 @@ outer:
 		}
 	}
 
+	if utils.IsCtxDone(sub_ctx) {
+		AbortResultSet(writer)
+		return nil, utils.IOError
+	}
+
 	// Flush all the writes back
 	writer.Close()
 
@@ -210,7 +215,7 @@ func (self ResultSetFactory) getSortedReader(
 	go func() {
 		defer close(sorter_input_chan)
 
-		row_chan := reader.Rows(ctx)
+		row_chan := reader.Rows(sub_ctx)
 		for {
 			select {
 			case <-sub_ctx.Done():
@@ -230,6 +235,11 @@ func (self ResultSetFactory) getSortedReader(
 		if ok {
 			writer.Write(row_dict)
 		}
+	}
+
+	if utils.IsCtxDone(sub_ctx) {
+		AbortResultSet(writer)
+		return nil, utils.IOError
 	}
 
 	// Close synchronously to flush the data
@@ -254,4 +264,13 @@ func getExpiry(config_obj *config_proto.Config) time.Duration {
 	}
 
 	return 10 * time.Minute
+}
+
+// Abort writing the result set by setting the TotalRows to -1 to
+// signal this result set is incomplete.
+func AbortResultSet(writer result_sets.ResultSetWriter) {
+	rs_writer, ok := writer.(*ElasticSimpleResultSetWriter)
+	if ok {
+		rs_writer.Abort()
+	}
 }

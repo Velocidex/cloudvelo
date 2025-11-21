@@ -36,13 +36,21 @@ type ElasticSimpleResultSetWriter struct {
 
 	md *ResultSetMetadataRecord
 
-	version string
+	version             string
+	rows_per_result_set uint64
+	max_size_per_packet uint64
 }
 
 // Not currently implemented but in future will be used to update
 // result sets in the GUI
 func (self *ElasticSimpleResultSetWriter) Update(uint64, *ordereddict.Dict) error {
 	return errors.New("Updating result sets is not implemented yet.")
+}
+
+func (self *ElasticSimpleResultSetWriter) Abort() {
+	self.md.TotalRows = -1
+	self.md.EndRow = -1
+	self.Close()
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
@@ -62,14 +70,18 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	record.TotalRows = uint64(self.start_row)
 
 	if self.sync {
-		services.SetElasticIndex(
+		err := services.SetElasticIndex(
 			self.ctx, self.org_id, "transient",
 			services.DocIdRandom, record)
-	} else {
-		services.SetElasticIndexAsync(
-			self.org_id, "transient", services.DocIdRandom,
-			cvelo_services.BulkUpdateCreate, record)
+		if err != nil {
+			self.Abort()
+		}
+		return
 	}
+
+	services.SetElasticIndexAsync(
+		self.org_id, "transient", services.DocIdRandom,
+		cvelo_services.BulkUpdateCreate, record)
 }
 
 func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
@@ -82,7 +94,10 @@ func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
 	self.buff = append(self.buff, '\n')
 	self.buffered_rows++
 
-	if self.buffered_rows > 100 {
+	// Flush depending on the total size of the buffer. If the rows
+	// are large, we try to keep document size under 1mb.
+	if uint64(self.buffered_rows) > self.rows_per_result_set ||
+		uint64(len(self.buff)) > self.max_size_per_packet {
 		self.Flush()
 	}
 }

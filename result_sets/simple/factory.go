@@ -34,6 +34,16 @@ func (self ResultSetFactory) NewResultSetWriter(
 	cvelo_services.Count("NewResultSetWriter")
 
 	cloud_config_obj := filestore.GetConfigObj(file_store_factory)
+	rows_per_result_set := cloud_config_obj.Cloud.RowsPerResultSet
+	if rows_per_result_set == 0 {
+		rows_per_result_set = 1000
+	}
+
+	max_size_per_packet := cloud_config_obj.Cloud.MaxSizePerPacket
+	if max_size_per_packet == 0 {
+		max_size_per_packet = 1024 * 1024
+	}
+
 	config_obj := cloud_config_obj.VeloConf()
 
 	new_id := fmt.Sprintf("%v", utils.GetGUID())
@@ -51,7 +61,6 @@ func (self ResultSetFactory) NewResultSetWriter(
 
 	if !truncate {
 		// Get the existing metadata record
-		fmt.Printf("GetResultSetMetadata %v for write\n", log_path)
 		existing_md, err := GetResultSetMetadata(ctx, config_obj, log_path)
 		if err == nil {
 			md = existing_md
@@ -67,15 +76,17 @@ func (self ResultSetFactory) NewResultSetWriter(
 	}
 
 	return &ElasticSimpleResultSetWriter{
-		org_id:     utils.GetOrgId(config_obj),
-		config_obj: config_obj,
-		log_path:   log_path,
-		opts:       opts,
-		ctx:        context.Background(),
-		sync:       utils.CompareFuncs(completion, utils.SyncCompleter),
-		version:    md.ID,
-		md:         md,
-		start_row:  md.EndRow,
+		org_id:              utils.GetOrgId(config_obj),
+		config_obj:          config_obj,
+		log_path:            log_path,
+		opts:                opts,
+		ctx:                 context.Background(),
+		sync:                utils.CompareFuncs(completion, utils.SyncCompleter),
+		version:             md.ID,
+		md:                  md,
+		start_row:           md.EndRow,
+		rows_per_result_set: rows_per_result_set,
+		max_size_per_packet: max_size_per_packet,
 	}, nil
 }
 
@@ -91,9 +102,15 @@ func (self ResultSetFactory) NewResultSetReader(
 	config_obj := cloud_config_obj.VeloConf()
 
 	// Get the existing metadata record
-	fmt.Printf("GetResultSetMetadata %v for read\n", log_path)
 	existing_md, err := GetResultSetMetadata(ctx, config_obj, log_path)
 	if err != nil {
+		return nil, utils.NotFoundError
+	}
+
+	// This signifies that the result set is incomplete - we can not
+	// open it. It happens when we abort the writing of the result set
+	// prematurely.
+	if existing_md.TotalRows < 0 {
 		return nil, utils.NotFoundError
 	}
 

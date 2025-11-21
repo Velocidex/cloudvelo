@@ -47,6 +47,11 @@ type ElasticConfiguration struct {
 	DedicatedForeman    bool     `json:"dedicated_foreman"`
 	DedicatedForemanOrg string   `json:"dedicated_foreman_org"`
 	ForemanExcludedOrgs []string `json:"foreman_excluded_orgs"`
+
+	// How many rows to collect before flushing into a result set
+	// packet. Default is 100.
+	RowsPerResultSet uint64 `json:"rows_per_result_set"`
+	MaxSizePerPacket uint64 `json:"max_size_per_packet"`
 }
 
 // Create a new cloud config object which contains the original
