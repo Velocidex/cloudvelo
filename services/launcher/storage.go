@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Velocidex/ttlcache/v2"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
-	cvelo_utils "www.velocidex.com/golang/cloudvelo/utils"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
@@ -41,10 +42,19 @@ func (self *FlowSummary) Summary() *services.FlowSummary {
 	}
 }
 
+type FlowCacheItem map[string]*flows_proto.ArtifactCollectorContext
+
 type FlowStorageManager struct {
 	launcher.FlowStorageManager
 
-	cache *cvelo_utils.Cache
+	// client_id -> FlowCacheItem : map[flow_id]*flows_proto.ArtifactCollectorContext
+	cache *ttlcache.Cache
+
+	cloud_config *config.ElasticConfiguration
+}
+
+func (self *FlowStorageManager) Flush() {
+	self.cache.Purge()
 }
 
 func (self *FlowStorageManager) WriteFlow(
@@ -106,7 +116,31 @@ func (self *FlowStorageManager) ListFlows(
 
 	cvelo_services.Count("ListFlows")
 
-	result := []*services.FlowSummary{}
+	flows, total, err := self._ListFlows(ctx, config_obj,
+		client_id, options, offset, length)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res := make([]*services.FlowSummary, 0, len(flows))
+	cache_item := make(FlowCacheItem)
+	for _, i := range flows {
+		res = append(res, i.Summary())
+		cache_item[i.FlowId] = i.Flow
+		self.cache.Set(client_id, cache_item)
+	}
+
+	return res, total, nil
+}
+
+func (self *FlowStorageManager) _ListFlows(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id string,
+	options result_sets.ResultSetOptions,
+	offset int64, length int64) ([]*FlowSummary, int64, error) {
+
+	result := []*FlowSummary{}
 	client_path_manager := paths.NewClientPathManager(client_id)
 	file_store_factory := file_store.GetFileStore(config_obj)
 
@@ -154,10 +188,7 @@ func (self *FlowStorageManager) ListFlows(
 		summary := &FlowSummary{}
 		err = json.Unmarshal(serialized, summary)
 		if err == nil {
-			result = append(result, summary.Summary())
-
-			key := client_id + "/" + summary.FlowId
-			self.cache.Set(key, summary.Flow)
+			result = append(result, summary)
 		}
 		if int64(len(result)) >= length {
 			break
@@ -208,34 +239,31 @@ func (self *FlowStorageManager) LoadCollectionContext(
 	}
 
 	// Hit the cache for the collection context
-	key := client_id + "/" + flow_id
-	flow_any, pres, age := self.cache.Get(key)
-	// Is the value too old?
-	if age.IsZero() {
-		// Try to re-populate the cache by reading the index in.
+	flows_any, err := self.cache.Get(client_id)
+	if err != nil {
+		cvelo_services.Count("LoadCollectionContext")
+
+		// This should populate the cache if needed.
 		_, _, err := self.ListFlows(ctx, config_obj,
-			client_id, result_sets.ResultSetOptions{},
-			0, 10000)
+			client_id, result_sets.ResultSetOptions{}, 0, 10000)
 		if err != nil {
 			return nil, err
 		}
 
-		// Try to hit the cache again.
-		flow_any, pres, age = self.cache.Get(key)
+		// Try to get it again from the cache. Should be there this
+		// time.
+		flows_any, err = self.cache.Get(client_id)
 
-		// Should not really happen.
-		if age.IsZero() {
-			return nil, utils.NotFoundError
-		}
+	} else {
+		cvelo_services.Count("LoadCollectionContext (Cached)")
 	}
 
-	if !pres {
-		return nil, utils.NotFoundError
-	}
-
-	flow, ok := flow_any.(*flows_proto.ArtifactCollectorContext)
+	flows, ok := flows_any.(FlowCacheItem)
 	if ok {
-		return flow, nil
+		hit, ok := flows[flow_id]
+		if ok {
+			return hit, nil
+		}
 	}
 
 	return nil, utils.NotFoundError

@@ -99,7 +99,9 @@ func (self *LazyServiceContainer) Launcher() (res services.Launcher, err error) 
 	defer self.mu.Unlock()
 
 	if self.launcher == nil {
-		self.launcher, err = launcher.NewLauncherService(self.ctx, self.wg, self.config_obj)
+		self.launcher, err = launcher.NewLauncherService(
+			self.ctx, self.wg, self.config_obj,
+			self.cloud_config)
 		if err != nil {
 			return nil, err
 		}

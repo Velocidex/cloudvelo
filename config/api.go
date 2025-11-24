@@ -52,6 +52,9 @@ type ElasticConfiguration struct {
 	// packet. Default is 100.
 	RowsPerResultSet uint64 `json:"rows_per_result_set"`
 	MaxSizePerPacket uint64 `json:"max_size_per_packet"`
+
+	// Minimum amount of time we cache flow indexes (Default 1)
+	MinFlowCacheTimeMin int64 `json:"min_flow_cache_time_min"`
 }
 
 // Create a new cloud config object which contains the original

@@ -48,6 +48,21 @@ func (self *FlowStorageManager) WriteFlowIndex(
 	cvelo_services.Count("WriteFlowIndex")
 
 	return self.buildIndex(ctx, config_obj, flow.ClientId)
+
+	client_path_manager := paths.NewClientPathManager(flow.ClientId)
+	file_store_factory := file_store.GetFileStore(config_obj)
+
+	// Try to open the result set.
+	rs_reader, err := result_sets.NewResultSetReader(
+		file_store_factory,
+		client_path_manager.FlowIndex())
+
+	if err != nil || self.shouldRebuildIndex(
+		ctx, config_obj, flow.ClientId, rs_reader) {
+		return self.buildIndex(ctx, config_obj, flow.ClientId)
+	}
+
+	return nil
 }
 
 func (self *FlowStorageManager) buildIndex(
@@ -69,7 +84,7 @@ func (self *FlowStorageManager) buildIndex(
 		return err
 	}
 
-	seen := make(map[string]*flows_proto.ArtifactCollectorContext)
+	seen := make(FlowCacheItem)
 
 	for hit := range hit_chan {
 		record := &cvelo_schema_api.ArtifactCollectorRecord{}
@@ -86,8 +101,11 @@ func (self *FlowStorageManager) buildIndex(
 		existing_record, pres := seen[item.SessionId]
 		if !pres {
 			existing_record = &flows_proto.ArtifactCollectorContext{
-				ClientId:  record.ClientId,
-				SessionId: record.SessionId,
+				ClientId:            record.ClientId,
+				SessionId:           record.SessionId,
+				State:               item.State,
+				TotalRequests:       item.TotalRequests,
+				OutstandingRequests: item.OutstandingRequests,
 			}
 		}
 
@@ -174,7 +192,15 @@ func (self *FlowStorageManager) shouldRebuildIndex(
 	// Within 1 minute we do not rebuild the index - we are ok with
 	// the index being 1 minute out.
 	now := utils.GetTime().Now()
-	if now.Sub(rs_reader.MTime()) < time.Minute {
+
+	min_flow_cache_time_min := time.Minute
+	if self.cloud_config != nil &&
+		self.cloud_config.MinFlowCacheTimeMin != 0 {
+		min_flow_cache_time_min = time.Minute *
+			time.Duration(self.cloud_config.MinFlowCacheTimeMin)
+	}
+
+	if now.Sub(rs_reader.MTime()) < min_flow_cache_time_min {
 		return false
 	}
 
