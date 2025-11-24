@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/Velocidex/ttlcache/v2"
 	"www.velocidex.com/golang/cloudvelo/config"
@@ -42,7 +43,31 @@ func (self *FlowSummary) Summary() *services.FlowSummary {
 	}
 }
 
-type FlowCacheItem map[string]*flows_proto.ArtifactCollectorContext
+type FlowCacheItem struct {
+	mu   sync.Mutex
+	data map[string]*flows_proto.ArtifactCollectorContext
+}
+
+func (self *FlowCacheItem) Set(key string, value *flows_proto.ArtifactCollectorContext) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	self.data[key] = value
+}
+
+func (self *FlowCacheItem) Get(key string) (*flows_proto.ArtifactCollectorContext, bool) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	res, pres := self.data[key]
+	return res, pres
+}
+
+func NewFlowCacheItem() *FlowCacheItem {
+	return &FlowCacheItem{
+		data: make(map[string]*flows_proto.ArtifactCollectorContext),
+	}
+}
 
 type FlowStorageManager struct {
 	launcher.FlowStorageManager
@@ -123,12 +148,12 @@ func (self *FlowStorageManager) ListFlows(
 	}
 
 	res := make([]*services.FlowSummary, 0, len(flows))
-	cache_item := make(FlowCacheItem)
+	cache_item := NewFlowCacheItem()
 	for _, i := range flows {
 		res = append(res, i.Summary())
-		cache_item[i.FlowId] = i.Flow
-		self.cache.Set(client_id, cache_item)
+		cache_item.Set(i.FlowId, i.Flow)
 	}
+	self.cache.Set(client_id, cache_item)
 
 	return res, total, nil
 }
@@ -258,9 +283,9 @@ func (self *FlowStorageManager) LoadCollectionContext(
 		cvelo_services.Count("LoadCollectionContext (Cached)")
 	}
 
-	flows, ok := flows_any.(FlowCacheItem)
+	flows, ok := flows_any.(*FlowCacheItem)
 	if ok {
-		hit, ok := flows[flow_id]
+		hit, ok := flows.Get(flow_id)
 		if ok {
 			return hit, nil
 		}
