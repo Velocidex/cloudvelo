@@ -31,6 +31,9 @@ type HuntIndexEntry struct {
 func (self *HuntStorageManagerImpl) FlushIndex(
 	ctx context.Context) error {
 
+	// Flush the index for the hunts table.
+	cvelo_services.Count("HuntsFlushIndex")
+
 	start_row := 0
 	length := 1000
 

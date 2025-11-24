@@ -67,6 +67,8 @@ func (self *Indexer) searchWithTermsChan(
 	config_obj *config_proto.Config,
 	terms []string) (chan *api.ClientRecord, error) {
 
+	cvelo_services.Count("Indexer: searchWithTermsChan")
+
 	output_chan := make(chan *api.ClientRecord)
 
 	go func() {
@@ -75,8 +77,10 @@ func (self *Indexer) searchWithTermsChan(
 		query := json.Format(strings.TrimSpace(getAllClientsQuery),
 			strings.Join(terms, ","), "")
 
+		page_size := 1000
+
 		// Page the query in parts. First part specifies the size.
-		part_query := `{"size":1000,` + query[1:]
+		part_query := json.Format(`{"size":%q,`, page_size) + query[1:]
 		hits, _, err := cvelo_services.QueryElasticIds(
 			ctx, config_obj.OrgId, "persisted", part_query)
 		if err != nil {
@@ -106,6 +110,11 @@ func (self *Indexer) searchWithTermsChan(
 					return
 				case output_chan <- c:
 				}
+			}
+
+			// Last page is part page.
+			if len(hits) < page_size {
+				break
 			}
 
 			// Get the next batch
@@ -145,6 +154,7 @@ func (self *Indexer) SearchClientsChan(
 		defer close(output_chan)
 
 		for c := range rows {
+			self.lru.Set(c.ClientId, c)
 			output_chan <- _makeApiClient(c)
 		}
 	}()

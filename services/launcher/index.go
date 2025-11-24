@@ -2,8 +2,8 @@ package launcher
 
 import (
 	"context"
-	"fmt"
 	"sort"
+	"time"
 
 	"github.com/Velocidex/ordereddict"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
@@ -14,6 +14,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/paths"
 	"www.velocidex.com/golang/velociraptor/result_sets"
+	"www.velocidex.com/golang/velociraptor/services/launcher"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -30,15 +31,10 @@ const (
           "match": {
             "client_id": %q
           }
-        }, {
-          "match": {
-            "type": "main"
-          }
         }
       ]
     }
-  },
-  "size": 10000
+  }
 }
 `
 )
@@ -48,7 +44,25 @@ func (self *FlowStorageManager) WriteFlowIndex(
 	config_obj *config_proto.Config,
 	flow *flows_proto.ArtifactCollectorContext) error {
 
+	// The index of flows in the GUI.
+	cvelo_services.Count("WriteFlowIndex")
+
 	return self.buildIndex(ctx, config_obj, flow.ClientId)
+
+	client_path_manager := paths.NewClientPathManager(flow.ClientId)
+	file_store_factory := file_store.GetFileStore(config_obj)
+
+	// Try to open the result set.
+	rs_reader, err := result_sets.NewResultSetReader(
+		file_store_factory,
+		client_path_manager.FlowIndex())
+
+	if err != nil || self.shouldRebuildIndex(
+		ctx, config_obj, flow.ClientId, rs_reader) {
+		return self.buildIndex(ctx, config_obj, flow.ClientId)
+	}
+
+	return nil
 }
 
 func (self *FlowStorageManager) buildIndex(
@@ -56,36 +70,52 @@ func (self *FlowStorageManager) buildIndex(
 	config_obj *config_proto.Config,
 	client_id string) error {
 
-	query := fmt.Sprintf(getCollectionsQuery, client_id)
-	records, _, err := cvelo_services.QueryElasticRaw(ctx,
-		config_obj.OrgId, "transient", query)
+	cvelo_services.Count("FlowStorageManager: buildIndex")
+
+	// Do not allow the index rebuild to be cancelled or we will end
+	// up with a broken index.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	hit_chan, err := cvelo_services.QueryChan(ctx,
+		config_obj, 1000, config_obj.OrgId, cvelo_services.TRANSIENT,
+		json.Format(getCollectionsQuery, client_id), "timestamp")
 	if err != nil {
 		return err
 	}
 
-	seen := make(map[string]bool)
+	seen := make(FlowCacheItem)
+
+	for hit := range hit_chan {
+		record := &cvelo_schema_api.ArtifactCollectorRecord{}
+		err = json.Unmarshal(hit, record)
+		if err != nil {
+			continue
+		}
+
+		item, err := record.ToProto()
+		if err != nil {
+			continue
+		}
+
+		existing_record, pres := seen[item.SessionId]
+		if !pres {
+			existing_record = &flows_proto.ArtifactCollectorContext{
+				ClientId:            record.ClientId,
+				SessionId:           record.SessionId,
+				State:               item.State,
+				TotalRequests:       item.TotalRequests,
+				OutstandingRequests: item.OutstandingRequests,
+			}
+		}
+
+		seen[item.SessionId] = mergeRecords(existing_record, item)
+	}
 
 	var flows []*flows_proto.ArtifactCollectorContext
-	for _, record := range records {
-		item := &cvelo_schema_api.ArtifactCollectorRecord{}
-		err = json.Unmarshal(record, &item)
-		if err != nil {
-			continue
-		}
-
-		_, pres := seen[item.SessionId]
-		if pres {
-			continue
-		}
-
-		seen[item.SessionId] = true
-
-		flow_context, err := item.ToProto()
-		if err != nil {
-			continue
-		}
-
-		flows = append(flows, flow_context)
+	for _, v := range seen {
+		launcher.UpdateFlowStats(v)
+		flows = append(flows, v)
 	}
 
 	sort.Slice(flows, func(i, j int) bool {
@@ -107,14 +137,92 @@ func (self *FlowStorageManager) buildIndex(
 	defer rs_writer.Close()
 
 	for _, flow := range flows {
+		creator := ""
+		var artifacts []string
+		if flow.Request != nil {
+			artifacts = flow.Request.Artifacts
+			creator = flow.Request.Creator
+
+		} else {
+			artifacts = flow.ArtifactsWithResults
+		}
+
 		summary := ordereddict.NewDict().
 			Set("FlowId", flow.SessionId).
-			Set("Artifacts", flow.Request.Artifacts).
+			Set("Artifacts", artifacts).
 			Set("Created", flow.StartTime).
-			Set("Creator", flow.Request.Creator)
+			Set("Creator", creator).
+			Set("_Flow", flow)
 
 		rs_writer.Write(summary)
 	}
 
 	return nil
+}
+
+const getLatestFlowRecord = `
+{
+  "sort": [
+   {"timestamp": {"order": "desc"}}
+  ],
+  "query": {
+     "bool": {
+       "must": [
+         {"match": {"client_id" : %q}},
+         {"match": {"doc_type" : "collection"}}
+      ]}
+  },
+  "size": 1
+}
+`
+
+// We only need to rebuild the index if the latest flow document is
+// newer than the index.
+func (self *FlowStorageManager) shouldRebuildIndex(
+	ctx context.Context, config_obj *config_proto.Config,
+	client_id string,
+
+	// The rs reader of the index.
+	rs_reader result_sets.ResultSetReader) bool {
+
+	if rs_reader == nil || rs_reader.TotalRows() <= 0 {
+		return true
+	}
+
+	// Within 1 minute we do not rebuild the index - we are ok with
+	// the index being 1 minute out.
+	now := utils.GetTime().Now()
+
+	min_flow_cache_time_min := time.Minute
+	if self.cloud_config != nil &&
+		self.cloud_config.MinFlowCacheTimeMin != 0 {
+		min_flow_cache_time_min = time.Minute *
+			time.Duration(self.cloud_config.MinFlowCacheTimeMin)
+	}
+
+	if now.Sub(rs_reader.MTime()) < min_flow_cache_time_min {
+		return false
+	}
+
+	hit, err := cvelo_services.GetElasticRecordByQuery(ctx,
+		config_obj.OrgId, cvelo_services.TRANSIENT, json.Format(
+			getLatestFlowRecord, client_id))
+
+	// If there are no flows at all in this client, we dont need to
+	// build any indexes.
+	if err != nil || len(hit) == 0 {
+		return false
+	}
+
+	item := &cvelo_schema_api.ArtifactCollectorRecord{}
+	err = json.Unmarshal(hit, item)
+	if err == nil {
+		last_modified := time.Unix(0, item.Timestamp)
+		if rs_reader.MTime().After(last_modified) {
+			// Skip the update if the result set is newer than the
+			// last_modified record.
+			return false
+		}
+	}
+	return true
 }

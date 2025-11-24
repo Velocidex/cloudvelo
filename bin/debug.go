@@ -22,6 +22,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"regexp"
 
 	"www.velocidex.com/golang/cloudvelo/services"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -30,7 +31,9 @@ import (
 )
 
 var (
-	debug_flag      = app.Flag("debug", "Enables debug and profile server.").Bool()
+	debug_flag  = app.Flag("debug", "Enables debug and profile server.").Bool()
+	debug_regex = app.Flag("debug_filter", "A regex to filter the debug source.").
+			Default(".").String()
 	debug_flag_port = app.Flag("debug_port", "Port for the debug server.").
 			Default("6060").Int64()
 )
@@ -40,7 +43,12 @@ func initDebugServer(config_obj *config_proto.Config) error {
 		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 		logger.Info("<green>Starting</> debug server on <red>http://127.0.0.1:%v/debug/pprof", *debug_flag_port)
 
-		services.SetDebugLogger(config_obj)
+		re, err := regexp.Compile("(?i)" + *debug_regex)
+		if err != nil {
+			return err
+		}
+
+		services.SetDebugLogger(config_obj, re)
 
 		// Switch off the debug flag so we do not run this again. (The
 		// GUI runs this function multiple times).

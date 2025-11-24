@@ -4,7 +4,7 @@ OVERRIDE_FILE=./Docker/config/local_override.json
 BINARY=./output/cvelociraptor
 CONFIG_ARGS= --config $(SERVER_CONFIG) --override_file $(OVERRIDE_FILE)
 CLIENT_CONFIG_ARGS= --config $(CLIENT_CONFIG) --override_file $(OVERRIDE_FILE)
-DLV=dlv debug --build-flags="-tags 'server_vql extras'" ./bin/ --
+DLV=dlv debug --init ./scripts/dlv.init --build-flags="-tags 'server_vql extras'" ./bin/ -- --debug --debug_filter result_set
 WRITEBACK_DIR=/tmp/pool_writebacks/
 POOL_NUMBER=20
 

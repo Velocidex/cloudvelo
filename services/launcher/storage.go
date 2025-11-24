@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Velocidex/ttlcache/v2"
+	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_schema_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -22,8 +24,37 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
+// Written in the flow index
+type FlowSummary struct {
+	FlowId    string                                `json:"FlowId"`
+	Artifacts []string                              `json:"Artifacts"`
+	Created   uint64                                `json:"Created"`
+	Creator   string                                `json:"Creator"`
+	Flow      *flows_proto.ArtifactCollectorContext `json:"_Flow"`
+}
+
+func (self *FlowSummary) Summary() *services.FlowSummary {
+	return &services.FlowSummary{
+		FlowId:    self.FlowId,
+		Artifacts: self.Artifacts,
+		Created:   self.Created,
+		Creator:   self.Creator,
+	}
+}
+
+type FlowCacheItem map[string]*flows_proto.ArtifactCollectorContext
+
 type FlowStorageManager struct {
 	launcher.FlowStorageManager
+
+	// client_id -> FlowCacheItem : map[flow_id]*flows_proto.ArtifactCollectorContext
+	cache *ttlcache.Cache
+
+	cloud_config *config.ElasticConfiguration
+}
+
+func (self *FlowStorageManager) Flush() {
+	self.cache.Purge()
 }
 
 func (self *FlowStorageManager) WriteFlow(
@@ -83,18 +114,58 @@ func (self *FlowStorageManager) ListFlows(
 	options result_sets.ResultSetOptions,
 	offset int64, length int64) ([]*services.FlowSummary, int64, error) {
 
-	err := self.buildIndex(ctx, config_obj, client_id)
+	cvelo_services.Count("ListFlows")
+
+	flows, total, err := self._ListFlows(ctx, config_obj,
+		client_id, options, offset, length)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	result := []*services.FlowSummary{}
+	res := make([]*services.FlowSummary, 0, len(flows))
+	cache_item := make(FlowCacheItem)
+	for _, i := range flows {
+		res = append(res, i.Summary())
+		cache_item[i.FlowId] = i.Flow
+		self.cache.Set(client_id, cache_item)
+	}
+
+	return res, total, nil
+}
+
+func (self *FlowStorageManager) _ListFlows(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id string,
+	options result_sets.ResultSetOptions,
+	offset int64, length int64) ([]*FlowSummary, int64, error) {
+
+	result := []*FlowSummary{}
 	client_path_manager := paths.NewClientPathManager(client_id)
 	file_store_factory := file_store.GetFileStore(config_obj)
+
+	// Try to open the result set.
 	rs_reader, err := result_sets.NewResultSetReaderWithOptions(
 		ctx, config_obj, file_store_factory,
 		client_path_manager.FlowIndex(), options)
-	if err != nil || rs_reader.TotalRows() <= 0 {
+
+	// Index does not exist yet.
+	if err != nil || self.shouldRebuildIndex(
+		ctx, config_obj, client_id, rs_reader) {
+
+		// Force a rebuild of the index.
+		err1 := self.buildIndex(ctx, config_obj, client_id)
+		if err1 != nil {
+			return nil, 0, fmt.Errorf("buildIndex: %w", err)
+		}
+
+		// Try to open it again. Hopefully it works now.
+		rs_reader, err = result_sets.NewResultSetReaderWithOptions(
+			ctx, config_obj, file_store_factory,
+			client_path_manager.FlowIndex(), options)
+	}
+
+	if err != nil || rs_reader == nil || rs_reader.TotalRows() <= 0 {
 		return result, 0, nil
 	}
 
@@ -114,7 +185,7 @@ func (self *FlowStorageManager) ListFlows(
 	}
 
 	for serialized := range json_chan {
-		summary := &services.FlowSummary{}
+		summary := &FlowSummary{}
 		err = json.Unmarshal(serialized, summary)
 		if err == nil {
 			result = append(result, summary)
@@ -166,6 +237,46 @@ func (self *FlowStorageManager) LoadCollectionContext(
 	if flow_id == "" || client_id == "" {
 		return &flows_proto.ArtifactCollectorContext{}, nil
 	}
+
+	// Hit the cache for the collection context
+	flows_any, err := self.cache.Get(client_id)
+	if err != nil {
+		cvelo_services.Count("LoadCollectionContext")
+
+		// This should populate the cache if needed.
+		_, _, err := self.ListFlows(ctx, config_obj,
+			client_id, result_sets.ResultSetOptions{}, 0, 10000)
+		if err != nil {
+			return nil, err
+		}
+
+		// Try to get it again from the cache. Should be there this
+		// time.
+		flows_any, err = self.cache.Get(client_id)
+
+	} else {
+		cvelo_services.Count("LoadCollectionContext (Cached)")
+	}
+
+	flows, ok := flows_any.(FlowCacheItem)
+	if ok {
+		hit, ok := flows[flow_id]
+		if ok {
+			return hit, nil
+		}
+	}
+
+	return nil, utils.NotFoundError
+}
+
+// The old slow version of LoadCollectionContext.
+// TODO: Remove when the new code is working well.
+func (self *FlowStorageManager) LoadCollectionContextSlow(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id, flow_id string) (*flows_proto.ArtifactCollectorContext, error) {
+
+	cvelo_services.Count("LoadCollectionContext")
 
 	hit_chan, err := cvelo_services.QueryChan(ctx,
 		config_obj, 1000, config_obj.OrgId, "transient",

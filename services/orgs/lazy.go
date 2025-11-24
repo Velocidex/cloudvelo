@@ -46,6 +46,12 @@ type LazyServiceContainer struct {
 	broadcast services.BroadcastService
 
 	journal services.JournalService
+
+	client_info services.ClientInfoManager
+
+	launcher services.Launcher
+
+	indexer services.Indexer
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -88,16 +94,38 @@ func (self *LazyServiceContainer) NotebookManager() (services.NotebookManager, e
 	return notebook.NewNotebookManagerService(self.ctx, self.wg, self.config_obj), nil
 }
 
-func (self *LazyServiceContainer) Launcher() (services.Launcher, error) {
-	return launcher.NewLauncherService(self.ctx, self.wg, self.config_obj)
+func (self *LazyServiceContainer) Launcher() (res services.Launcher, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.launcher == nil {
+		self.launcher, err = launcher.NewLauncherService(
+			self.ctx, self.wg, self.config_obj,
+			self.cloud_config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.launcher, nil
 }
 
 func (self *LazyServiceContainer) HuntDispatcher() (services.IHuntDispatcher, error) {
 	return hunt_dispatcher.NewHuntDispatcher(self.ctx, self.wg, self.config_obj)
 }
 
-func (self *LazyServiceContainer) Indexer() (services.Indexer, error) {
-	return indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+func (self *LazyServiceContainer) Indexer() (res services.Indexer, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.indexer == nil {
+		self.indexer, err = indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.indexer, nil
 }
 
 func (self *LazyServiceContainer) Scheduler() (services.Scheduler, error) {
@@ -133,8 +161,19 @@ func (self *LazyServiceContainer) Journal() (res services.JournalService, err er
 	return self.journal, nil
 }
 
-func (self *LazyServiceContainer) ClientInfoManager() (services.ClientInfoManager, error) {
-	return client_info.NewClientInfoManager(self.config_obj)
+func (self *LazyServiceContainer) ClientInfoManager() (res services.ClientInfoManager, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.client_info == nil {
+		self.client_info, err = client_info.NewClientInfoManager(
+			self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.client_info, nil
 }
 
 func (self *LazyServiceContainer) Inventory() (services.Inventory, error) {

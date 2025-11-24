@@ -52,23 +52,6 @@ const (
   "from": %q
 }
 `
-
-	query_for_specific_supertimeline = `
-{
-  "sort": [
-  {
-    "timestamp": {"order": "desc"}
-  }],
-  "query": {
-    "bool": {
-      "must": [
-        {"match": {"notebook_id": %q}},
-        {"match": {"supertimeline_name": %q}},
-        {"match": {"type": "Supertimeline"}}
-      ]}
-  }
-}
-`
 )
 
 type SuperTimelineStorer struct {
@@ -136,6 +119,8 @@ func (self SuperTimelineStorer) List(ctx context.Context,
 
 	count := 1000
 	offset := 0
+
+	cvelo_services.Count("SuperTimelineStorer: List")
 
 	query := json.Format(query_for_supertimelines, notebook_id, count, offset)
 	hits, _, err := cvelo_services.QueryElasticRaw(

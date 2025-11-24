@@ -91,6 +91,8 @@ func (self *ExportManager) GetAvailableDownloadFiles(
 	config_obj *config_proto.Config,
 	opts services.ContainerOptions) (*api_proto.AvailableDownloads, error) {
 
+	cvelo_services.Count("ExportManager: GetAvailableDownloadFiles")
+
 	filter := ""
 	switch opts.Type {
 	case services.NotebookExport:
