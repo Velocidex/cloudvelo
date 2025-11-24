@@ -84,7 +84,7 @@ func (self *FlowStorageManager) buildIndex(
 		return err
 	}
 
-	seen := make(FlowCacheItem)
+	seen := make(map[string]*flows_proto.ArtifactCollectorContext)
 
 	for hit := range hit_chan {
 		record := &cvelo_schema_api.ArtifactCollectorRecord{}
