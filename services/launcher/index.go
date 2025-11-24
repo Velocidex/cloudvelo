@@ -45,7 +45,7 @@ func (self *FlowStorageManager) WriteFlowIndex(
 	flow *flows_proto.ArtifactCollectorContext) error {
 
 	// The index of flows in the GUI.
-	defer cvelo_services.Count("WriteFlowIndex")
+	cvelo_services.Count("WriteFlowIndex")
 
 	return self.buildIndex(ctx, config_obj, flow.ClientId)
 }

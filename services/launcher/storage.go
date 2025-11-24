@@ -248,7 +248,7 @@ func (self *FlowStorageManager) LoadCollectionContextSlow(
 	config_obj *config_proto.Config,
 	client_id, flow_id string) (*flows_proto.ArtifactCollectorContext, error) {
 
-	defer cvelo_services.Count("LoadCollectionContext")
+	cvelo_services.Count("LoadCollectionContext")
 
 	hit_chan, err := cvelo_services.QueryChan(ctx,
 		config_obj, 1000, config_obj.OrgId, "transient",

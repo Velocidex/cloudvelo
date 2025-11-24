@@ -7,6 +7,7 @@ import (
 
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	"www.velocidex.com/golang/velociraptor/logging"
@@ -103,7 +104,7 @@ func (self *ClientInfoBase) ListClients(ctx context.Context) <-chan string {
 func (self *ClientInfoBase) Set(
 	ctx context.Context, client_info *services.ClientInfo) error {
 
-	defer cvelo_services.Count("SetClient")
+	cvelo_services.Count("SetClient")
 
 	now := utils.GetTime().Now().Unix()
 
@@ -137,19 +138,33 @@ func (self ClientInfoBase) Get(
 	ctx context.Context, client_id string) (
 	*services.ClientInfo, error) {
 
-	defer cvelo_services.Count("GetClient")
+	cvelo_services.Count("GetClient")
 
-	hits, err := api.GetMultipleClients(
-		ctx, self.config_obj, []string{client_id})
+	indexer, err := services.GetIndexer(self.config_obj)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(hits) == 0 {
-		return nil, errors.New("Client ID not found")
+	client_info, err := indexer.FastGetApiClient(
+		ctx, self.config_obj, client_id)
+	if err != nil {
+		return nil, err
 	}
 
-	return api.ToClientInfo(hits[0]), nil
+	return &services.ClientInfo{actions_proto.ClientInfo{
+		ClientId:              client_info.ClientId,
+		Hostname:              client_info.OsInfo.Hostname,
+		Fqdn:                  client_info.OsInfo.Fqdn,
+		System:                client_info.OsInfo.System,
+		Release:               client_info.OsInfo.Release,
+		Architecture:          client_info.OsInfo.Machine,
+		MacAddresses:          client_info.OsInfo.MacAddresses,
+		FirstSeenAt:           client_info.FirstSeenAt * 1000,
+		Ping:                  client_info.LastSeenAt * 1000,
+		LastHuntTimestamp:     client_info.LastHuntTimestamp,
+		LastEventTableVersion: client_info.LastEventTableVersion,
+		BuildTime:             client_info.AgentInformation.BuildTime,
+	}}, nil
 }
 
 func (self ClientInfoBase) GetStats(

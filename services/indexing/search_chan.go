@@ -154,6 +154,7 @@ func (self *Indexer) SearchClientsChan(
 		defer close(output_chan)
 
 		for c := range rows {
+			self.lru.Set(c.ClientId, c)
 			output_chan <- _makeApiClient(c)
 		}
 	}()

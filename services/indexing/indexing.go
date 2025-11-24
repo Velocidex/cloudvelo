@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
+	"github.com/Velocidex/ttlcache/v2"
 	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	"www.velocidex.com/golang/cloudvelo/services"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
@@ -25,6 +27,9 @@ type ElasticIndexRecord struct {
 type Indexer struct {
 	config_obj *config_proto.Config
 	ctx        context.Context
+
+	// client_id: *cvelo_api.ClientRecord
+	lru *ttlcache.Cache
 }
 
 func (self Indexer) SetIndex(client_id, term string) error {
@@ -159,8 +164,19 @@ func (self Indexer) FastGetApiClient(
 	config_obj *config_proto.Config,
 	client_id string) (*api_proto.ApiClient, error) {
 
-	defer services.Count("FastGetApiClient")
+	// First check if the client record is actually cached.
+	record_any, err := self.lru.Get(client_id)
+	if err == nil {
+		record, ok := record_any.(*cvelo_api.ClientRecord)
+		if ok {
+			services.Count("FastGetApiClient (Cached)")
+			return _makeApiClient(record), nil
+		}
+	}
 
+	services.Count("FastGetApiClient")
+
+	// Nope - get it the old way.
 	records, err := cvelo_api.GetMultipleClients(
 		ctx, config_obj, []string{client_id})
 	if err != nil {
@@ -170,6 +186,8 @@ func (self Indexer) FastGetApiClient(
 	if len(records) == 0 {
 		return nil, utils.NotFoundError
 	}
+
+	self.lru.Set(client_id, records[0])
 
 	return _makeApiClient(records[0]), nil
 }
@@ -202,9 +220,22 @@ func _makeApiClient(client_info *cvelo_api.ClientRecord) *api_proto.ApiClient {
 
 func NewIndexingService(ctx context.Context, wg *sync.WaitGroup,
 	config_obj *config_proto.Config) (*Indexer, error) {
+
+	lru := ttlcache.NewCache()
+	lru.SetCacheSizeLimit(20000)
+	lru.SkipTTLExtensionOnHit(true)
+	lru.SetTTL(5 * time.Minute)
+
+	go func() {
+		<-ctx.Done()
+		lru.Close()
+	}()
+
 	indexer := &Indexer{
 		config_obj: config_obj,
 		ctx:        ctx,
+		lru:        lru,
 	}
+
 	return indexer, nil
 }

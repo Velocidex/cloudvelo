@@ -50,6 +50,8 @@ type LazyServiceContainer struct {
 	client_info services.ClientInfoManager
 
 	launcher services.Launcher
+
+	indexer services.Indexer
 }
 
 func (self *LazyServiceContainer) FrontendManager() (services.FrontendManager, error) {
@@ -110,8 +112,18 @@ func (self *LazyServiceContainer) HuntDispatcher() (services.IHuntDispatcher, er
 	return hunt_dispatcher.NewHuntDispatcher(self.ctx, self.wg, self.config_obj)
 }
 
-func (self *LazyServiceContainer) Indexer() (services.Indexer, error) {
-	return indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+func (self *LazyServiceContainer) Indexer() (res services.Indexer, err error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if self.indexer == nil {
+		self.indexer, err = indexing.NewIndexingService(self.ctx, self.wg, self.config_obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return self.indexer, nil
 }
 
 func (self *LazyServiceContainer) Scheduler() (services.Scheduler, error) {
