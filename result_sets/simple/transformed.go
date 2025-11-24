@@ -88,7 +88,7 @@ func (self ResultSetFactory) getFilteredReader(
 		return nil, err
 	}
 
-	sub_ctx, sub_cancel := utils.WithTimeout(ctx, getExpiry(config_obj))
+	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	// Filter the table with the regex
@@ -193,7 +193,7 @@ func (self ResultSetFactory) getSortedReader(
 		return nil, err
 	}
 
-	sub_ctx, sub_cancel := utils.WithTimeout(ctx, getExpiry(config_obj))
+	sub_ctx, sub_cancel := context.WithTimeout(ctx, getExpiry(config_obj))
 	defer sub_cancel()
 
 	sorter_input_chan := make(chan vfilter.Row)
