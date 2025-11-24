@@ -119,11 +119,21 @@ func (self *FlowStorageManager) buildIndex(
 	defer rs_writer.Close()
 
 	for _, flow := range flows {
+		creator := ""
+		var artifacts []string
+		if flow.Request != nil {
+			artifacts = flow.Request.Artifacts
+			creator = flow.Request.Creator
+
+		} else {
+			artifacts = flow.ArtifactsWithResults
+		}
+
 		summary := ordereddict.NewDict().
 			Set("FlowId", flow.SessionId).
-			Set("Artifacts", flow.Request.Artifacts).
+			Set("Artifacts", artifacts).
 			Set("Created", flow.StartTime).
-			Set("Creator", flow.Request.Creator).
+			Set("Creator", creator).
 			Set("_Flow", flow)
 
 		rs_writer.Write(summary)
