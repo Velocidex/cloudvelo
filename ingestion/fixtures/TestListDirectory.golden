@@ -86,6 +86,38 @@
    "doc_type": "vfs",
    "doc_id": "1cbcacc4b30a75913df3a051a73742ca2bca1963",
    "timestamp": 1661385600000000000
+  },
+  {
+   "timestamp": 1661385600000000000,
+   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEV6I8LHAT83O/Listing.json",
+   "id": "",
+   "end_row": 1,
+   "total_rows": 0,
+   "type": "rs_metadata"
+  },
+  {
+   "timestamp": 1661385600000000000,
+   "vfs_path": "/clients/C.77ad4285690698d9/artifacts/System.VFS.ListDirectory/F.CEV6I8LHAT83O/Stats.json",
+   "id": "",
+   "end_row": 1,
+   "total_rows": 0,
+   "type": "rs_metadata"
+  },
+  {
+   "timestamp": 1661385600000000000,
+   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
+   "id": "",
+   "end_row": 14,
+   "total_rows": 0,
+   "type": "rs_metadata"
+  },
+  {
+   "timestamp": 1661385600000000000,
+   "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
+   "id": "",
+   "end_row": 5,
+   "total_rows": 0,
+   "type": "rs_metadata"
   }
  ],
  "System.VFS.ListDirectory vfs": [

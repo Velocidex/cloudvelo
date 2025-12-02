@@ -31,7 +31,7 @@ dump:
 	$(BINARY) $(CONFIG_ARGS) elastic dump -v
 
 dump_persisted:
-	$(BINARY) $(CONFIG_ARGS) elastic dump --index="persisted" -v --org_id O123
+	$(BINARY) $(CONFIG_ARGS) elastic dump --index="persisted" -v --dump_count 2000
 
 debug_gui:
 	$(DLV) $(CONFIG_ARGS) gui -v

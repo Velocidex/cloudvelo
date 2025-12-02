@@ -6,7 +6,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/codesoap/lineworker"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/services/indexing"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store"
@@ -18,6 +20,12 @@ import (
 	"www.velocidex.com/golang/velociraptor/utils"
 	"www.velocidex.com/golang/vfilter"
 )
+
+type job_t struct {
+	ClientId string
+	FlowId   string
+	Details  *api_proto.FlowDetails
+}
 
 const (
 	getHuntsFlowsQuery = `{ "from": %q,
@@ -55,37 +63,63 @@ type HuntFlowEntry struct {
 	DocType   string `json:"doc_type"`
 }
 
-func (self *HuntDispatcher) syncFlowTables(
-	ctx context.Context, config_obj *config_proto.Config,
-	hunt_id string) error {
+func (self *HuntDispatcher) shouldRebuildIndex(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	hunt_id string) bool {
 
 	file_store_factory := file_store.GetFileStore(config_obj)
 	hunt_path_manager := paths.NewHuntPathManager(hunt_id)
 	table_to_query := hunt_path_manager.EnrichedClients()
+
+	rs_reader, err := result_sets.NewResultSetReader(
+		file_store_factory, table_to_query)
+	if err != nil {
+		return true
+	}
+
+	now := utils.GetTime().Now()
+
+	// If the index is too old, then rebuild it anyway. TODO: This can
+	// be relaxed when the indexing gets more stable.
+	if now.Sub(rs_reader.MTime()) > time.Hour*12 {
+		return true
+	}
 
 	// First get the latest hunt_flow document. This indicates the
 	// last time the hunt was seen.
 	hit, err := cvelo_services.GetElasticRecordByQuery(ctx,
 		config_obj.OrgId, cvelo_services.TRANSIENT, json.Format(
 			getLatestHuntFlowForHuntId, hunt_id))
-	if err == nil && len(hit) > 1 {
-		entry := &HuntFlowEntry{}
-		err = json.Unmarshal(hit, entry)
-		if err == nil {
-			last_modified := time.Unix(entry.Timestamp, 0)
-
-			// Now check the last modified time of the result set.
-			rs_reader, err := result_sets.NewResultSetReader(
-				file_store_factory, table_to_query)
-			if err == nil && rs_reader.MTime().After(last_modified) {
-
-				// Skip the update if the result set is newer than the
-				// last_modified record.
-				return nil
-			}
-
-		}
+	if err != nil || len(hit) == 0 {
+		return true
 	}
+
+	entry := &HuntFlowEntry{}
+	err = json.Unmarshal(hit, entry)
+	if err != nil {
+		return true
+	}
+
+	// This is the last modified time of any flow in the hunt.
+	last_modified := time.Unix(entry.Timestamp, 0)
+
+	// Now check the last modified time of the result set.
+	if rs_reader.MTime().Before(last_modified) {
+		return true
+	}
+
+	// Skip the update if the result set is newer than the
+	// last_modified record.
+	return false
+}
+
+func (self *HuntDispatcher) syncFlowTables(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	hunt_id string) error {
+
+	defer cvelo_services.Summarize("HuntDispatcher: syncFlowTables")()
 
 	count := 0
 	seen := make(map[string]bool)
@@ -94,6 +128,19 @@ func (self *HuntDispatcher) syncFlowTables(
 	if err != nil {
 		return err
 	}
+
+	err = indexing.PopulateClientInfoCache(ctx, config_obj)
+	if err != nil {
+		return err
+	}
+
+	// Needs to be immediately available because we will query it
+	// right away.
+	defer cvelo_services.FlushIndex(ctx, self.config_obj.OrgId, "transient")
+
+	file_store_factory := file_store.GetFileStore(config_obj)
+	hunt_path_manager := paths.NewHuntPathManager(hunt_id)
+	table_to_query := hunt_path_manager.EnrichedClients()
 
 	rs_writer, err := result_sets.NewResultSetWriter(file_store_factory,
 		table_to_query, json.DefaultEncOpts(),
@@ -111,26 +158,49 @@ func (self *HuntDispatcher) syncFlowTables(
 		return err
 	}
 
-	for hit := range hits {
-		entry := &HuntFlowEntry{}
-		err = json.Unmarshal(hit, entry)
-		if err != nil {
-			continue
-		}
-
-		if seen[entry.FlowId+entry.ClientId] {
-			continue
-		}
-		seen[entry.FlowId+entry.ClientId] = true
-
+	// Get the flow details in a worker pool
+	pool := lineworker.NewWorkerPool(30, func(entry *job_t) (*job_t, error) {
 		flow, err := laucher_manager.GetFlowDetails(
 			ctx, config_obj, services.GetFlowOptions{},
 			entry.ClientId, entry.FlowId)
+		if err == nil {
+			entry.Details = flow
+		}
+		return entry, err
+	})
+	go func() {
+		defer pool.Stop()
+
+		for hit := range hits {
+			entry := &HuntFlowEntry{}
+			err = json.Unmarshal(hit, entry)
+			if err != nil {
+				continue
+			}
+
+			key := entry.FlowId + entry.ClientId
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			pool.Process(&job_t{
+				ClientId: entry.ClientId,
+				FlowId:   entry.FlowId,
+			})
+		}
+	}()
+
+	for {
+		entry, err := pool.Next()
+		if err == lineworker.EOS {
+			break
+		}
 		if err != nil {
 			continue
 		}
-
 		count++
+
+		flow := entry.Details
 		rs_writer.WriteJSONL([]byte(
 			json.Format(`{"ClientId": %q, "Hostname": %q, "FlowId": %q, "StartedTime": %q, "State": %q, "Duration": %q, "TotalBytes": %q, "TotalRows": %q}
 `,
@@ -144,10 +214,6 @@ func (self *HuntDispatcher) syncFlowTables(
 				flow.Context.TotalCollectedRows)), 1)
 	}
 
-	// Needs to be immediately available because we will query it
-	// right away.
-	cvelo_services.FlushIndex(ctx, self.config_obj.OrgId, "transient")
-
 	return nil
 }
 
@@ -159,7 +225,15 @@ func (self HuntDispatcher) GetFlows(
 
 	output_chan := make(chan *api_proto.FlowDetails)
 
-	err := self.syncFlowTables(ctx, config_obj, hunt_id)
+	if self.shouldRebuildIndex(ctx, config_obj, hunt_id) {
+		err := self.syncFlowTables(ctx, config_obj, hunt_id)
+		if err != nil {
+			close(output_chan)
+			return output_chan, 0, err
+		}
+	}
+
+	launcher, err := services.GetLauncher(config_obj)
 	if err != nil {
 		close(output_chan)
 		return output_chan, 0, err
@@ -192,16 +266,11 @@ func (self HuntDispatcher) GetFlows(
 		return output_chan, 0, err
 	}
 
-	launcher, err := services.GetLauncher(config_obj)
-	if err != nil {
-		close(output_chan)
-		rs_reader.Close()
-		return output_chan, 0, err
-	}
-
 	go func() {
 		defer close(output_chan)
 		defer rs_reader.Close()
+
+		defer cvelo_services.Summarize("HuntDispatcher: GetFlows")()
 
 		for row := range rs_reader.Rows(ctx) {
 			client_id, pres := row.GetString("ClientId")
@@ -211,7 +280,6 @@ func (self HuntDispatcher) GetFlows(
 					continue
 				}
 			}
-
 			flow_id, pres := row.GetString("FlowId")
 			if !pres {
 				flow_id, pres = row.GetString("flow_id")
@@ -221,7 +289,6 @@ func (self HuntDispatcher) GetFlows(
 			}
 
 			var collection_context *api_proto.FlowDetails
-
 			if options.BasicInformation {
 				collection_context = &api_proto.FlowDetails{
 					Context: &flows_proto.ArtifactCollectorContext{
@@ -229,7 +296,6 @@ func (self HuntDispatcher) GetFlows(
 						SessionId: flow_id,
 					},
 				}
-
 				// If the user wants detailed flow information we need
 				// to fetch this now. For many uses this is not
 				// necessary so we can get away with very basic

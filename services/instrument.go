@@ -17,6 +17,14 @@ var (
 		[]string{"operation"},
 	)
 
+	OpensearchSummary = promauto.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "opensearch_operations",
+			Help: "Latency to access datastore.",
+		},
+		[]string{"operation"},
+	)
+
 	// Watch operations in real time using:
 	// watch 'curl -s http://localhost:8003/metrics | grep -E "operations{|opensearch_latency_bucket.+Inf"'
 	OperationCounter = promauto.NewCounterVec(
@@ -35,6 +43,14 @@ func Count(operation string) {
 func Instrument(operation string) func() time.Duration {
 	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 		OpensearchHistorgram.WithLabelValues(operation).Observe(v)
+	}))
+
+	return timer.ObserveDuration
+}
+
+func Summarize(operation string) func() time.Duration {
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		OpensearchSummary.WithLabelValues(operation).Observe(v)
 	}))
 
 	return timer.ObserveDuration
