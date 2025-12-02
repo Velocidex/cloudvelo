@@ -56,8 +56,8 @@ func (self *ElasticSimpleResultSetWriter) Abort() {
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	serialized []byte, total_rows uint64) {
 
+	// Valid JSONL should be followed by \n already
 	self.buff = append(self.buff, serialized...)
-	self.buff = append(self.buff, '\n')
 	self.buffered_rows += int(total_rows)
 
 	// Flush depending on the total size of the buffer. If the rows
