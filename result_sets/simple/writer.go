@@ -56,6 +56,22 @@ func (self *ElasticSimpleResultSetWriter) Abort() {
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	serialized []byte, total_rows uint64) {
 
+	self.buff = append(self.buff, serialized...)
+	self.buff = append(self.buff, '\n')
+	self.buffered_rows += int(total_rows)
+
+	// Flush depending on the total size of the buffer. If the rows
+	// are large, we try to keep document size under 1mb.
+	if uint64(self.buffered_rows) > self.rows_per_result_set ||
+		uint64(len(self.buff)) > self.max_size_per_packet {
+		self.Flush()
+	}
+}
+
+// Write the JSONL record into a single document.
+func (self *ElasticSimpleResultSetWriter) writeJSONL(
+	serialized []byte, total_rows uint64) {
+
 	record := NewSimpleResultSetRecord(self.log_path, self.version)
 	record.JSONData = string(serialized)
 	record.StartRow = self.start_row
@@ -116,7 +132,7 @@ func (self *ElasticSimpleResultSetWriter) Flush() {
 		return
 	}
 
-	self.WriteJSONL(self.buff, uint64(self.buffered_rows))
+	self.writeJSONL(self.buff, uint64(self.buffered_rows))
 	self.buff = nil
 	self.buffered_rows = 0
 

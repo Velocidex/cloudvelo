@@ -11,6 +11,7 @@ require (
 	github.com/alecthomas/assert v1.0.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2/config v1.27.6
+	github.com/codesoap/lineworker v0.2.1
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/google/uuid v1.6.0
 	github.com/magefile/mage v1.15.0

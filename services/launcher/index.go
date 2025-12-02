@@ -185,6 +185,7 @@ func (self *FlowStorageManager) shouldRebuildIndex(
 	// The rs reader of the index.
 	rs_reader result_sets.ResultSetReader) bool {
 
+	// Total rows is -1 if the index was aborted.
 	if rs_reader == nil || rs_reader.TotalRows() <= 0 {
 		return true
 	}
