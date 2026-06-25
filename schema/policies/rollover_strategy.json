@@ -1,6 +1,6 @@
 {
   "policy": {
-    "description": "Rollover policy responsible for rolling over indexes when the primary shard reaches a set age.",
+    "description": "Rollover policy responsible for rolling over indexes when the primary shard reaches a set age or size.",
     "default_state": "rollover",
     "states": [
       {
@@ -8,7 +8,8 @@
         "actions": [
           {
             "rollover": {
-              "min_index_age": "5d"
+              "min_index_age": "5d",
+              "min_primary_shard_size": "40gb"
             }
           }
         ],
