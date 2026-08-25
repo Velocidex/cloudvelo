@@ -1,0 +1,6 @@
+{
+  "script": {
+    "lang": "painless",
+    "source": "if (ctx._source.assigned_hunts == null) { ctx._source.assigned_hunts = new def[]{params.tag} } else { ctx._source.assigned_hunts.add(params.tag); } ctx._source.last_event_table_version = params.version;"
+  }
+}
