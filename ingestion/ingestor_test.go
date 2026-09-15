@@ -195,6 +195,80 @@ func (self *IngestionTestSuite) TestListDirectory() {
 		json.MustMarshalIndent(self.golden))
 }
 
+// Regression test for the merge-on-read freeze: a flow that keeps
+// sending PROGRESS snapshots (never a terminal one) must have its
+// row/byte counters and State track the *latest* snapshot, not get
+// stuck on the first one it ever received.
+func (self *IngestionTestSuite) TestFlowStatsProgressNotFrozen() {
+	closer := utils.MockTime(&utils.IncClock{NowTime: 1661391000})
+	defer closer()
+
+	client_id := "C.77ad4285690698d9"
+	flow_id := "F.PROGRESSFREEZE"
+
+	// First progress snapshot: a handful of rows, still running.
+	err := self.ingestor.HandleFlowStats(self.ctx, self.ConfigObj.VeloConf(),
+		&crypto_proto.VeloMessage{
+			Source:    client_id,
+			SessionId: flow_id,
+			FlowStats: &crypto_proto.FlowStats{
+				QueryStatus: []*crypto_proto.VeloStatus{
+					{
+						Status:        crypto_proto.VeloStatus_PROGRESS,
+						ResultRows:    5,
+						UploadedBytes: 100,
+					},
+				},
+			},
+		})
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	config_obj := self.ConfigObj.VeloConf()
+	launcher, err := services.GetLauncher(config_obj)
+	assert.NoError(self.T(), err)
+
+	details, err := launcher.GetFlowDetails(self.Ctx, config_obj,
+		services.GetFlowOptions{}, client_id, flow_id)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), uint64(5), details.Context.TotalCollectedRows)
+	assert.Equal(self.T(), uint64(100), details.Context.TotalUploadedBytes)
+	assert.Equal(self.T(),
+		flows_proto.ArtifactCollectorContext_RUNNING, details.Context.State)
+
+	// Second progress snapshot: much further along, still running (no
+	// terminal status). Before the fix this second, fresher snapshot
+	// was discarded and the flow stayed frozen at the first one.
+	err = self.ingestor.HandleFlowStats(self.ctx, self.ConfigObj.VeloConf(),
+		&crypto_proto.VeloMessage{
+			Source:    client_id,
+			SessionId: flow_id,
+			FlowStats: &crypto_proto.FlowStats{
+				QueryStatus: []*crypto_proto.VeloStatus{
+					{
+						Status:        crypto_proto.VeloStatus_PROGRESS,
+						ResultRows:    50,
+						UploadedBytes: 5000,
+					},
+				},
+			},
+		})
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	details, err = launcher.GetFlowDetails(self.Ctx, config_obj,
+		services.GetFlowOptions{}, client_id, flow_id)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), uint64(50), details.Context.TotalCollectedRows)
+	assert.Equal(self.T(), uint64(5000), details.Context.TotalUploadedBytes)
+	assert.Equal(self.T(),
+		flows_proto.ArtifactCollectorContext_RUNNING, details.Context.State)
+}
+
 func (self *IngestionTestSuite) TestVFSDownload() {
 
 	// Replay the ListDirectory artifact messages to the ingestor.
