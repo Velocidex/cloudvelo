@@ -88,13 +88,18 @@ func mergeRecords(
 		collection_context.CreateTime = stats_context.CreateTime
 	}
 
-	// We will encounter two records with QueryStats: the progress
-	// messages and the completed messages. Make sure that if we see a
-	// completion message it always replaces the progress message
-	// regardless which order it appears.
+	// Each FlowStats message the client sends contains the complete,
+	// cumulative status of every query in the flow so far (see
+	// responder.FlowContext.getStats() upstream) - never a partial
+	// update. Therefore, as long as our accumulator has not yet reached
+	// a terminal state, always adopt the latest snapshot wholesale: it
+	// is always at least as current as what we have. Once the
+	// accumulator reaches a terminal state (is_running == false), stop
+	// updating - this correctly freezes on the final message even if a
+	// stray/out-of-order message arrives later.
 	if len(stats_context.QueryStats) > 0 {
 		if len(collection_context.QueryStats) == 0 ||
-			is_running(collection_context) && !is_running(stats_context) {
+			is_running(collection_context) {
 			collection_context.QueryStats = stats_context.QueryStats
 		}
 	}
