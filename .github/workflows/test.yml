@@ -22,32 +22,30 @@ jobs:
 
     - name: Start LocalStack
       env:
-          SERVICES: s3
-          DEBUG: 1
-          DATA_DIR: /tmp/localstack/data
-          KINESIS_PROVIDER: kinesalite
-
           # These have to match up with the config in server.config.yaml
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_DEFAULT_REGION: us-east-1
 
       run: |
-          # install LocalStack cli and awslocal
-          pip3 install cffi==1.15.1 cryptography==41.0.4 pyOpenSSL==23.2.0 pycparser==2.21
-          pip3 install awscli==1.29.54 awscli-local==0.21 boto3==1.28.54 botocore==1.31.54 cachetools==5.0.0 dill==0.3.2 dnslib==0.9.23 dnspython==2.4.2 docutils==0.16 ecdsa==0.18.0 jmespath==1.0.1 localstack==2.2.0 localstack-client==2.3 localstack-core==2.2.0 localstack-ext==2.2.0 markdown-it-py==3.0.0 mdurl==0.1.2 pbr==5.11.1 plux==1.4.0 psutil==5.9.5 pyaes==1.6.1 pygments==2.16.1 python-dateutil==2.8.2 python-dotenv==1.0.0 python-jose==3.3.0 rich==13.5.3 rsa==4.7.2 s3transfer==0.6.2 semver==3.0.1 stevedore==5.1.0 tabulate==0.9.0 tailer==0.4.1
+          # The localstack Python CLI's own container-bootstrap logic
+          # (`localstack start -d` / `localstack wait`) does not reliably
+          # produce a running container in this environment. Run the
+          # free, unlicensed community image directly instead - verified
+          # locally to start cleanly and pass a live health check with
+          # no CLI wrapper involved.
+          docker run -d --name localstack_main \
+            -p 4566:4566 \
+            -e SERVICES=s3 \
+            -e DEBUG=1 \
+            localstack/localstack:2.2.0
 
-          # Make sure to pull the latest version of the image
-          docker pull localstack/localstack:2.2.0
-
-          # Start LocalStack in the background
-          localstack start -d
-          # Wait 30 seconds for the LocalStack container to become ready before timing out
           echo "Waiting for LocalStack startup..."
-          localstack wait -t 30
+          timeout 60 bash -c 'until curl -sf http://localhost:4566/_localstack/health > /dev/null; do sleep 2; done'
           echo "Startup complete"
     - name: Initialize localstack
       run: |
+          pip3 install awscli-local==0.21
           awslocal s3 mb s3://velociraptor
           awslocal s3 ls
           echo "Test Execution complete!"
