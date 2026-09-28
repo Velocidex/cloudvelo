@@ -13,12 +13,22 @@ jobs:
 
     - uses: actions/setup-go@v2
       with:
-        go-version: '^1.20'
+        # Pin to the version go.mod actually declares. The previous
+        # '^1.20' floats to whatever is newest at CI-run time (1.26.8
+        # as of this fix) - six minor versions past what this code is
+        # written/tested against.
+        go-version: '1.23.2'
     - run: go version
     - name: Install Opensearch
       uses: ankane/setup-opensearch@v1
       with:
-        opensearch-version: 3
+        # Match the major version used everywhere else in this repo
+        # (Docker/docker-compose.yaml pins opensearchproject/opensearch:2).
+        # Version 3 here was observed producing intermittent,
+        # non-deterministic test failures (the same test failing two
+        # different ways across consecutive runs) once the LocalStack
+        # step above was fixed and the suite could actually run.
+        opensearch-version: 2
 
     - name: Start LocalStack
       env:
