@@ -142,7 +142,23 @@ func (self ClientInfoBase) Get(
 
 func (self ClientInfoBase) GetStats(
 	ctx context.Context, client_id string) (*services.Stats, error) {
-	return nil, errors.New("ClientInfoManager.GetStats Not implemented")
+
+	records, err := api.GetMultipleClients(
+		ctx, self.config_obj, []string{client_id})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(records) == 0 {
+		return nil, NotFoundError
+	}
+
+	record := records[0]
+	return &services.Stats{
+		Ping:                  record.Ping / 1000,
+		LastHuntTimestamp:     record.LastHuntTimestamp,
+		LastEventTableVersion: record.LastEventTableVersion,
+	}, nil
 }
 
 func (self ClientInfoBase) UpdateStats(

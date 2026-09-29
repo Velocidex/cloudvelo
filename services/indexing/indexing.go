@@ -56,7 +56,7 @@ func (self Indexer) getIndexRecords(
 	config_obj *config_proto.Config,
 	query string, output_chan chan *api_proto.IndexRecord) {
 	hits, err := cvelo_services.QueryChan(ctx, config_obj, 1000,
-		config_obj.OrgId, "persisted", query, cvelo_services.NoSortField)
+		config_obj.OrgId, "persisted", query, "client_id")
 	if err != nil {
 		logger := logging.GetLogger(config_obj, &logging.FrontendComponent)
 		logger.Error("getIndexRecords: %v", err)
@@ -77,9 +77,7 @@ func (self Indexer) getIndexRecords(
 }
 
 const searchlabel = `
-{"sort": [{
-    "client_id": {"order": "asc", "unmapped_type": "keyword"}
- }],
+{
  "query": {
    "bool": {
      "must": [
@@ -107,12 +105,14 @@ func (self Indexer) SearchIndexWithPrefix(
 		case "all":
 			query := `
 {
-    "query": {"bool": {
-        "must": [{"match": {
-                    "doc_type": "clients"
-                  }}]
-         }},
-    "_source": {"includes": ["client_id"]}
+ "query": {
+   "bool": {
+     "must": [
+       {"match": {"doc_type": "clients"}},
+       {"match": {"type": "main"}}]
+   }
+}
+,"_source":{"includes":["client_id"]}
 }`
 			self.getIndexRecords(ctx, config_obj, query, output_chan)
 			return
