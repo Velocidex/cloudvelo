@@ -36,6 +36,14 @@ func mergeRecords(
 	collection_context *flows_proto.ArtifactCollectorContext,
 	stats_context *flows_proto.ArtifactCollectorContext) *flows_proto.ArtifactCollectorContext {
 
+	// If either is nil skip the merge attempt
+	if collection_context == nil {
+		return stats_context
+	}
+	if stats_context == nil {
+		return collection_context
+	}
+
 	if stats_context.Request != nil {
 		collection_context.Request = stats_context.Request
 	}
