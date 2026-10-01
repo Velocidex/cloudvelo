@@ -90,7 +90,7 @@ func (self *Indexer) searchRecents(
 }
 
 const (
-	allClientsQuery    = `{"range": {"first_seen_at": {"gte": 0}}}`
+	allClientsQuery    = `{"match": {"type": "main"}}`
 	recentClientsQuery = `{
    "range": {
      "ping": {"gt": %q}
