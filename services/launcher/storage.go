@@ -286,7 +286,7 @@ func (self *FlowStorageManager) LoadCollectionContext(
 	flows, ok := flows_any.(*FlowCacheItem)
 	if ok {
 		hit, ok := flows.Get(flow_id)
-		if ok {
+		if ok && hit != nil {
 			return hit, nil
 		}
 	}
