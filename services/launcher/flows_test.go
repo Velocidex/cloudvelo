@@ -10,7 +10,6 @@ import (
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
-	"www.velocidex.com/golang/velociraptor/utils"
 )
 
 func TestMergeRecordsNilAccumulator(t *testing.T) {
@@ -92,22 +91,6 @@ func TestMergeRecordsCompletionRecorded(t *testing.T) {
 	require.Equal(t, uint64(42), acc.TotalCollectedRows)
 	require.Equal(t, uint64(12345), acc.TotalUploadedBytes)
 	require.Equal(t, flows_proto.ArtifactCollectorContext_FINISHED, acc.State)
-}
-
-func TestLoadCollectionContextNilCacheEntry(t *testing.T) {
-	const client_id, flow_id = "C.1234", "F.1234"
-
-	cache_item := NewFlowCacheItem()
-	cache_item.Set(flow_id, nil)
-
-	mgr := &FlowStorageManager{cache: ttlcache.NewCache()}
-	require.NoError(t, mgr.cache.Set(client_id, cache_item))
-
-	res, err := mgr.LoadCollectionContext(context.Background(),
-		&config_proto.Config{}, client_id, flow_id)
-
-	require.Nil(t, res)
-	require.ErrorIs(t, err, utils.NotFoundError)
 }
 
 func TestLoadCollectionContextCachedHit(t *testing.T) {

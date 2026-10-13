@@ -183,6 +183,58 @@ sources:
 	assert.Equal(self.T(), "F.1234second", flows.Items[0].SessionId)
 }
 
+func (self *LauncherTestSuite) TestLoadCollectionContextFallback() {
+	config_obj := self.ConfigObj.VeloConf()
+	client_id := "C.5678"
+	set_flow_id := "F.5678"
+
+	launcher, err := services.GetLauncher(config_obj)
+	assert.NoError(self.T(), err)
+
+	_, err = launcher.GetFlows(self.Ctx, config_obj, client_id,
+		result_sets.ResultSetOptions{}, 0, 100)
+	assert.NoError(self.T(), err)
+
+	closer := utils.SetFlowIdForTests(set_flow_id)
+	defer closer()
+
+	repository_manager, err := services.GetRepositoryManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	repository := repository_manager.NewRepository()
+	_, err = repository.LoadYaml(`
+name: TestArtifact
+sources:
+- query: SELECT * FROM info()
+`, services.ArtifactOptions{
+		ValidateArtifact:  true,
+		ArtifactIsBuiltIn: true})
+	assert.NoError(self.T(), err)
+
+	flow_id, err := launcher.ScheduleArtifactCollection(
+		self.Ctx, config_obj, acl_managers.NullACLManager{},
+		repository, &flows_proto.ArtifactCollectorArgs{
+			ClientId:  client_id,
+			Artifacts: []string{"TestArtifact"},
+		}, nil)
+	assert.NoError(self.T(), err)
+
+	err = cvelo_services.FlushBulkIndexer()
+	assert.NoError(self.T(), err)
+
+	vtesting.WaitUntil(5*time.Second, self.T(), func() bool {
+		collection_context, err := launcher.Storage().LoadCollectionContext(
+			self.Ctx, config_obj, client_id, flow_id)
+		return err == nil && collection_context != nil &&
+			collection_context.SessionId == flow_id
+	})
+
+	collection_context, err := launcher.Storage().LoadCollectionContext(
+		self.Ctx, config_obj, client_id, flow_id)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), flow_id, collection_context.SessionId)
+}
+
 func TestLauncher(t *testing.T) {
 	suite.Run(t, &LauncherTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{

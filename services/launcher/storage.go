@@ -151,7 +151,9 @@ func (self *FlowStorageManager) ListFlows(
 	cache_item := NewFlowCacheItem()
 	for _, i := range flows {
 		res = append(res, i.Summary())
-		cache_item.Set(i.FlowId, i.Flow)
+		if i.Flow != nil {
+			cache_item.Set(i.FlowId, i.Flow)
+		}
 	}
 	self.cache.Set(client_id, cache_item)
 
@@ -291,7 +293,11 @@ func (self *FlowStorageManager) LoadCollectionContext(
 		}
 	}
 
-	return nil, utils.NotFoundError
+	collection_context, err := self.LoadCollectionContextSlow(ctx, config_obj, client_id, flow_id)
+	if err == nil && ok {
+		flows.Set(flow_id, collection_context)
+	}
+	return collection_context, err
 }
 
 // The old slow version of LoadCollectionContext.
