@@ -19,6 +19,10 @@ type BufferedWriter struct {
 
 // Flush a buffer into the uploader
 func (self *BufferedWriter) Flush() error {
+	if self.buf_idx == 0 {
+		return nil
+	}
+
 	self.sent_first_buffer = true
 	err := self.uploader.Put(self.buf[:self.buf_idx])
 	if err != nil {
