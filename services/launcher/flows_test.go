@@ -1,9 +1,12 @@
 package launcher
 
 import (
+	"context"
 	"testing"
 
+	"github.com/Velocidex/ttlcache/v2"
 	"github.com/stretchr/testify/require"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/services/launcher"
@@ -88,4 +91,21 @@ func TestMergeRecordsCompletionRecorded(t *testing.T) {
 	require.Equal(t, uint64(42), acc.TotalCollectedRows)
 	require.Equal(t, uint64(12345), acc.TotalUploadedBytes)
 	require.Equal(t, flows_proto.ArtifactCollectorContext_FINISHED, acc.State)
+}
+
+func TestLoadCollectionContextCachedHit(t *testing.T) {
+	const client_id, flow_id = "C.1234", "F.1234"
+	want := &flows_proto.ArtifactCollectorContext{SessionId: flow_id}
+
+	cache_item := NewFlowCacheItem()
+	cache_item.Set(flow_id, want)
+
+	mgr := &FlowStorageManager{cache: ttlcache.NewCache()}
+	require.NoError(t, mgr.cache.Set(client_id, cache_item))
+
+	res, err := mgr.LoadCollectionContext(context.Background(),
+		&config_proto.Config{}, client_id, flow_id)
+
+	require.NoError(t, err)
+	require.Same(t, want, res)
 }
