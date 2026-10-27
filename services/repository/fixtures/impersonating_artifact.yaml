@@ -1,0 +1,5 @@
+name: Custom.Test.Impersonating
+type: SERVER
+impersonate: admin
+sources:
+  - query: SELECT * FROM info()

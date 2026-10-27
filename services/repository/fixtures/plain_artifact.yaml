@@ -1,0 +1,4 @@
+name: Custom.Test.Plain
+type: SERVER
+sources:
+  - query: SELECT * FROM info()
