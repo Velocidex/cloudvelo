@@ -56,7 +56,7 @@ type ClientRecord struct {
 
 func ToClientInfo(record *ClientRecord) *services.ClientInfo {
 	return &services.ClientInfo{
-		actions_proto.ClientInfo{
+		ClientInfo: &actions_proto.ClientInfo{
 			ClientId:              record.ClientId,
 			Hostname:              record.Hostname,
 			System:                record.System,

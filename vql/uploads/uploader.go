@@ -30,10 +30,10 @@ import (
 	"www.velocidex.com/golang/velociraptor/constants"
 	"www.velocidex.com/golang/velociraptor/crypto"
 	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
-	"www.velocidex.com/golang/velociraptor/http_comms"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/responder"
 	"www.velocidex.com/golang/velociraptor/uploads"
+	"www.velocidex.com/golang/velociraptor/utils/rand"
 	"www.velocidex.com/golang/velociraptor/vql/networking"
 	"www.velocidex.com/golang/vfilter"
 )
@@ -252,7 +252,7 @@ func GetURL(config_obj *config_proto.Config) (string, error) {
 	}
 
 	// Choose a random url to upload to from the configured URLs.
-	idx := http_comms.GetRand()(len(config_obj.Client.ServerUrls))
+	idx := rand.Intn(len(config_obj.Client.ServerUrls))
 	return config_obj.Client.ServerUrls[idx], nil
 }
 

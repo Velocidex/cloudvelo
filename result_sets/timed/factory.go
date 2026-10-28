@@ -40,3 +40,12 @@ func (self TimedFactory) NewTimedResultSetReader(
 		config_obj:   config_obj,
 	}, nil
 }
+
+// Not implemented upstream either - timed result sets are aged out by the
+// Elastic index lifecycle policy rather than deleted explicitly.
+func (self TimedFactory) DeleteTimedResultSet(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	path_manager api.PathManager) error {
+	return utils.NotImplementedError
+}

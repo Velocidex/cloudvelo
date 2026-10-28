@@ -48,6 +48,10 @@ func mergeRecords(
 		collection_context.Request = stats_context.Request
 	}
 
+	if len(stats_context.ArtifactsWithResults) > 0 {
+		collection_context.ArtifactsWithResults = stats_context.ArtifactsWithResults
+	}
+
 	// Copy relevant fields into the main context
 	if stats_context.TotalUploadedFiles > 0 {
 		collection_context.TotalUploadedFiles = stats_context.TotalUploadedFiles

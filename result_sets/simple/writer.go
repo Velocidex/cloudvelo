@@ -10,6 +10,7 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
+	"www.velocidex.com/golang/velociraptor/logging"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -36,6 +37,10 @@ type ElasticSimpleResultSetWriter struct {
 
 	md *ResultSetMetadataRecord
 
+	// Set once the result set is aborted. After this no further
+	// writes or flushes are made.
+	aborted bool
+
 	version             string
 	rows_per_result_set uint64
 	max_size_per_packet uint64
@@ -47,14 +52,31 @@ func (self *ElasticSimpleResultSetWriter) Update(uint64, *ordereddict.Dict) erro
 	return errors.New("Updating result sets is not implemented yet.")
 }
 
+// Abort the result set: any buffered rows are discarded and the
+// metadata is marked with TotalRows = -1 so readers refuse to open
+// it. Abort does not go through Flush so it can be safely called
+// from a failed write without re-entering the write path.
 func (self *ElasticSimpleResultSetWriter) Abort() {
+	if self.aborted {
+		return
+	}
+	self.aborted = true
+
+	self.buff = nil
+	self.buffered_rows = 0
+
 	self.md.TotalRows = -1
 	self.md.EndRow = -1
-	self.Close()
+
+	_ = SetResultSetMetadata(self.ctx, self.config_obj, self.log_path, self.md)
+	_ = flushIndex(self.ctx, self.org_id, "transient")
 }
 
 func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	serialized []byte, total_rows uint64) {
+	if self.aborted {
+		return
+	}
 
 	// Valid JSONL should be followed by \n already
 	self.buff = append(self.buff, serialized...)
@@ -68,9 +90,10 @@ func (self *ElasticSimpleResultSetWriter) WriteJSONL(
 	}
 }
 
-// Write the JSONL record into a single document.
+// Write the JSONL record into a single document. The row counters
+// are only advanced once the record is accepted.
 func (self *ElasticSimpleResultSetWriter) writeJSONL(
-	serialized []byte, total_rows uint64) {
+	serialized []byte, total_rows uint64) error {
 
 	record := NewSimpleResultSetRecord(self.log_path, self.version)
 	record.JSONData = string(serialized)
@@ -79,28 +102,97 @@ func (self *ElasticSimpleResultSetWriter) writeJSONL(
 	record.Timestamp = utils.GetTime().Now().Unix()
 	record.ID = self.version
 	record.Type = "result_set"
-
-	self.start_row = record.EndRow
-	self.md.EndRow = record.EndRow
-
-	record.TotalRows = uint64(self.start_row)
+	record.TotalRows = uint64(record.EndRow)
 
 	if self.sync {
-		err := services.SetElasticIndex(
+		err := setElasticIndex(
 			self.ctx, self.org_id, "transient",
 			services.DocIdRandom, record)
 		if err != nil {
-			self.Abort()
+			return err
 		}
+	} else {
+		// Async failures are reported by the bulk indexer.
+		_ = setElasticIndexAsync(
+			self.org_id, "transient", services.DocIdRandom,
+			cvelo_services.BulkUpdateCreate, record)
+	}
+
+	self.start_row = record.EndRow
+	self.md.EndRow = record.EndRow
+	if self.md.EndByte != nil {
+		*self.md.EndByte += int64(len(serialized))
+	}
+
+	return nil
+}
+
+// The Elastic backend stores plain JSONL rows so there is nowhere to keep
+// a compressed blob and its chunk index. Inflate the batch and store it as
+// normal rows rather than dropping it. The interface gives us no way to
+// report an error, so a batch that is corrupt or out of sequence aborts
+// the result set rather than storing rows in the wrong place.
+func (self *ElasticSimpleResultSetWriter) WriteCompressedJSONL(
+	serialized []byte, byte_offset uint64,
+	uncompressed_size int, total_rows uint64) {
+	if self.aborted {
 		return
 	}
 
-	services.SetElasticIndexAsync(
-		self.org_id, "transient", services.DocIdRandom,
-		cvelo_services.BulkUpdateCreate, record)
+	uncompressed, err := utils.Uncompress(self.ctx, serialized)
+	if err != nil {
+		self.abortWithError("can not decompress batch: %v", err)
+		return
+	}
+
+	if len(uncompressed) != uncompressed_size {
+		self.abortWithError(
+			"batch decompressed to %v bytes, expected %v",
+			len(uncompressed), uncompressed_size)
+		return
+	}
+
+	next_byte, known := self.nextByte()
+	if !known {
+		// New result sets and ones written before the byte position
+		// was tracked do not record it. Start from this batch's
+		// offset so the batches after it are checked.
+		if len(self.buff) == 0 {
+			start := int64(byte_offset)
+			self.md.EndByte = &start
+		}
+
+	} else if byte_offset != uint64(next_byte) {
+		self.abortWithError("batch starts at byte %v, expected %v",
+			byte_offset, next_byte)
+		return
+	}
+
+	self.WriteJSONL(uncompressed, total_rows)
+}
+
+// The position in the uncompressed JSONL stream where the next batch
+// starts: the bytes already stored plus the bytes still buffered.
+func (self *ElasticSimpleResultSetWriter) nextByte() (int64, bool) {
+	if self.md.EndByte == nil {
+		return 0, false
+	}
+	return *self.md.EndByte + int64(len(self.buff)), true
+}
+
+func (self *ElasticSimpleResultSetWriter) abortWithError(
+	format string, args ...interface{}) {
+	logger := logging.GetLogger(self.config_obj, &logging.FrontendComponent)
+	logger.Error("Aborting result set %v: "+format,
+		append([]interface{}{self.log_path.AsClientPath()}, args...)...)
+	self.Abort()
 }
 
 func (self *ElasticSimpleResultSetWriter) Write(row *ordereddict.Dict) {
+	if self.aborted {
+		return
+	}
+
 	serialized, err := json.MarshalWithOptions(row, self.opts)
 	if err != nil {
 		return
@@ -128,19 +220,28 @@ func (self *ElasticSimpleResultSetWriter) SetStartRow(start_row int64) error {
 }
 
 func (self *ElasticSimpleResultSetWriter) Flush() {
-	if self.buffered_rows == 0 {
+	if self.aborted || self.buffered_rows == 0 {
 		return
 	}
 
-	self.writeJSONL(self.buff, uint64(self.buffered_rows))
+	// Take ownership of the buffer before writing so a failed write
+	// is never retried by a re-entrant Flush.
+	buff := self.buff
+	buffered_rows := self.buffered_rows
 	self.buff = nil
 	self.buffered_rows = 0
+
+	err := self.writeJSONL(buff, uint64(buffered_rows))
+	if err != nil {
+		self.Abort()
+		return
+	}
 
 	// Write a newer version of the MD record.
 	_ = SetResultSetMetadata(self.ctx, self.config_obj, self.log_path, self.md)
 
 	// Make sure the results are visible immediately
-	cvelo_services.FlushIndex(self.ctx, self.org_id, "transient")
+	_ = flushIndex(self.ctx, self.org_id, "transient")
 
 	// No need to find the last start row as we assume we are the only
 	// writers.

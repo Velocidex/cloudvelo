@@ -13,7 +13,7 @@ import (
 
 func FatalIfError(command *kingpin.CmdClause, cb func() error) {
 	err := cb()
-	kingpin.FatalIfError(err, command.FullCommand())
+	kingpin.FatalIfError(err, "%s", command.FullCommand())
 }
 
 func install_sig_handler() (context.Context, context.CancelFunc) {

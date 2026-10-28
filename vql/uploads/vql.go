@@ -9,6 +9,7 @@ import (
 
 	"github.com/Velocidex/ordereddict"
 	"www.velocidex.com/golang/velociraptor/accessors"
+	"www.velocidex.com/golang/velociraptor/acls"
 	"www.velocidex.com/golang/velociraptor/artifacts"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/uploads"
@@ -46,11 +47,10 @@ func (self *UploadFunction) Call(ctx context.Context,
 		arg.Accessor = "auto"
 	}
 
-	err = vql_subsystem.CheckFilesystemAccess(scope, arg.Accessor)
-	if err != nil {
-		scope.Log("upload: %v", err)
-		return vfilter.Null{}
-	}
+	// NOTE: Velociraptor 0.75 removed vql_subsystem.CheckFilesystemAccess().
+	// Per-accessor permissions are now declared by each accessor
+	// (Describe().Permissions) and enforced inside accessors.GetAccessor()
+	// below, so no explicit check is needed here.
 
 	config_obj, ok := vql_subsystem.GetServerConfig(scope)
 	if !ok {
@@ -116,6 +116,8 @@ func (self UploadFunction) Info(scope vfilter.Scope, type_map *vfilter.TypeMap) 
 			"client this will upload the file into the flow and store " +
 			"it in the server's file store.",
 		ArgType: type_map.AddType(scope, &networking.UploadFunctionArgs{}),
+		Metadata: vql_subsystem.VQLMetadata().
+			Permissions(acls.FILESYSTEM_READ).Build(),
 	}
 }
 

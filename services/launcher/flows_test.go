@@ -93,9 +93,36 @@ func TestMergeRecordsCompletionRecorded(t *testing.T) {
 	require.Equal(t, flows_proto.ArtifactCollectorContext_FINISHED, acc.State)
 }
 
+func TestMergeRecordsUnknownFlowRewritten(t *testing.T) {
+	unknown_flow := statsSnapshot(crypto_proto.VeloStatus_GENERIC_ERROR, 0, 0)
+	unknown_flow.QueryStats[0].ErrorMessage = "Flow not known - maybe the client crashed?"
+
+	acc := foldFlowIndex(
+		statsSnapshot(crypto_proto.VeloStatus_PROGRESS, 5, 100),
+		unknown_flow,
+	)
+
+	require.Equal(t, flows_proto.ArtifactCollectorContext_ERROR, acc.State)
+	require.Equal(t, "Flow not known - maybe the client crashed?", acc.Status)
+	require.Equal(t, uint64(0), acc.TotalCollectedRows)
+	require.Equal(t, uint64(0), acc.TotalUploadedBytes)
+}
+
+func TestMergeRecordsUnknownFlowRaw(t *testing.T) {
+	acc := foldFlowIndex(
+		statsSnapshot(crypto_proto.VeloStatus_PROGRESS, 5, 100),
+		statsSnapshot(crypto_proto.VeloStatus_UNKNOWN_FLOW, 0, 0),
+	)
+
+	require.Equal(t, flows_proto.ArtifactCollectorContext_RUNNING, acc.State)
+}
+
 func TestLoadCollectionContextCachedHit(t *testing.T) {
 	const client_id, flow_id = "C.1234", "F.1234"
-	want := &flows_proto.ArtifactCollectorContext{SessionId: flow_id}
+	want := &flows_proto.ArtifactCollectorContext{
+		SessionId: flow_id,
+		State:     flows_proto.ArtifactCollectorContext_FINISHED,
+	}
 
 	cache_item := NewFlowCacheItem()
 	cache_item.Set(flow_id, want)

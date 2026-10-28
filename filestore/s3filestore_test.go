@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/stretchr/testify/suite"
 	"www.velocidex.com/golang/cloudvelo/filestore"
@@ -25,8 +26,11 @@ func (self *S3FilestoreTest) checkForKey() []string {
 	assert.NoError(self.T(), err)
 
 	svc := s3.New(session)
+	// Only list this org's objects, the bucket is shared by all
+	// test packages.
 	res, err := svc.ListObjects(&s3.ListObjectsInput{
 		Bucket: &self.ConfigObj.Cloud.Bucket,
+		Prefix: aws.String("orgs/" + self.OrgId + "/"),
 	})
 	assert.NoError(self.T(), err)
 
@@ -78,7 +82,7 @@ func (self *S3FilestoreTest) TestS3FileWriting() {
 	// Make sure the underlying key name reflects the org name in it
 	keys := self.checkForKey()
 	assert.Equal(self.T(), 1, len(keys))
-	assert.Equal(self.T(), "orgs/test/Test/file.json", keys[0])
+	assert.Equal(self.T(), "orgs/"+self.OrgId+"/Test/file.json", keys[0])
 
 	// Now delete the file.
 	err = file_store_factory.Delete(test_file)
@@ -95,8 +99,6 @@ func (self *S3FilestoreTest) TestS3FileWriting() {
 
 func TestS3Filestore(t *testing.T) {
 	suite.Run(t, &S3FilestoreTest{
-		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"persisted"},
-		},
+		CloudTestSuite: &testsuite.CloudTestSuite{},
 	})
 }

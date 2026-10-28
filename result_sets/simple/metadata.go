@@ -32,6 +32,11 @@ type ResultSetMetadataRecord struct {
 	EndRow    int64  `json:"end_row"`
 	TotalRows int64  `json:"total_rows"`
 	Type      string `json:"type"`
+
+	// Number of uncompressed JSONL bytes stored, which is where the
+	// next compressed batch must start. Nil when the position is not
+	// known, e.g. for records written before it was tracked.
+	EndByte *int64 `json:"end_byte,omitempty"`
 }
 
 // Because we can not delete result sets in the transient index we
@@ -85,7 +90,16 @@ func SetResultSetMetadata(
 	config_obj *config_proto.Config,
 	log_path api.FSPathSpec, md *ResultSetMetadataRecord) error {
 
-	md.Timestamp = utils.GetTime().Now().UnixNano()
-	return cvelo_services.SetElasticIndex(ctx, utils.GetOrgId(config_obj),
+	// Readers use the record with the newest timestamp, so each
+	// record must be newer than the one it replaces. The clock alone
+	// does not guarantee this: it may be frozen in tests, and appends
+	// can come from a frontend whose clock is behind the last writer.
+	now := utils.GetTime().Now().UnixNano()
+	if now <= md.Timestamp {
+		now = md.Timestamp + 1
+	}
+	md.Timestamp = now
+
+	return setElasticIndex(ctx, utils.GetOrgId(config_obj),
 		"transient", services.DocIdRandom, md)
 }

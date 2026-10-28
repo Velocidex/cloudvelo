@@ -30,3 +30,14 @@ func (self FrontendService) GetPublicUrl(
 	config_obj *config_proto.Config) (res *url.URL, err error) {
 	return frontend.GetPublicUrl(config_obj)
 }
+
+// Global user messages are GUI banners maintained in memory by the master
+// frontend. This service is stateless (and handed out by value) so it can
+// not hold them - the same approach upstream's MinionFrontendManager takes.
+func (self FrontendService) SetGlobalMessage(
+	message *api_proto.GlobalUserMessage) {
+}
+
+func (self FrontendService) GetGlobalMessages() []*api_proto.GlobalUserMessage {
+	return nil
+}

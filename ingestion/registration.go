@@ -62,7 +62,7 @@ func (self Ingestor) HandleClientInfoUpdates(
 			return err
 		}
 		err = client_info_manager.Set(ctx,
-			&services.ClientInfo{actions_proto.ClientInfo{
+			&services.ClientInfo{ClientInfo: &actions_proto.ClientInfo{
 				ClientId:      message.Source,
 				Hostname:      row.Hostname,
 				Fqdn:          row.Hostname,

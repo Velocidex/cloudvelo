@@ -15,6 +15,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/hunt_dispatcher"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
+	crypto_proto "www.velocidex.com/golang/velociraptor/crypto/proto"
 	flows_proto "www.velocidex.com/golang/velociraptor/flows/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -39,6 +40,13 @@ name: ArtifactForLabel2
 type: CLIENT_EVENT
 sources:
 - query: SELECT ArtifactForLabel2 FROM scope()
+`, `
+name: ArtifactWithTimeout
+type: CLIENT_EVENT
+resources:
+  timeout: 3600
+sources:
+- query: SELECT ArtifactWithTimeout FROM scope()
 `}
 )
 
@@ -285,6 +293,50 @@ func (self *ForemanTestSuite) TestClientMonitoring() {
 	assert.Equal(self.T(), 1, len(new_plan.MonitoringTablesToClients))
 	assert.Equal(self.T(), []string{"C.ConnectedClient"},
 		new_plan.MonitoringTablesToClients["Label1"])
+}
+
+// Clients refresh an event query every 12 hours when it is sent with
+// no timeout, or at the artifact's own timeout when it sets one.
+func (self *ForemanTestSuite) TestEventQueriesAreRefreshed() {
+	config_obj := self.ConfigObj.VeloConf()
+
+	client_monitoring_service, err := services.ClientEventManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	err = client_monitoring_service.SetClientMonitoringState(
+		self.Ctx, config_obj,
+		"user1", &flows_proto.ClientEventTable{
+			Artifacts: &flows_proto.ArtifactCollectorArgs{
+				Artifacts: []string{"ArtifactForAll"},
+			},
+			LabelEvents: []*flows_proto.LabelEvents{
+				{Label: "Label1", Artifacts: &flows_proto.ArtifactCollectorArgs{
+					Artifacts: []string{"ArtifactWithTimeout"},
+				}},
+			},
+		})
+	assert.NoError(self.T(), err)
+
+	state := client_monitoring_service.GetClientMonitoringState()
+	messages := map[string]*crypto_proto.VeloMessage{
+		"foreman": GetClientUpdateEventTableMessage(
+			self.Ctx, config_obj, state, []string{"Label1"}),
+		"client monitoring service": client_monitoring_service.
+			GetClientUpdateEventTableMessage(self.Ctx, config_obj, "C.NoLabels"),
+	}
+
+	for name, message := range messages {
+		timeouts := make(map[string]uint64)
+		for _, event := range message.UpdateEventTable.Event {
+			timeouts[utils.GetQueryName(event.Query)] = event.Timeout
+		}
+
+		expected := map[string]uint64{"ArtifactForAll": 0}
+		if name == "foreman" {
+			expected["ArtifactWithTimeout"] = 3600
+		}
+		assert.Equal(self.T(), expected, timeouts, name)
+	}
 }
 
 func (self *ForemanTestSuite) setupAllHunts() {
@@ -854,9 +906,7 @@ func (self *ForemanTestSuite) checkAssignedHunts(clientId string, expectedHunts 
 
 func TestForeman(t *testing.T) {
 	suite.Run(t, &ForemanTestSuite{
-		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"persisted"},
-		},
+		CloudTestSuite: &testsuite.CloudTestSuite{},
 	})
 }
 

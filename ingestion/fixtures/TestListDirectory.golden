@@ -107,15 +107,15 @@
    "timestamp": 1661385600000000000,
    "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
    "id": "",
-   "end_row": 14,
+   "end_row": 5,
    "total_rows": 0,
    "type": "rs_metadata"
   },
   {
-   "timestamp": 1661385600000000000,
+   "timestamp": 1661385600000000001,
    "vfs_path": "/clients/C.77ad4285690698d9/collections/F.CEV6I8LHAT83O/logs.json",
    "id": "",
-   "end_row": 5,
+   "end_row": 14,
    "total_rows": 0,
    "type": "rs_metadata"
   }

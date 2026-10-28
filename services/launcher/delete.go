@@ -106,6 +106,19 @@ func (self *FlowStorageManager) DeleteFlow(
 	notebook_id := fmt.Sprintf("N.%s-%s", flow_id, client_id)
 	r.delete_index("Notebook", "persisted", "notebook_id", notebook_id)
 
+	// Both the flow index and the flow cache still describe the deleted
+	// flow. shouldRebuildIndex stops rebuilding once the last collection
+	// document for the client is gone, so the index has to be rewritten
+	// here, and the GetFlowDetails call above has already repopulated the
+	// cache.
+	if options.ReallyDoIt {
+		err = self.buildIndex(ctx, config_obj, client_id)
+		if err != nil {
+			return nil, err
+		}
+		self.cache.Remove(client_id)
+	}
+
 	return r.responses, nil
 }
 
