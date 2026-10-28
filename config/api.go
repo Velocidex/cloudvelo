@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/Velocidex/yaml/v2"
 	jsonpatch "github.com/evanphx/json-patch/v5"
@@ -144,8 +145,32 @@ func (self *ConfigLoader) validateVeloConfig(config_obj *Config) error {
 	if err != nil {
 		return err
 	}
+
+	err = checkDatastoreCompression(velo_config)
+	if err != nil {
+		return err
+	}
+
 	config_obj.Config = *velo_config
 	return nil
+}
+
+// Ingestion only reads uncompressed VQL responses, so any compression
+// setting other than none is refused. An unset value becomes none.
+func checkDatastoreCompression(config_obj *config_proto.Config) error {
+	if config_obj.Datastore == nil {
+		return nil
+	}
+
+	switch strings.ToLower(strings.TrimSpace(config_obj.Datastore.Compression)) {
+	case "", "none":
+		config_obj.Datastore.Compression = "none"
+		return nil
+	}
+
+	return fmt.Errorf("Datastore.compression %q is not supported: "+
+		"ingestion only reads uncompressed responses, set it to \"none\"",
+		config_obj.Datastore.Compression)
 }
 
 func (self *ConfigLoader) Load() (*Config, error) {

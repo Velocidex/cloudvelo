@@ -1,14 +1,19 @@
 package uploads_test
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/Velocidex/ordereddict"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/stretchr/testify/suite"
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
@@ -36,6 +41,7 @@ import (
 	"www.velocidex.com/golang/velociraptor/vtesting"
 	"www.velocidex.com/golang/velociraptor/vtesting/assert"
 	"www.velocidex.com/golang/velociraptor/vtesting/goldie"
+	"www.velocidex.com/golang/vfilter"
 
 	_ "www.velocidex.com/golang/cloudvelo/vql_plugins"
 	_ "www.velocidex.com/golang/velociraptor/accessors/data"
@@ -278,6 +284,78 @@ func (self *UploaderTestSuite) TestSparseUploader() {
 
 }
 
+// Velociraptor 0.75 removed the explicit vql_subsystem.CheckFilesystemAccess()
+// call from this override and relies on accessors.GetAccessor() enforcing each
+// accessor's declared permissions instead. The override is ours, so nothing
+// upstream covers it - assert that a caller without the permission is still
+// refused, and that the refusal names the permission it lacked.
+func (self *UploaderTestSuite) TestUploadRefusedWithoutPermission() {
+	ctx := self.Sm.Ctx
+	wg := self.Sm.Wg
+
+	org_manager, err := services.GetOrgManager()
+	assert.NoError(self.T(), err)
+
+	org_config_obj, err := org_manager.GetOrgConfig(self.OrgId)
+	assert.NoError(self.T(), err)
+
+	self.startServerCommunicator(ctx, wg, org_config_obj)
+	self.startClientCommunicator(ctx, wg, org_config_obj)
+
+	resp := responder.TestResponderWithFlowId(
+		self.ConfigObj.VeloConf(), "F.1233")
+
+	// The bucket outlives the test run, so anything left over for this flow
+	// has to go before an absence can be asserted.
+	self.clearKeys("F.1233")
+
+	// A real readable file, so the permission check is the only thing
+	// between the upload and the filestore.
+	source := filepath.Join(self.T().TempDir(), "denied.txt")
+	err = os.WriteFile(source, []byte("Hello world"), 0600)
+	assert.NoError(self.T(), err)
+
+	// The refusal is only reported through the scope log, so capture it.
+	log_buffer := &syncBuffer{}
+
+	// An investigator can collect from clients but holds neither
+	// FILESYSTEM_READ nor SERVER_ADMIN.
+	builder := services.ScopeBuilder{
+		Config:       org_config_obj,
+		ClientConfig: org_config_obj.Client,
+		ACLManager: acl_managers.NewRoleACLManager(
+			org_config_obj, "investigator"),
+		Logger: log.New(log_buffer, "", 0),
+	}
+
+	manager, err := services.GetRepositoryManager(org_config_obj)
+	assert.NoError(self.T(), err)
+
+	scope := manager.BuildScope(builder)
+	defer scope.Close()
+
+	scope.SetContext(constants.SCOPE_RESPONDER_CONTEXT, resp)
+
+	res := (&uploads.UploadFunction{}).Call(ctx, scope,
+		ordereddict.NewDict().
+			Set("accessor", "file").
+			Set("file", source).
+			Set("name", "denied.txt"))
+
+	// The accessor is resolved while the arguments are parsed, so a refused
+	// upload never reaches the uploader and yields no UploadResponse.
+	assert.IsType(self.T(), vfilter.Null{}, res)
+
+	// Naming the permission rules out the upload having stopped for some
+	// other reason, which would leave this test green with no enforcement.
+	assert.Contains(self.T(), log_buffer.String(), "FILESYSTEM_READ")
+
+	// Nothing reached the bucket for this flow. Checking by flow id rather
+	// than by an expected path keeps the assertion from passing merely
+	// because the path was guessed wrong.
+	assert.Equal(self.T(), 0, len(self.checkForKey("F.1233")))
+}
+
 func (self *UploaderTestSuite) TestUploaderExactMultipleOfBuffer() {
 	ctx := self.Sm.Ctx
 	wg := self.Sm.Wg
@@ -378,14 +456,52 @@ func (self *UploaderTestSuite) TestUploaderExactMultipleOfBuffer() {
 		json.MustMarshalIndent(golden))
 }
 
+// The scope is closed from a deferred call while the test still reads the
+// log, so the writer has to be safe for concurrent use.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (self *syncBuffer) Write(p []byte) (int, error) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	return self.buf.Write(p)
+}
+
+func (self *syncBuffer) String() string {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	return self.buf.String()
+}
+
+func (self *UploaderTestSuite) clearKeys(filter string) {
+	session, err := filestore.GetS3Session(self.ConfigObj)
+	assert.NoError(self.T(), err)
+
+	svc := s3.New(session)
+	for _, key := range self.checkForKey(filter) {
+		_, err := svc.DeleteObject(&s3.DeleteObjectInput{
+			Bucket: &self.ConfigObj.Cloud.Bucket,
+			Key:    aws.String(key),
+		})
+		assert.NoError(self.T(), err)
+	}
+}
+
 func (self *UploaderTestSuite) checkForKey(filter string) []string {
 	// Check the actual path in the bucket we are in.
 	session, err := filestore.GetS3Session(self.ConfigObj)
 	assert.NoError(self.T(), err)
 
 	svc := s3.New(session)
+	// Only list this org's objects, the bucket is shared by all
+	// test packages.
 	res, err := svc.ListObjects(&s3.ListObjectsInput{
 		Bucket: &self.ConfigObj.Cloud.Bucket,
+		Prefix: aws.String("orgs/" + self.OrgId + "/"),
 	})
 	assert.NoError(self.T(), err)
 
@@ -401,10 +517,7 @@ func (self *UploaderTestSuite) checkForKey(filter string) []string {
 
 func TestUploader(t *testing.T) {
 	suite.Run(t, &UploaderTestSuite{
-		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"persisted"},
-			OrgId:   "test",
-		},
-		golden: ordereddict.NewDict(),
+		CloudTestSuite: &testsuite.CloudTestSuite{},
+		golden:         ordereddict.NewDict(),
 	})
 }

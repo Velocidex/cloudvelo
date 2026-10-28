@@ -19,8 +19,7 @@ jobs:
     - name: Install Opensearch
       uses: ankane/setup-opensearch@v1
       with:
-        # Matches Docker/docker-compose.yaml - v3 caused flaky test failures.
-        opensearch-version: 2
+        opensearch-version: 2.19.6
 
     - name: Start LocalStack
       env:
@@ -58,11 +57,12 @@ jobs:
       shell: bash
       run: |
         mkdir -p artifact_output/
-        go test -v ./vql/uploads/ ./foreman/ ./ingestion/ -update
+        go run make.go -v BareAssets
+        go test -v -p 1 ./vql/uploads/ ./foreman/ ./ingestion/ -update
         cp -a ./vql/uploads/fixtures/* ./foreman/fixtures/* ./ingestion/fixtures/* artifact_output/
 
     - uses: actions/upload-artifact@master
       if: ${{ failure() }}
       with:
-        name: artifact
+        name: regenerated-fixtures-diff-before-committing
         path: artifact_output

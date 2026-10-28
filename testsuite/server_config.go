@@ -218,6 +218,8 @@ Frontend:
     expected_clients: 10000
 Datastore:
   implementation: Test
+  # Ingestion only reads uncompressed responses; startup refuses any other value.
+  compression: none
 
 Mail: {}
 Logging:

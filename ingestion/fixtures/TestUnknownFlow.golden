@@ -1,0 +1,40 @@
+{
+ "UnknownFlow FlowDetail": {
+  "context": {
+   "client_id": "C.77ad4285690698d9",
+   "session_id": "F.CUNKNOWNFLOW1",
+   "create_time": 1661391001000000000,
+   "total_uploaded_bytes": 2048,
+   "total_collected_rows": 12,
+   "total_requests": 3,
+   "execution_duration": 6370402,
+   "state": 3,
+   "status": "Flow not known - maybe the client crashed?",
+   "query_stats": [
+    {
+     "duration": 6370402,
+     "Artifact": "Generic.Client.Info/BasicInformation",
+     "uploaded_bytes": 2048,
+     "result_rows": 5,
+     "query_id": 1,
+     "total_queries": 3
+    },
+    {
+     "duration": 5190402,
+     "Artifact": "Generic.Client.Info/Users",
+     "result_rows": 7,
+     "query_id": 2,
+     "total_queries": 3
+    },
+    {
+     "status": 10,
+     "error_message": "Flow not known - maybe the client crashed?",
+     "duration": 1000000,
+     "Artifact": "Generic.Client.Info/WindowsInfo",
+     "query_id": 3,
+     "total_queries": 3
+    }
+   ]
+  }
+ }
+}

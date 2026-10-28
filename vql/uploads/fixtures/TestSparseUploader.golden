@@ -4,12 +4,13 @@
   "Size": 15,
   "StoredSize": 10,
   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "md5": "d41d8cd98f00b204e9800998ecf8427e"
+  "md5": "d41d8cd98f00b204e9800998ecf8427e",
+  "UploadId": 0
  },
  "Sparse File Data": "the lox ju",
  "S3 files": [
-  "orgs/test/clients/C.1352adc54e292a23/collections/F.1231/uploads/sparse/0be2d1424fd102c85547fbcb46838ebe8617d98bb088c0bce5ab70234da97e90",
-  "orgs/test/clients/C.1352adc54e292a23/collections/F.1231/uploads/sparse/0be2d1424fd102c85547fbcb46838ebe8617d98bb088c0bce5ab70234da97e90.idx"
+  "orgs/test_vql_uploads/clients/C.1352adc54e292a23/collections/F.1231/uploads/sparse/0be2d1424fd102c85547fbcb46838ebe8617d98bb088c0bce5ab70234da97e90",
+  "orgs/test_vql_uploads/clients/C.1352adc54e292a23/collections/F.1231/uploads/sparse/0be2d1424fd102c85547fbcb46838ebe8617d98bb088c0bce5ab70234da97e90.idx"
  ],
  "IDX file": "{\"ranges\":[{\"file_length\":5,\"length\":5},{\"file_offset\":5,\"original_offset\":5,\"length\":5},{\"file_offset\":5,\"original_offset\":10,\"file_length\":5,\"length\":5}]}"
 }

@@ -1,0 +1,22 @@
+{
+ "session_id": "F.CUNKNOWNFLOW2.H",
+ "request_id": 981,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "flow_stats": {
+  "total_collected_rows": 5,
+  "total_logs": 3,
+  "timestamp": 1673423174265325,
+  "query_status": [
+   {
+    "status": 4,
+    "duration": 6370402,
+    "Artifact": "Generic.Client.Info",
+    "result_rows": 5,
+    "query_id": 1,
+    "total_queries": 1
+   }
+  ],
+  "flow_complete": false
+ }
+}

@@ -16,10 +16,6 @@ import (
 	vql_subsystem "www.velocidex.com/golang/velociraptor/vql"
 )
 
-var (
-	NotFoundError = errors.New("Not found")
-)
-
 type ClientInfoManager struct {
 	ClientInfoBase
 	ClientInfoQueuer
@@ -106,6 +102,18 @@ func (self *ClientInfoBase) Set(
 
 	cvelo_services.Count("SetClient")
 
+	// An empty client id would index a main record under a random
+	// document id. Validate through the org's client info manager.
+	client_info_manager, err := services.GetClientInfoManager(self.config_obj)
+	if err != nil {
+		return err
+	}
+
+	err = client_info_manager.ValidateClientId(client_info.ClientId)
+	if err != nil {
+		return err
+	}
+
 	now := utils.GetTime().Now().Unix()
 
 	return cvelo_services.SetElasticIndex(ctx,
@@ -140,6 +148,15 @@ func (self ClientInfoBase) Get(
 
 	cvelo_services.Count("GetClient")
 
+	// The server is a pseudo client - it has no record in the index.
+	if client_id == "server" {
+		return &services.ClientInfo{ClientInfo: &actions_proto.ClientInfo{
+			ClientId: client_id,
+			Hostname: client_id,
+			Fqdn:     client_id,
+		}}, nil
+	}
+
 	indexer, err := services.GetIndexer(self.config_obj)
 	if err != nil {
 		return nil, err
@@ -148,10 +165,11 @@ func (self ClientInfoBase) Get(
 	client_info, err := indexer.FastGetApiClient(
 		ctx, self.config_obj, client_id)
 	if err != nil {
-		return nil, err
+		return nil, utils.Wrap(err,
+			"Client ID %v not known in this org", client_id)
 	}
 
-	return &services.ClientInfo{actions_proto.ClientInfo{
+	return &services.ClientInfo{ClientInfo: &actions_proto.ClientInfo{
 		ClientId:              client_info.ClientId,
 		Hostname:              client_info.OsInfo.Hostname,
 		Fqdn:                  client_info.OsInfo.Fqdn,
@@ -177,7 +195,8 @@ func (self ClientInfoBase) GetStats(
 	}
 
 	if len(records) == 0 {
-		return nil, NotFoundError
+		return nil, utils.Wrap(utils.NotFoundError,
+			"Client ID %v not known in this org", client_id)
 	}
 
 	record := records[0]

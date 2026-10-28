@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -23,8 +26,6 @@ type CloudTestSuite struct {
 
 	OrgId     string
 	ConfigObj *config.Config
-
-	Indexes []string
 
 	Sm     *services.Service
 	Ctx    context.Context
@@ -89,6 +90,13 @@ func (self *CloudTestSuite) TearDownSuite() {
 func (self *CloudTestSuite) TearDownTest() {
 	self.cancel()
 	self.Sm.Close()
+
+	// SetupTest installs a new clock per test, so it has to be restored
+	// per test too - otherwise every test but the last leaks one.
+	if self.time_closer != nil {
+		self.time_closer()
+		self.time_closer = nil
+	}
 }
 
 func (self *CloudTestSuite) SetupTest() {
@@ -104,7 +112,7 @@ func (self *CloudTestSuite) SetupTest() {
 
 	test_org := self.OrgId
 	if test_org == "" {
-		test_org = "test"
+		test_org = defaultTestOrg()
 	}
 
 	// Delete the previous indexes for the org.
@@ -115,9 +123,42 @@ func (self *CloudTestSuite) SetupTest() {
 	assert.NoError(self.T(), err)
 
 	self.Sm = sm
+	self.OrgId = test_org
 	self.ConfigObj.OrgId = test_org
 
 	// Make sure the index templates are initialized if needed.
 	err = schema.InstallIndexTemplates(self.Ctx, config_obj)
 	assert.NoError(self.T(), err)
+}
+
+var invalidOrgChars = regexp.MustCompile("[^a-z0-9_]+")
+
+// Returns an org named after the test package, e.g.
+// test_services_launcher. SetupTest deletes the org's indexes and go
+// test runs packages in parallel, so packages sharing an org delete
+// each other's data mid test.
+func defaultTestOrg() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "test"
+	}
+
+	// go test runs in the package directory. Name the org after its
+	// path in the module so packages with the same name differ.
+	name := filepath.Base(cwd)
+	for dir := cwd; ; dir = filepath.Dir(dir) {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			rel, err := filepath.Rel(dir, cwd)
+			if err == nil && rel != "." {
+				name = rel
+			}
+			break
+		}
+		if filepath.Dir(dir) == dir {
+			break
+		}
+	}
+
+	return "test_" + invalidOrgChars.ReplaceAllString(
+		strings.ToLower(filepath.ToSlash(name)), "_")
 }

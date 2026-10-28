@@ -89,9 +89,6 @@ func GetClientUpdateEventTableMessage(
 		if event.MaxWait == 0 {
 			event.MaxWait = 120
 		}
-
-		// Event queries never time out
-		event.Timeout = 99999999
 	}
 
 	return &crypto_proto.VeloMessage{

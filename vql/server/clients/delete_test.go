@@ -126,8 +126,6 @@ func (self *DeleteTestSuite) getClientRecord(client_id string) *api.ClientRecord
 
 func TestDeletePlugin(t *testing.T) {
 	suite.Run(t, &DeleteTestSuite{
-		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"persisted"},
-		},
+		CloudTestSuite: &testsuite.CloudTestSuite{},
 	})
 }

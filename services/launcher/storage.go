@@ -280,29 +280,42 @@ func (self *FlowStorageManager) LoadCollectionContext(
 		// Try to get it again from the cache. Should be there this
 		// time.
 		flows_any, err = self.cache.Get(client_id)
-
-	} else {
-		cvelo_services.Count("LoadCollectionContext (Cached)")
 	}
 
 	flows, ok := flows_any.(*FlowCacheItem)
 	if ok {
-		hit, ok := flows.Get(flow_id)
-		if ok && hit != nil {
+		hit, pres := flows.Get(flow_id)
+
+		// The snapshot is per process with no cross process invalidation,
+		// so a non terminal entry may already be superseded.
+		if pres && hit != nil && IsTerminalFlowState(hit.State) {
+			cvelo_services.Count("LoadCollectionContext (Cached)")
 			return hit, nil
 		}
 	}
 
-	collection_context, err := self.LoadCollectionContextSlow(ctx, config_obj, client_id, flow_id)
-	if err == nil && ok {
-		flows.Set(flow_id, collection_context)
-	}
-	return collection_context, err
+	return self.LoadCollectionContextSlow(ctx, config_obj, client_id, flow_id)
+}
+
+// FINISHED and ERROR are the only states a collection does not leave.
+func IsTerminalFlowState(
+	state flows_proto.ArtifactCollectorContext_State) bool {
+	return state == flows_proto.ArtifactCollectorContext_FINISHED ||
+		state == flows_proto.ArtifactCollectorContext_ERROR
 }
 
 // The old slow version of LoadCollectionContext.
 // TODO: Remove when the new code is working well.
 func (self *FlowStorageManager) LoadCollectionContextSlow(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	client_id, flow_id string) (*flows_proto.ArtifactCollectorContext, error) {
+
+	return LoadCollectionContextFromIndex(ctx, config_obj, client_id, flow_id)
+}
+
+// Folds the collection records of one flow from the index.
+func LoadCollectionContextFromIndex(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	client_id, flow_id string) (*flows_proto.ArtifactCollectorContext, error) {
@@ -338,7 +351,7 @@ func (self *FlowStorageManager) LoadCollectionContextSlow(
 		collection_context = mergeRecords(collection_context, stats_context)
 	}
 	if collection_context == nil {
-		return nil, errors.New("Not found")
+		return nil, utils.NotFoundError
 	}
 	launcher.UpdateFlowStats(collection_context)
 

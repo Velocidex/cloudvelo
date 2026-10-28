@@ -54,7 +54,7 @@ func (self *DatastoreTest) TestDownloadQueriesOnTransientIndex() {
 	}
 
 	err := cvelo_services.SetElasticIndex(self.ctx,
-		"test", "transient", "", record)
+		self.ConfigObj.OrgId, "transient", "", record)
 
 	serialized = "{\"timestamp\":1715614088,\"total_uncompressed_bytes\":21375,\"total_compressed_bytes\":20054,\"total_container_files\":18,\"hash\":\"095079e35e17c37bd5ac6f602a15173697f404a2ac9ea4b1f54c653ab25706e2\",\"total_duration\":1,\"components\":[\"downloads\",\"hunts\",\"H.CP12M5IRRKRUE\",\"H.CP12M5IRRKRUE.zip\"],\"type\":\"zip\"}"
 	record = datastore.DatastoreRecord{
@@ -66,16 +66,16 @@ func (self *DatastoreTest) TestDownloadQueriesOnTransientIndex() {
 		Timestamp: utils.GetTime().Now().UnixNano(),
 	}
 	err = cvelo_services.SetElasticIndex(self.ctx,
-		"test", "transient", "", record)
+		self.ConfigObj.OrgId, "transient", "", record)
 
 	id := cvelo_services.MakeId(vfs_path)
 	hit, err := cvelo_services.GetElasticRecord(
-		self.ctx, "test", "transient", id)
+		self.ctx, self.ConfigObj.OrgId, "transient", id)
 	assert.Nil(self.T(), hit)
 	if assert.Error(self.T(), err) {
 		assert.Equal(self.T(), os.ErrNotExist, err)
 	}
-	result, _, err := cvelo_services.QueryElasticRaw(self.ctx, "test",
+	result, _, err := cvelo_services.QueryElasticRaw(self.ctx, self.ConfigObj.OrgId,
 		"transient", json.Format(get_datastore_doc_query, cvelo_services.MakeId(vfs_path)))
 
 	assert.NoError(self.T(), err)
@@ -83,8 +83,6 @@ func (self *DatastoreTest) TestDownloadQueriesOnTransientIndex() {
 }
 func TestDataStore(t *testing.T) {
 	suite.Run(t, &DatastoreTest{
-		CloudTestSuite: &testsuite.CloudTestSuite{
-			Indexes: []string{"transient"},
-		},
+		CloudTestSuite: &testsuite.CloudTestSuite{},
 	})
 }

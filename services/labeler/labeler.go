@@ -93,7 +93,19 @@ func (self Labeler) SetClientLabel(
 		return errors.New("Invalid Label should use only A-Z and 0-9")
 	}
 
-	err := cvelo_services.UpdateIndex(ctx,
+	// Otherwise a missing labels document is created for any client
+	// id, including an empty one.
+	client_info_manager, err := services.GetClientInfoManager(self.config_obj)
+	if err != nil {
+		return err
+	}
+
+	err = client_info_manager.ValidateClientId(client_id)
+	if err != nil {
+		return err
+	}
+
+	err = cvelo_services.UpdateIndex(ctx,
 		self.config_obj.OrgId,
 		"persisted", client_id+"_labels",
 		json.Format(label_update_query, all_label_painless, label,

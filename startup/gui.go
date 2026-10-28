@@ -74,11 +74,9 @@ func StartGUIServices(
 	// Register the "fs" accessor for accessing the filestore in VQL
 	fs_factory := file_store_accessor.NewFileStoreFileSystemAccessor(
 		config_obj.VeloConf())
-	accessors.Register("fs", fs_factory,
-		`Provide access to the server's filestore and datastore.
-
-Many VQL plugins produce references to files stored on the server. This accessor can be used to open those files and read them. Typically references to filestore or datastore files have the "fs:" or "ds:" prefix.
-`)
+	// The accessor now supplies its own name, description and required
+	// permissions via Describe().
+	accessors.Register(fs_factory)
 
 	// Apply allow listing to restrict server functionality.  It is
 	// possible to extend the default allow list in the config file.

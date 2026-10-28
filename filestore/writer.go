@@ -88,6 +88,16 @@ func (self *S3Writer) Write(data []byte) (size int, err error) {
 	return len(data), nil
 }
 
+// Writing compressed data requires a chunk index sidecar file so the
+// chunks can be located and inflated on read. The S3 filestore has no
+// concept of that sidecar, and nothing in cloudvelo produces compressed
+// result sets, so fail loudly rather than store data that could never be
+// read back.
+func (self *S3Writer) WriteCompressed(
+	data []byte, offset uint64, uncompressed_size int) (int, error) {
+	return 0, errors.New("Writing compressed filestore objects is not supported")
+}
+
 func (self *S3Writer) Update(data []byte, offset int64) error {
 	return errors.New("Updating filestore objects is not implemented yet")
 }

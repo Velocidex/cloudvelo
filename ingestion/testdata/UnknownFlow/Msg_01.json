@@ -1,0 +1,36 @@
+{
+ "session_id": "F.CUNKNOWNFLOW1",
+ "request_id": 981,
+ "source": "C.77ad4285690698d9",
+ "auth_state": 1,
+ "flow_stats": {
+  "total_collected_rows": 12,
+  "total_uploaded_bytes": 2048,
+  "total_logs": 3,
+  "timestamp": 1673423174265325,
+  "query_status": [
+   {
+    "duration": 6370402,
+    "Artifact": "Generic.Client.Info/BasicInformation",
+    "result_rows": 5,
+    "uploaded_bytes": 2048,
+    "query_id": 1,
+    "total_queries": 3
+   },
+   {
+    "duration": 5190402,
+    "Artifact": "Generic.Client.Info/Users",
+    "result_rows": 7,
+    "query_id": 2,
+    "total_queries": 3
+   },
+   {
+    "status": 4,
+    "duration": 1000000,
+    "Artifact": "Generic.Client.Info/WindowsInfo",
+    "query_id": 3,
+    "total_queries": 3
+   }
+  ]
+ }
+}

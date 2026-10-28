@@ -186,11 +186,22 @@ func (self *RepositoryManager) SetArtifactFile(
 	}
 
 	// Load the artifact into the currently running repository.
-	return global_repository.LoadYaml(definition,
+	artifact, err := global_repository.LoadYaml(definition,
 		services.ArtifactOptions{
 			ValidateArtifact:  true,
 			ArtifactIsBuiltIn: false,
 		})
+	if err != nil {
+		return nil, err
+	}
+
+	// LoadYaml clears the metadata but callers (e.g. artifact_set)
+	// update the returned metadata, so return what is stored.
+	cloud_repository, ok := global_repository.(*Repository)
+	if ok {
+		artifact = cloud_repository.decorateMetadata(ctx, artifact)
+	}
+	return artifact, nil
 }
 
 func (self *RepositoryManager) DeleteArtifactFile(
@@ -268,7 +279,18 @@ func (self *RepositoryManager) LoadBuiltInArtifacts(
 func (self *RepositoryManager) SetArtifactMetadata(
 	ctx context.Context, config_obj *config_proto.Config,
 	principal, name string, metadata *artifacts_proto.ArtifactMetadata) error {
-	return errors.New("RepositoryManager.SetArtifactMetadata not implemented")
+	global_repository, err := self.GetGlobalRepository(config_obj)
+	if err != nil {
+		return err
+	}
+
+	cloud_repository, ok := global_repository.(*Repository)
+	if !ok {
+		return errors.New(
+			"RepositoryManager.SetArtifactMetadata: unsupported repository")
+	}
+
+	return cloud_repository.SetMetadata(ctx, name, metadata)
 }
 
 func LoadOverridenArtifacts(

@@ -47,7 +47,9 @@ func (self *FlowStorageManager) WriteFlowIndex(
 	// The index of flows in the GUI.
 	cvelo_services.Count("WriteFlowIndex")
 
-	return self.buildIndex(ctx, config_obj, flow.ClientId)
+	err := self.buildIndex(ctx, config_obj, flow.ClientId)
+	self.cache.Remove(flow.ClientId)
+	return err
 
 	client_path_manager := paths.NewClientPathManager(flow.ClientId)
 	file_store_factory := file_store.GetFileStore(config_obj)

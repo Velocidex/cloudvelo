@@ -7,6 +7,7 @@ import (
 
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/result_sets"
@@ -47,32 +48,12 @@ func (self ResultSetFactory) NewResultSetWriter(
 	config_obj := cloud_config_obj.VeloConf()
 
 	new_id := fmt.Sprintf("%v", utils.GetGUID())
-	base_record := NewSimpleResultSetRecord(log_path, new_id)
 	ctx := context.Background()
 
-	var existing bool
-	md := &ResultSetMetadataRecord{
-		Timestamp: utils.GetTime().Now().UnixNano(),
-		VFSPath:   base_record.VFSPath,
-		ID:        new_id,
-		EndRow:    0,
-		Type:      "rs_metadata",
-	}
-
-	if !truncate {
-		// Get the existing metadata record
-		existing_md, err := GetResultSetMetadata(ctx, config_obj, log_path)
-		if err == nil {
-			md = existing_md
-			existing = true
-		}
-	}
-
-	if !existing {
-		err := SetResultSetMetadata(ctx, config_obj, log_path, md)
-		if err != nil {
-			return nil, err
-		}
+	md, err := openWriterMetadata(ctx, config_obj, log_path, truncate,
+		newWriterMetadata(log_path, new_id))
+	if err != nil {
+		return nil, err
 	}
 
 	return &ElasticSimpleResultSetWriter{
@@ -88,6 +69,66 @@ func (self ResultSetFactory) NewResultSetWriter(
 		rows_per_result_set: rows_per_result_set,
 		max_size_per_packet: max_size_per_packet,
 	}, nil
+}
+
+// The metadata record for a new version of a result set. Its byte
+// position is left unknown: after an abort the new version continues
+// a client's stream part way through, so it can not start at 0.
+func newWriterMetadata(
+	log_path api.FSPathSpec, id string) *ResultSetMetadataRecord {
+	return &ResultSetMetadataRecord{
+		Timestamp: utils.GetTime().Now().UnixNano(),
+		VFSPath:   NewSimpleResultSetRecord(log_path, id).VFSPath,
+		ID:        id,
+		EndRow:    0,
+		Type:      "rs_metadata",
+	}
+}
+
+// Returns the metadata record a new writer continues from. When
+// appending this is the existing record, otherwise new_md is stored
+// and used, which starts a new version of the result set.
+func openWriterMetadata(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	log_path api.FSPathSpec,
+	truncate result_sets.WriteMode,
+	new_md *ResultSetMetadataRecord) (*ResultSetMetadataRecord, error) {
+
+	if !truncate {
+		existing_md, err := getResultSetMetadata(ctx, config_obj, log_path)
+
+		if err == nil {
+			// An aborted result set can never be read again, so
+			// appending to it would make the new rows unreadable
+			// too. Start a new version instead so the result set
+			// recovers.
+			if existing_md.TotalRows >= 0 {
+				return existing_md, nil
+			}
+
+			// The new version has to replace the aborted record.
+			if new_md.Timestamp < existing_md.Timestamp {
+				new_md.Timestamp = existing_md.Timestamp
+			}
+		}
+	}
+
+	err := SetResultSetMetadata(ctx, config_obj, log_path, new_md)
+	if err != nil {
+		return nil, err
+	}
+	return new_md, nil
+}
+
+// Result sets live in the Elastic "transient" index, not in the
+// filestore. cloudvelo's own FlowStorageManager.DeleteFlow() removes them
+// with a delete-by-query, so this filestore based entry point is never
+// used here.
+func (self ResultSetFactory) DeleteResultSet(
+	file_store_factory api.FileStore,
+	path api.FSPathSpec) error {
+	return utils.NotImplementedError
 }
 
 func (self ResultSetFactory) NewResultSetReader(

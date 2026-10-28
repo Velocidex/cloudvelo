@@ -94,9 +94,6 @@ func (self *ClientMonitoringManager) GetClientUpdateEventTableMessage(
 			jitter = 20
 		}
 		event.MaxWait += uint64(rand.Intn(int(jitter)))
-
-		// Event queries never time out
-		event.Timeout = 99999999
 	}
 
 	return &crypto_proto.VeloMessage{

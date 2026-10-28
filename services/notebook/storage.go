@@ -13,6 +13,7 @@ import (
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/json"
 	"www.velocidex.com/golang/velociraptor/services"
+	velo_notebook "www.velocidex.com/golang/velociraptor/services/notebook"
 	"www.velocidex.com/golang/velociraptor/timelines"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
@@ -145,13 +146,8 @@ func (self *NotebookStoreImpl) SetNotebookCell(
 
 	// Update the cell's timestamp so the gui will refresh it.
 	new_cell_md := []*api_proto.NotebookCell{}
-	cell_summary := &api_proto.NotebookCell{
-		CellId:            in.CellId,
-		AvailableVersions: in.AvailableVersions,
-		CurrentVersion:    in.CurrentVersion,
-		Timestamp:         time.Now().UnixNano(),
-		Type:              in.Type,
-	}
+	cell_summary := velo_notebook.SummarizeCell(in)
+	cell_summary.Timestamp = time.Now().UnixNano()
 
 	existing := false
 	for _, cell_md := range notebook.CellMetadata {
