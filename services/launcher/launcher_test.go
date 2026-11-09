@@ -9,7 +9,10 @@ import (
 	"github.com/Velocidex/ordereddict"
 	"github.com/alecthomas/assert"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	cvelo_api "www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
 	"www.velocidex.com/golang/cloudvelo/services/client_info"
@@ -401,6 +404,93 @@ func (self *LauncherTestSuite) TestLoadCollectionContextIgnoresIndexRowWithoutFl
 	assert.NoError(self.T(), err)
 	assert.Equal(self.T(),
 		flows_proto.ArtifactCollectorContext_FINISHED, collection_context.State)
+}
+
+// Resuming a terminal collection must leave it exactly as stored and
+// queue nothing for the client.
+func (self *LauncherTestSuite) TestResumeFlowIsRefused() {
+	config_obj := self.ConfigObj.VeloConf()
+
+	launcher, err := services.GetLauncher(config_obj)
+	assert.NoError(self.T(), err)
+
+	for _, tc := range []struct {
+		name string
+		flow *flows_proto.ArtifactCollectorContext
+	}{{
+		name: "finished",
+		flow: &flows_proto.ArtifactCollectorContext{
+			ClientId:  "C.resumefinished",
+			SessionId: "F.resumefinished",
+			Request:   &flows_proto.ArtifactCollectorArgs{Timeout: 600},
+			State:     flows_proto.ArtifactCollectorContext_FINISHED,
+			QueryStats: []*crypto_proto.VeloStatus{{
+				Status:     crypto_proto.VeloStatus_OK,
+				ResultRows: 77,
+			}},
+		},
+	}, {
+		name: "error",
+		flow: &flows_proto.ArtifactCollectorContext{
+			ClientId:  "C.resumeerror",
+			SessionId: "F.resumeerror",
+			Request:   &flows_proto.ArtifactCollectorArgs{Timeout: 600},
+			State:     flows_proto.ArtifactCollectorContext_ERROR,
+			Status:    "query failed",
+			QueryStats: []*crypto_proto.VeloStatus{{
+				Status:       crypto_proto.VeloStatus_GENERIC_ERROR,
+				ErrorMessage: "query failed",
+				ResultRows:   3,
+			}},
+		},
+	}} {
+		self.Run(tc.name, func() {
+			client_id := tc.flow.ClientId
+			flow_id := tc.flow.SessionId
+
+			self.seedClient(config_obj, client_id)
+
+			err := launcher.Storage().WriteFlow(
+				self.Ctx, config_obj, tc.flow, utils.SyncCompleter)
+			assert.NoError(self.T(), err)
+
+			err = cvelo_services.FlushBulkIndexer()
+			assert.NoError(self.T(), err)
+
+			before, err := launcher.GetFlowDetails(self.Ctx, config_obj,
+				services.GetFlowOptions{}, client_id, flow_id)
+			assert.NoError(self.T(), err)
+			assert.Equal(self.T(), tc.flow.State, before.Context.State)
+
+			transactions, err := launcher.ResumeFlow(
+				self.Ctx, config_obj, client_id, flow_id)
+			assert.Error(self.T(), err)
+			assert.Equal(self.T(), codes.Unimplemented, status.Code(err))
+			assert.Nil(self.T(), transactions)
+
+			err = cvelo_services.FlushBulkIndexer()
+			assert.NoError(self.T(), err)
+
+			// A fresh instance has no snapshot, so this reads storage.
+			after, err := self.newLauncherInstance().GetFlowDetails(
+				self.Ctx, config_obj, services.GetFlowOptions{},
+				client_id, flow_id)
+			assert.NoError(self.T(), err)
+
+			assert.Equal(self.T(), before.Context.State, after.Context.State)
+			assert.Equal(self.T(), before.Context.Status, after.Context.Status)
+			assert.Equal(self.T(),
+				len(before.Context.QueryStats), len(after.Context.QueryStats))
+			for i := range before.Context.QueryStats {
+				assert.True(self.T(), proto.Equal(
+					before.Context.QueryStats[i], after.Context.QueryStats[i]))
+			}
+
+			tasks, err := PeekClientTasks(self.Ctx, config_obj, client_id)
+			assert.NoError(self.T(), err)
+			assert.Equal(self.T(), 0, len(tasks))
+		})
+	}
 }
 
 // Writes the index row shape an older build produces. The index is
