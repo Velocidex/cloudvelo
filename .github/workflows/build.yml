@@ -25,10 +25,10 @@ jobs:
         go get -v -t -d ./...
         sudo apt-get install mingw-w64-x86-64-dev gcc-mingw-w64-x86-64 gcc-mingw-w64 musl-tools
 
-    - name: Use Node.js v16
-      uses: actions/setup-node@v1
+    - name: Use Node.js v22
+      uses: actions/setup-node@v4
       with:
-        node-version: 16
+        node-version: 22.19
 
     - name: npm install gui
       run: |
