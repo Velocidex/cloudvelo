@@ -9,8 +9,6 @@ import (
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
-	"www.velocidex.com/golang/velociraptor/paths"
-	"www.velocidex.com/golang/velociraptor/services"
 	"www.velocidex.com/golang/velociraptor/utils"
 )
 
@@ -26,32 +24,12 @@ var (
 func PathspecToKey(config_obj *config.Config,
 	path_spec api.FSPathSpec) string {
 
-	components := path_spec.Components()
-
-	org_id := config_obj.OrgId
-	if isOwnFormUpload(config_obj, components) {
-		org_id = services.ROOT_ORG_ID
-	}
-
-	parts := []string{"orgs", utils.NormalizedOrgId(org_id)}
-	for _, component := range components {
+	parts := []string{"orgs", utils.NormalizedOrgId(config_obj.OrgId)}
+	for _, component := range path_spec.Components() {
 		parts = append(parts, utils.SanitizeString(component))
 	}
 
 	return strings.Join(parts, "/") + api.GetExtensionForFilestore(path_spec)
-}
-
-// Form uploads (UploadFormFile, used by the GUI to upload an artifact
-// pack) are always written to the root org's public/temp directory,
-// but LoadArtifactPack reads them back through the calling org's
-// filestore. Map an org's own form uploads to the root org so the
-// read finds them. The hash in the path is ObfuscateName(org,
-// filename), so an org can only reach uploads made from that org.
-func isOwnFormUpload(config_obj *config.Config, components []string) bool {
-	return len(components) == 4 &&
-		components[0] == paths.PUBLIC_ROOT.Components()[0] &&
-		components[1] == "temp" &&
-		components[2] == paths.ObfuscateName(&config_obj.Config, components[3])
 }
 
 // Build an S3 key from a client upload request.
