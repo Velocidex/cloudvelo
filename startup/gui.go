@@ -7,6 +7,7 @@ import (
 	"www.velocidex.com/golang/cloudvelo/services/orgs"
 	"www.velocidex.com/golang/cloudvelo/services/sanity"
 	"www.velocidex.com/golang/cloudvelo/services/scheduler"
+	"www.velocidex.com/golang/cloudvelo/startup/security"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	file_store_accessor "www.velocidex.com/golang/velociraptor/accessors/file_store"
 	"www.velocidex.com/golang/velociraptor/api"
@@ -67,6 +68,11 @@ func StartGUIServices(
 
 	// Start the sanity service to initialize if needed.
 	err = sanity.NewSanityCheckService(sm.Ctx, sm.Wg, config_obj)
+	if err != nil {
+		return sm, err
+	}
+
+	err = security.Apply(config_obj.VeloConf())
 	if err != nil {
 		return sm, err
 	}

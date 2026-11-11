@@ -225,6 +225,11 @@ Datastore:
   implementation: Test
   # Ingestion only reads uncompressed responses; startup refuses any other value.
   compression: none
+security:
+  allowed_fs_accessor_prefix:
+    - /clients
+    - /downloads
+    - /notebooks
 Writeback:
   private_key: |
     -----BEGIN RSA PRIVATE KEY-----
