@@ -19,6 +19,7 @@ type ClientRecord struct {
 	// Stored in '<client id>'
 	ClientId      string `json:"client_id,omitempty"`
 	Hostname      string `json:"hostname,omitempty"`
+	Fqdn          string `json:"fqdn,omitempty"`
 	Release       string `json:"release,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
 	ClientVersion string `json:"client_version,omitempty"`
@@ -59,6 +60,7 @@ func ToClientInfo(record *ClientRecord) *services.ClientInfo {
 		ClientInfo: &actions_proto.ClientInfo{
 			ClientId:              record.ClientId,
 			Hostname:              record.Hostname,
+			Fqdn:                  record.Fqdn,
 			System:                record.System,
 			FirstSeenAt:           record.FirstSeenAt,
 			Ping:                  record.Ping,
@@ -130,6 +132,10 @@ func mergeClientRecords(first *ClientRecord, second *ClientRecord) {
 
 	if second.Hostname != "" {
 		first.Hostname = second.Hostname
+	}
+
+	if second.Fqdn != "" {
+		first.Fqdn = second.Fqdn
 	}
 
 	if second.Release != "" {

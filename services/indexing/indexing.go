@@ -193,7 +193,12 @@ func (self Indexer) FastGetApiClient(
 }
 
 func _makeApiClient(client_info *cvelo_api.ClientRecord) *api_proto.ApiClient {
-	fqdn := client_info.Hostname
+	// Records indexed before the fqdn field existed have none until
+	// the client next sends Server.Internal.ClientInfo.
+	fqdn := client_info.Fqdn
+	if fqdn == "" {
+		fqdn = client_info.Hostname
+	}
 	return &api_proto.ApiClient{
 		ClientId: client_info.ClientId,
 		Labels:   client_info.Labels,

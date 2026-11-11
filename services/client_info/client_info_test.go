@@ -50,6 +50,26 @@ func (self *ClientInfoTestSuite) TestSetRejectsInvalidClientIds() {
 	assert.Equal(self.T(), "accepted", client_info.Hostname)
 }
 
+func (self *ClientInfoTestSuite) TestSetPersistsFqdn() {
+	config_obj := self.ConfigObj.VeloConf()
+
+	client_info_manager, err := services.GetClientInfoManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	err = client_info_manager.Set(self.Ctx, &services.ClientInfo{
+		ClientInfo: &actions_proto.ClientInfo{
+			ClientId: "C.1234",
+			Hostname: "devbox",
+			Fqdn:     "devbox.corp.example.com",
+		}})
+	assert.NoError(self.T(), err)
+
+	client_info, err := client_info_manager.Get(self.Ctx, "C.1234")
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), "devbox", client_info.Hostname)
+	assert.Equal(self.T(), "devbox.corp.example.com", client_info.Fqdn)
+}
+
 func TestClientInfo(t *testing.T) {
 	suite.Run(t, &ClientInfoTestSuite{
 		CloudTestSuite: &testsuite.CloudTestSuite{},
