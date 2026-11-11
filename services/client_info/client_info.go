@@ -122,6 +122,7 @@ func (self *ClientInfoBase) Set(
 		&api.ClientRecord{
 			ClientId:              client_info.ClientId,
 			Hostname:              client_info.Hostname,
+			Fqdn:                  client_info.Fqdn,
 			System:                client_info.System,
 			FirstSeenAt:           client_info.FirstSeenAt,
 			Type:                  "main",

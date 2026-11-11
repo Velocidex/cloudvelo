@@ -14,6 +14,7 @@ import (
 type ClientInfoUpdate struct {
 	ClientId      string `json:"client_id"`
 	Hostname      string `json:"hostname"`
+	Fqdn          string `json:"fqdn"`
 	Release       string `json:"release"`
 	Architecture  string `json:"architecture"`
 	ClientVersion string `json:"client_version"`
@@ -65,7 +66,7 @@ func (self Ingestor) HandleClientInfoUpdates(
 			&services.ClientInfo{ClientInfo: &actions_proto.ClientInfo{
 				ClientId:      message.Source,
 				Hostname:      row.Hostname,
-				Fqdn:          row.Hostname,
+				Fqdn:          row.Fqdn,
 				ClientVersion: row.ClientVersion,
 				BuildTime:     row.BuildTime,
 				System:        row.System,

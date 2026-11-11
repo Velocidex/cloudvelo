@@ -33,6 +33,7 @@ func (self *SearchTestSuite) SetupTest() {
 
 	self.seed(onlineClient, api.ClientRecord{
 		ClientId: onlineClient, Hostname: "alpha-1",
+		Fqdn: "alpha-1.corp.example.com",
 		Type: "main", DocType: "clients"})
 	self.seed(onlineClient+"_ping", api.ClientRecord{
 		ClientId: onlineClient, Ping: now,
@@ -102,6 +103,23 @@ func (self *SearchTestSuite) TestFreeTextClientId() {
 
 func (self *SearchTestSuite) TestFreeTextNoMatch() {
 	self.assertSearch("gamma", api_proto.SearchClientsRequest_UNFILTERED, 0, 0)
+}
+
+func (self *SearchTestSuite) TestApiClientFqdn() {
+	config_obj := self.ConfigObj.VeloConf()
+
+	indexer, err := services.GetIndexer(config_obj)
+	assert.NoError(self.T(), err)
+
+	client, err := indexer.FastGetApiClient(self.Ctx, config_obj, onlineClient)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), "alpha-1", client.OsInfo.Hostname)
+	assert.Equal(self.T(), "alpha-1.corp.example.com", client.OsInfo.Fqdn)
+
+	// Indexed before the fqdn field existed.
+	client, err = indexer.FastGetApiClient(self.Ctx, config_obj, offlineClient)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), "alpha-2", client.OsInfo.Fqdn)
 }
 
 func (self *SearchTestSuite) seed(id string, record api.ClientRecord) {

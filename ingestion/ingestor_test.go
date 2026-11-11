@@ -130,6 +130,14 @@ func (self *IngestionTestSuite) TestEnrollment() {
 	assert.NoError(self.T(), err)
 	self.golden.Set("ClientRecord", result[0])
 
+	client_info_manager, err := services.GetClientInfoManager(config_obj)
+	assert.NoError(self.T(), err)
+
+	client_info, err := client_info_manager.Get(self.ctx, client_id)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), "devbox", client_info.Hostname)
+	assert.Equal(self.T(), "devbox.corp.example.com", client_info.Fqdn)
+
 	// Record results in monitoring data.
 	records, _, err := cvelo_services.QueryElasticRaw(self.ctx,
 		self.ConfigObj.OrgId, "transient", getAllItemsQuery)
