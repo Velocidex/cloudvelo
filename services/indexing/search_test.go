@@ -127,10 +127,13 @@ func (self *SearchTestSuite) TestApiClientFqdn() {
 
 func (self *SearchTestSuite) TestLabelWildcards() {
 	for _, query := range []string{
-		"label:*", "label:", "label:pro", "label:p*d", "label:*ROD"} {
+		"label:*", "label:", "label:pro", "label:p*d", "label:*ROD",
+		"label:p*o", "label:*r*o", "label:*RO"} {
 		self.assertSearchIds(query, onlineClient, offlineClient)
 	}
 	self.assertSearchIds("label:x*")
+	self.assertSearchIds("label:p*x")
+	self.assertSearchIds("label:ro*")
 	self.assertSearchIds("label:pro?")
 }
 
@@ -138,6 +141,8 @@ func (self *SearchTestSuite) TestHostWildcards() {
 	self.assertSearchIds("host:A*", onlineClient, offlineClient)
 	self.assertSearchIds("host:*-1", onlineClient, plainClient)
 	self.assertSearchIds("host:a*2", offlineClient)
+	self.assertSearchIds("host:al*a", onlineClient, offlineClient)
+	self.assertSearchIds("host:*et*", plainClient)
 }
 
 func (self *SearchTestSuite) TestLabelNone() {

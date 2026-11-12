@@ -203,7 +203,7 @@ var (
 
 func fieldWildcardTerm(field, term string) string {
 	pattern := wildcardEscaper.Replace(term)
-	if !strings.Contains(pattern, "*") {
+	if !strings.HasSuffix(pattern, "*") {
 		pattern += "*"
 	}
 	return json.Format(fieldWildcardQuery, field, pattern)
