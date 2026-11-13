@@ -77,7 +77,8 @@ func (self *Indexer) searchWithNames(
 	field, operator, label string,
 	offset, limit uint64) (*api_proto.SearchClientsResponse, error) {
 
-	query := json.Format(getAllClientsAgg, field, label,
+	prefix, filter := splitSearchTermIntoPrefixAndFilter(label)
+	query := json.Format(getAllClientsAgg, field, prefix,
 		field, offset, limit+1)
 	hits, err := cvelo_services.QueryElasticAggregations(
 		ctx, config_obj.OrgId, "persisted", query)
@@ -85,7 +86,6 @@ func (self *Indexer) searchWithNames(
 		return nil, err
 	}
 
-	prefix, filter := splitSearchTermIntoPrefixAndFilter(label)
 	result := &api_proto.SearchClientsResponse{}
 	for _, hit := range hits {
 		if !strings.HasPrefix(hit, prefix) {

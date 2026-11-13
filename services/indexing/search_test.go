@@ -1,12 +1,14 @@
 package indexing_test
 
 import (
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
 	"www.velocidex.com/golang/cloudvelo/schema/api"
 	cvelo_services "www.velocidex.com/golang/cloudvelo/services"
+	"www.velocidex.com/golang/cloudvelo/services/indexing"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
 	api_proto "www.velocidex.com/golang/velociraptor/api/proto"
 	"www.velocidex.com/golang/velociraptor/services"
@@ -17,6 +19,7 @@ const (
 	onlineClient  = "C.1000000000000001"
 	offlineClient = "C.1000000000000002"
 	plainClient   = "C.1000000000000003"
+	emptiedClient = "C.1000000000000004"
 	unknownClient = "C.ffffffffffffffff"
 )
 
@@ -122,7 +125,116 @@ func (self *SearchTestSuite) TestApiClientFqdn() {
 	assert.Equal(self.T(), "alpha-2", client.OsInfo.Fqdn)
 }
 
-func (self *SearchTestSuite) seed(id string, record api.ClientRecord) {
+func (self *SearchTestSuite) TestLabelWildcards() {
+	for _, query := range []string{
+		"label:*", "label:", "label:pro", "label:p*d", "label:*ROD",
+		"label:p*o", "label:*r*o", "label:*RO"} {
+		self.assertSearchIds(query, onlineClient, offlineClient)
+	}
+	self.assertSearchIds("label:x*")
+	self.assertSearchIds("label:p*x")
+	self.assertSearchIds("label:ro*")
+	self.assertSearchIds("label:pro?")
+}
+
+func (self *SearchTestSuite) TestHostWildcards() {
+	self.assertSearchIds("host:A*", onlineClient, offlineClient)
+	self.assertSearchIds("host:*-1", onlineClient, plainClient)
+	self.assertSearchIds("host:a*2", offlineClient)
+	self.assertSearchIds("host:al*a", onlineClient, offlineClient)
+	self.assertSearchIds("host:*et*", plainClient)
+}
+
+func (self *SearchTestSuite) TestLabelNone() {
+	self.seedEmptiedLabels()
+	self.assertSearchIds("label:none", plainClient, emptiedClient)
+	assert.Equal(self.T(), sorted(plainClient, emptiedClient),
+		sorted(self.searchChanIds("label:none")...))
+}
+
+func (self *SearchTestSuite) TestLabelNonePagesLabelledClients() {
+	defer indexing.SetLabelledClientsLimits(1, 10)()
+	self.assertSearchIds("label:none", plainClient)
+}
+
+func (self *SearchTestSuite) TestLabelNoneFailsAboveTermsLimit() {
+	defer indexing.SetLabelledClientsLimits(1, 1)()
+
+	_, err := self.search("label:none", false)
+	assert.ErrorContains(self.T(), err, "at most 1 labelled clients")
+
+	config_obj := self.ConfigObj.VeloConf()
+	indexer, err := services.GetIndexer(config_obj)
+	assert.NoError(self.T(), err)
+	_, err = indexer.SearchClientsChan(self.Ctx, nil, config_obj, "label:none", "")
+	assert.ErrorContains(self.T(), err, "at most 1 labelled clients")
+}
+
+func (self *SearchTestSuite) TestLabelNameSuggestionWildcards() {
+	result, err := self.search("label:P*d", true)
+	assert.NoError(self.T(), err)
+	assert.Equal(self.T(), []string{"label:Prod"}, result.Names)
+}
+
+func (self *SearchTestSuite) seedEmptiedLabels() {
+	self.seed(emptiedClient, api.ClientRecord{
+		ClientId: emptiedClient, Hostname: "beta-2",
+		Type: "main", DocType: "clients"})
+	self.seed(emptiedClient+"_labels", map[string]interface{}{
+		"client_id": emptiedClient, "labels": []string{},
+		"lower_labels": []string{}, "doc_type": "clients"})
+}
+
+func (self *SearchTestSuite) search(query string, name_only bool) (
+	*api_proto.SearchClientsResponse, error) {
+	config_obj := self.ConfigObj.VeloConf()
+
+	indexer, err := services.GetIndexer(config_obj)
+	assert.NoError(self.T(), err)
+	return indexer.SearchClients(self.Ctx, config_obj,
+		&api_proto.SearchClientsRequest{
+			Query:    query,
+			Limit:    10,
+			NameOnly: name_only,
+		}, "admin")
+}
+
+func (self *SearchTestSuite) assertSearchIds(query string, expected ...string) {
+	result, err := self.search(query, false)
+	assert.NoError(self.T(), err)
+
+	ids := []string{}
+	for _, item := range result.Items {
+		ids = append(ids, item.ClientId)
+	}
+	assert.Equal(self.T(), sorted(expected...), sorted(ids...), "Items for %q", query)
+	assert.Equal(self.T(), uint64(len(expected)), result.Total, "Total for %q", query)
+}
+
+func (self *SearchTestSuite) searchChanIds(query string) []string {
+	config_obj := self.ConfigObj.VeloConf()
+
+	indexer, err := services.GetIndexer(config_obj)
+	assert.NoError(self.T(), err)
+
+	search_chan, err := indexer.SearchClientsChan(
+		self.Ctx, nil, config_obj, query, "")
+	assert.NoError(self.T(), err)
+
+	ids := []string{}
+	for client := range search_chan {
+		ids = append(ids, client.ClientId)
+	}
+	return ids
+}
+
+func sorted(ids ...string) []string {
+	result := append([]string{}, ids...)
+	sort.Strings(result)
+	return result
+}
+
+func (self *SearchTestSuite) seed(id string, record interface{}) {
 	err := cvelo_services.SetElasticIndex(
 		self.Ctx, self.OrgId, "persisted", id, record)
 	assert.NoError(self.T(), err)

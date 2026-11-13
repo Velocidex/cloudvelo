@@ -4,6 +4,7 @@ package indexing
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -177,8 +178,36 @@ func (self *Indexer) getAllClients(
 }
 
 const (
-	fieldSearchQuery = `{"prefix": {%q: {"value": %q, "case_insensitive": true}}}`
+	fieldSearchQuery   = `{"prefix": {%q: {"value": %q, "case_insensitive": true}}}`
+	fieldWildcardQuery = `{"wildcard": {%q: {"value": %q, "case_insensitive": true}}}`
+
+	labelledClientsQuery = `
+{"sort": [{
+    "client_id": {"order": "asc", "unmapped_type": "keyword"}
+ }],
+ "query": {"exists": {"field": "labels"}},
+ "_source": false,
+ "size": %q
+ %s
+}
+`
+	unlabelledClientsQuery = `{"bool": {"must_not": {"terms": {"client_id": %q}}}}`
 )
+
+var (
+	labelledClientsPageSize = 10000
+	maxTermsCount           = 65536
+
+	wildcardEscaper = strings.NewReplacer(`\`, `\\`, `?`, `\?`)
+)
+
+func fieldWildcardTerm(field, term string) string {
+	pattern := wildcardEscaper.Replace(term)
+	if !strings.HasSuffix(pattern, "*") {
+		pattern += "*"
+	}
+	return json.Format(fieldWildcardQuery, field, pattern)
+}
 
 func (self *Indexer) searchClientsByLabel(
 	ctx context.Context,
@@ -187,9 +216,57 @@ func (self *Indexer) searchClientsByLabel(
 	in *api_proto.SearchClientsRequest,
 	limit uint64) ([]*api.ClientRecord, int, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "labels", label)}
+	terms := []string{fieldWildcardTerm("labels", label)}
 	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
+}
+
+func (self *Indexer) searchUnlabeledClients(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	in *api_proto.SearchClientsRequest) ([]*api.ClientRecord, int, error) {
+
+	unlabelled, err := self.unlabelledClientsTerm(ctx, config_obj)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	terms := []string{allClientsQuery, unlabelled}
+	return self.searchWithTerms(ctx, config_obj,
+		in.Filter, terms, in.Offset, in.Limit)
+}
+
+func (self *Indexer) unlabelledClientsTerm(
+	ctx context.Context,
+	config_obj *config_proto.Config) (string, error) {
+
+	labelled := []string{}
+	search_after := ""
+	for {
+		hits, _, err := cvelo_services.QueryElasticIds(
+			ctx, config_obj.OrgId, "persisted", json.Format(
+				labelledClientsQuery, labelledClientsPageSize, search_after))
+		if err != nil {
+			return "", err
+		}
+
+		for _, hit := range hits {
+			labelled = append(labelled, api.GetClientIdFromDocId(hit))
+		}
+
+		if len(labelled) > maxTermsCount {
+			return "", fmt.Errorf(
+				"label:none supports at most %d labelled clients",
+				maxTermsCount)
+		}
+
+		if len(hits) < labelledClientsPageSize {
+			return json.Format(unlabelledClientsQuery, labelled), nil
+		}
+
+		search_after = json.Format(`, "search_after": [%q]`,
+			labelled[len(labelled)-1])
+	}
 }
 
 func (self *Indexer) searchClientsByHost(
@@ -204,7 +281,7 @@ func (self *Indexer) searchClientsByHost(
 			"hostname", operator, hostname, in.Offset, in.Limit)
 	}
 
-	terms := []string{json.Format(fieldSearchQuery, "hostname", hostname)}
+	terms := []string{fieldWildcardTerm("hostname", hostname)}
 	if hostname == "*" {
 		terms = []string{allClientsQuery}
 	}
@@ -226,7 +303,7 @@ func (self *Indexer) searchClientsByMac(
 	in *api_proto.SearchClientsRequest,
 	limit uint64) ([]*api.ClientRecord, int, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "mac_addresses", mac)}
+	terms := []string{fieldWildcardTerm("mac_addresses", mac)}
 	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
 }
@@ -238,7 +315,7 @@ func (self *Indexer) searchClientsByOs(
 	in *api_proto.SearchClientsRequest,
 	limit uint64) ([]*api.ClientRecord, int, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "system", mac)}
+	terms := []string{fieldWildcardTerm("system", mac)}
 	return self.searchWithTerms(ctx, config_obj,
 		in.Filter, terms, in.Offset, in.Limit)
 }
@@ -400,6 +477,9 @@ func (self *Indexer) SearchClientRecords(
 		return self.getAllClients(ctx, config_obj, in, limit)
 
 	case "label":
+		if term == "none" {
+			return self.searchUnlabeledClients(ctx, config_obj, in)
+		}
 		return self.searchClientsByLabel(ctx, config_obj,
 			operator, term, in, limit)
 

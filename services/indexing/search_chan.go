@@ -31,7 +31,7 @@ func (self *Indexer) searchClientsByMacChan(
 	config_obj *config_proto.Config,
 	mac string) (chan *api.ClientRecord, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "mac_addresses", mac)}
+	terms := []string{fieldWildcardTerm("mac_addresses", mac)}
 	return self.searchWithTermsChan(ctx, config_obj, terms)
 }
 
@@ -40,7 +40,7 @@ func (self *Indexer) searchClientsByHostChan(
 	config_obj *config_proto.Config,
 	hostname string) (chan *api.ClientRecord, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "hostname", hostname)}
+	terms := []string{fieldWildcardTerm("hostname", hostname)}
 	return self.searchWithTermsChan(ctx, config_obj, terms)
 }
 
@@ -58,8 +58,20 @@ func (self *Indexer) searchClientsByLabelChan(
 	config_obj *config_proto.Config,
 	label string) (chan *api.ClientRecord, error) {
 
-	terms := []string{json.Format(fieldSearchQuery, "labels", label)}
+	terms := []string{fieldWildcardTerm("labels", label)}
 	return self.searchWithTermsChan(ctx, config_obj, terms)
+}
+
+func (self *Indexer) searchUnlabeledClientsChan(
+	ctx context.Context,
+	config_obj *config_proto.Config) (chan *api.ClientRecord, error) {
+
+	unlabelled, err := self.unlabelledClientsTerm(ctx, config_obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return self.searchWithTermsChan(ctx, config_obj, []string{unlabelled})
 }
 
 func (self *Indexer) searchWithTermsChan(
@@ -179,6 +191,9 @@ func (self *Indexer) SearchClientRecordsChan(
 		return self.SearchAfterClients(ctx, config_obj, timestamp)
 
 	case "label":
+		if term == "none" {
+			return self.searchUnlabeledClientsChan(ctx, config_obj)
+		}
 		return self.searchClientsByLabelChan(ctx, config_obj, term)
 
 	case "", "host":
