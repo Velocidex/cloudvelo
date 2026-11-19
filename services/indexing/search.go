@@ -4,6 +4,7 @@ package indexing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -50,7 +51,7 @@ const (
 {"sort": [{
     "timestamp": {"order": "desc", "unmapped_type": "long"}
   }],
-  "query": {"term": {"username": %q}},
+  "query": {"bool": {"must": [%s]}},
   "from": %q, "size": %q
 }`
 )
@@ -60,12 +61,19 @@ const (
 func (self *Indexer) searchRecents(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	principal string, term string, from, limit uint64) (
-	[]*api.ClientRecord, int, error) {
+	principal string, term string,
+	filter api_proto.SearchClientsRequest_Filters,
+	from, limit uint64) ([]*api.ClientRecord, int, error) {
+
+	terms, err := self.filteredTerms(ctx, config_obj, filter,
+		[]string{json.Format(`{"term": {"username": %q}}`, principal)})
+	if err != nil {
+		return nil, 0, err
+	}
 
 	hits, total, err := cvelo_services.QueryElasticRaw(
 		ctx, config_obj.OrgId, "persisted", json.Format(
-			clientsMRUQuery, principal, from, limit))
+			clientsMRUQuery, strings.Join(terms, ","), from, limit))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -181,17 +189,21 @@ const (
 	fieldSearchQuery   = `{"prefix": {%q: {"value": %q, "case_insensitive": true}}}`
 	fieldWildcardQuery = `{"wildcard": {%q: {"value": %q, "case_insensitive": true}}}`
 
-	labelledClientsQuery = `
+	clientIdsQuery = `
 {"sort": [{
     "client_id": {"order": "asc", "unmapped_type": "keyword"}
  }],
- "query": {"exists": {"field": "labels"}},
+ "query": %s,
  "_source": false,
  "size": %q
  %s
 }
 `
+	labelledClientsQuery   = `{"exists": {"field": "labels"}}`
 	unlabelledClientsQuery = `{"bool": {"must_not": {"terms": {"client_id": %q}}}}`
+	onlineClientsQuery     = `{"terms": {"client_id": %q}}`
+
+	onlineWindow = 15 * time.Minute
 )
 
 var (
@@ -199,6 +211,8 @@ var (
 	maxTermsCount           = 65536
 
 	wildcardEscaper = strings.NewReplacer(`\`, `\\`, `?`, `\?`)
+
+	errTooManyClients = errors.New("too many clients")
 )
 
 func fieldWildcardTerm(field, term string) string {
@@ -240,32 +254,66 @@ func (self *Indexer) unlabelledClientsTerm(
 	ctx context.Context,
 	config_obj *config_proto.Config) (string, error) {
 
-	labelled := []string{}
+	labelled, err := matchingClientIds(ctx, config_obj, labelledClientsQuery)
+	if errors.Is(err, errTooManyClients) {
+		return "", fmt.Errorf(
+			"label:none supports at most %d labelled clients", maxTermsCount)
+	}
+	if err != nil {
+		return "", err
+	}
+	return json.Format(unlabelledClientsQuery, labelled), nil
+}
+
+func (self *Indexer) onlineClientsTerm(
+	ctx context.Context,
+	config_obj *config_proto.Config) (string, error) {
+
+	online, err := matchingClientIds(ctx, config_obj,
+		json.Format(recentClientsQuery, onlineThreshold()))
+	if errors.Is(err, errTooManyClients) {
+		return "", fmt.Errorf(
+			"the Online filter supports at most %d online clients", maxTermsCount)
+	}
+	if err != nil {
+		return "", err
+	}
+	return json.Format(onlineClientsQuery, online), nil
+}
+
+func onlineThreshold() uint64 {
+	return uint64(time.Now().Add(-onlineWindow).UnixNano())
+}
+
+func matchingClientIds(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	query string) ([]string, error) {
+
+	client_ids := []string{}
 	search_after := ""
 	for {
 		hits, _, err := cvelo_services.QueryElasticIds(
 			ctx, config_obj.OrgId, "persisted", json.Format(
-				labelledClientsQuery, labelledClientsPageSize, search_after))
+				clientIdsQuery, query, labelledClientsPageSize, search_after))
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		for _, hit := range hits {
-			labelled = append(labelled, api.GetClientIdFromDocId(hit))
+			client_ids = append(client_ids, api.GetClientIdFromDocId(hit))
 		}
 
-		if len(labelled) > maxTermsCount {
-			return "", fmt.Errorf(
-				"label:none supports at most %d labelled clients",
-				maxTermsCount)
+		if len(client_ids) > maxTermsCount {
+			return nil, errTooManyClients
 		}
 
 		if len(hits) < labelledClientsPageSize {
-			return json.Format(unlabelledClientsQuery, labelled), nil
+			return client_ids, nil
 		}
 
 		search_after = json.Format(`, "search_after": [%q]`,
-			labelled[len(labelled)-1])
+			client_ids[len(client_ids)-1])
 	}
 }
 
@@ -291,9 +339,14 @@ func (self *Indexer) searchClientsByHost(
 		dir = "desc"
 	}
 
+	terms, err := self.filteredTerms(ctx, config_obj, in.Filter, terms)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	sorter := json.Format(sortQueryPart, "hostname", dir)
 	return self.searchWithSortTerms(ctx, config_obj,
-		sorter, in.Filter, terms, in.Offset, in.Limit)
+		sorter, terms, in.Offset, in.Limit)
 }
 
 func (self *Indexer) searchClientsByMac(
@@ -368,12 +421,17 @@ func (self *Indexer) searchWithTerms(
 	offset, limit uint64) ([]*api.ClientRecord, int, error) {
 	sorter := json.Format(sortQueryPart, "client_id", "asc")
 
-	clients, _, err := self.searchWithSortTerms(ctx, config_obj, sorter, filter, terms, offset, limit)
+	terms, err := self.filteredTerms(ctx, config_obj, filter, terms)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	total, err := self.CountWithTerms(ctx, config_obj, filter, terms)
+	clients, _, err := self.searchWithSortTerms(ctx, config_obj, sorter, terms, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := self.CountWithTerms(ctx, config_obj, terms)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -384,35 +442,38 @@ func (self *Indexer) searchWithTerms(
 func (self *Indexer) CountWithTerms(
 	ctx context.Context,
 	config_obj *config_proto.Config,
-	filter api_proto.SearchClientsRequest_Filters,
 	terms []string) (total int, err error) {
-
-	if filter == api_proto.SearchClientsRequest_ONLINE {
-		terms = []string{json.Format(recentClientsQuery,
-			time.Now().UnixNano()-600000000000)}
-	}
 
 	query := json.Format(getClientsQuery, strings.Join(terms, ","))
 	return cvelo_services.QueryCountAPI(ctx, config_obj.OrgId, "persisted", query)
+}
+
+// Ping is stored in its own document, so it can not share a bool
+// query with the hostname or label documents. Match on client_id
+// instead.
+func (self *Indexer) filteredTerms(
+	ctx context.Context,
+	config_obj *config_proto.Config,
+	filter api_proto.SearchClientsRequest_Filters,
+	terms []string) ([]string, error) {
+
+	if filter != api_proto.SearchClientsRequest_ONLINE {
+		return terms, nil
+	}
+
+	online, err := self.onlineClientsTerm(ctx, config_obj)
+	if err != nil {
+		return nil, err
+	}
+	return append(append([]string{}, terms...), online), nil
 }
 
 func (self *Indexer) searchWithSortTerms(
 	ctx context.Context,
 	config_obj *config_proto.Config,
 	sorter string,
-	filter api_proto.SearchClientsRequest_Filters,
 	terms []string,
 	offset, limit uint64) (records []*api.ClientRecord, total int, err error) {
-
-	// Show clients that pinged more recently than 10 min ago
-	if filter == api_proto.SearchClientsRequest_ONLINE {
-		// We can not have both conditions because the records are
-		// split: A ping range query operates on ping records but
-		// other queries (like hostname queries) operate on the
-		// hostname which may be in a different record.
-		terms = []string{json.Format(recentClientsQuery,
-			time.Now().UnixNano()-600000000000)}
-	}
 
 	query := json.Format(
 		getSortedClientsQuery,
@@ -501,7 +562,7 @@ func (self *Indexer) SearchClientRecords(
 
 	case "recent":
 		return self.searchRecents(ctx, config_obj,
-			principal, term, in.Offset, limit)
+			principal, term, in.Filter, in.Offset, limit)
 
 	default:
 		return self.searchVerbs(ctx, config_obj, in, limit)
@@ -517,6 +578,17 @@ func (self *Indexer) searchClientsByClientId(
 	records, err := api.GetMultipleClients(ctx, config_obj, []string{client_id})
 	if err != nil {
 		return nil, 0, err
+	}
+
+	if in.Filter == api_proto.SearchClientsRequest_ONLINE {
+		online := []*api.ClientRecord{}
+		threshold := onlineThreshold()
+		for _, record := range records {
+			if record.Ping > threshold {
+				online = append(online, record)
+			}
+		}
+		records = online
 	}
 	return records, len(records), nil
 }
