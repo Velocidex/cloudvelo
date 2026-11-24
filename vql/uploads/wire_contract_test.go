@@ -105,3 +105,40 @@ func TestUploaderWireContract(t *testing.T) {
 		}
 	}
 }
+
+type v1CompletedPart struct {
+	ChecksumCRC32  *string
+	ChecksumCRC32C *string
+	ChecksumSHA1   *string
+	ChecksumSHA256 *string
+	ETag           *string
+	PartNumber     *int64
+}
+
+func TestCompletedPartIsCompatibleWithV1Peers(t *testing.T) {
+	old := `{"key":"k","upload_id":"u","parts":[{"ChecksumCRC32":null,"ChecksumCRC32C":null,` +
+		`"ChecksumSHA1":null,"ChecksumSHA256":null,"ETag":"\"e1\"","PartNumber":1}]}`
+	request := &UploadCompletionRequest{}
+	assert.NoError(t, json.Unmarshal([]byte(old), request))
+	assert.Equal(t, 1, len(request.Parts))
+	assert.Equal(t, `"e1"`, *request.Parts[0].ETag)
+	assert.Equal(t, int64(1), *request.Parts[0].PartNumber)
+
+	etag := `"e2"`
+	number := int64(2)
+	serialized, err := json.Marshal(&UploadCompletionRequest{
+		Key: "k", UploadId: "u",
+		Parts: []*CompletedPart{{ETag: &etag, PartNumber: &number}}})
+	assert.NoError(t, err)
+
+	var peer struct {
+		Key      string
+		UploadId string             `json:"upload_id"`
+		Parts    []*v1CompletedPart `json:"parts"`
+	}
+	assert.NoError(t, json.Unmarshal(serialized, &peer))
+	assert.Equal(t, 1, len(peer.Parts))
+	assert.Equal(t, `"e2"`, *peer.Parts[0].ETag)
+	assert.Equal(t, int64(2), *peer.Parts[0].PartNumber)
+	assert.Nil(t, peer.Parts[0].ChecksumCRC32)
+}

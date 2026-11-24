@@ -2,14 +2,16 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/vql/uploads"
 	"www.velocidex.com/golang/velociraptor/json"
@@ -79,7 +81,6 @@ func (self *Communicator) StartMultipartUpload(
 	}
 
 	// Formulate the filestore path from the upload request.
-	svc := s3.New(self.session)
 	key := filestore.S3KeyForClientUpload(org_id, request)
 	s3_request := &s3.CreateMultipartUploadInput{
 		Bucket:      aws.String(self.config_obj.Cloud.Bucket),
@@ -87,7 +88,8 @@ func (self *Communicator) StartMultipartUpload(
 		ContentType: aws.String("application/binary"),
 	}
 
-	resp, err := svc.CreateMultipartUpload(s3_request)
+	resp, err := self.s3_client.CreateMultipartUpload(
+		context.Background(), s3_request)
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(err.Error()))
@@ -164,7 +166,7 @@ func (self *Communicator) GetUploadPart(
 		return
 	}
 
-	completed_part := &s3.CompletedPart{
+	completed_part := &uploads.CompletedPart{
 		ETag:       part_data.ETag,
 		PartNumber: aws.Int64(int64(req.Part)),
 	}
@@ -176,18 +178,16 @@ func (self *Communicator) GetUploadPart(
 func (self *Communicator) uploadPart(
 	key, upload_id string, part int, data []byte) (
 	resp *s3.UploadPartOutput, err error) {
-	svc := s3.New(self.session)
-	partInput := &s3.UploadPartInput{
-		Body:          bytes.NewReader(data),
-		Bucket:        aws.String(self.config_obj.Cloud.Bucket),
-		Key:           aws.String(key),
-		PartNumber:    aws.Int64(int64(part)),
-		UploadId:      aws.String(upload_id),
-		ContentLength: aws.Int64(int64(len(data))),
-	}
-
 	for i := 0; i <= maxRetries; i++ {
-		resp, err = svc.UploadPart(partInput)
+		resp, err = self.s3_client.UploadPart(context.Background(),
+			&s3.UploadPartInput{
+				Body:          bytes.NewReader(data),
+				Bucket:        aws.String(self.config_obj.Cloud.Bucket),
+				Key:           aws.String(key),
+				PartNumber:    aws.Int32(int32(part)),
+				UploadId:      aws.String(upload_id),
+				ContentLength: aws.Int64(int64(len(data))),
+			})
 		if err == nil {
 			return resp, nil
 		}
@@ -204,20 +204,32 @@ func (self *Communicator) uploadPart(
 }
 
 func (self *Communicator) completeUpload(
-	key, upload_id string, parts []*s3.CompletedPart) error {
-	svc := s3.New(self.session)
+	key, upload_id string, parts []*uploads.CompletedPart) error {
+	completed := make([]types.CompletedPart, 0, len(parts))
+	for _, part := range parts {
+		if part == nil {
+			continue
+		}
+		item := types.CompletedPart{ETag: part.ETag}
+		if part.PartNumber != nil {
+			item.PartNumber = aws.Int32(int32(*part.PartNumber))
+		}
+		completed = append(completed, item)
+	}
+
 	completeInput := &s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(self.config_obj.Cloud.Bucket),
 		Key:      aws.String(key),
 		UploadId: aws.String(upload_id),
-		MultipartUpload: &s3.CompletedMultipartUpload{
-			Parts: parts,
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: completed,
 		},
 	}
 
 	self.log("CompleteMultipartUpload %v", completeInput)
 
-	_, err := svc.CompleteMultipartUpload(completeInput)
+	_, err := self.s3_client.CompleteMultipartUpload(
+		context.Background(), completeInput)
 	return err
 }
 

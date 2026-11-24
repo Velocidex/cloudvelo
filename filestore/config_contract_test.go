@@ -57,6 +57,7 @@ func (self *fakeS3) last() recordedRequest {
 }
 
 func newConfig(endpoint string) *config.Config {
+	endpoint = strings.Replace(endpoint, "127.0.0.1", "localhost", 1)
 	result := &config.Config{}
 	result.Config = config_proto.Config{OrgId: "O123"}
 	result.Cloud.Endpoint = endpoint
@@ -163,4 +164,53 @@ func TestS3ReadServerErrorIsReturned(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "AccessDenied"),
 		"expected AccessDenied, got %v", err)
+}
+
+type fakeMultipartS3 struct {
+	mu       sync.Mutex
+	partHdrs []http.Header
+}
+
+func (self *fakeMultipartS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	io.Copy(io.Discard, r.Body)
+	query := r.URL.Query()
+	switch {
+	case r.Method == http.MethodPost && query.Has("uploads"):
+		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<InitiateMultipartUploadResult><Bucket>b</Bucket><Key>k</Key><UploadId>U1</UploadId></InitiateMultipartUploadResult>`)
+	case r.Method == http.MethodPut && query.Has("partNumber"):
+		self.mu.Lock()
+		self.partHdrs = append(self.partHdrs, r.Header.Clone())
+		self.mu.Unlock()
+		w.Header().Set("ETag", `"abc"`)
+	case r.Method == http.MethodPost && query.Has("uploadId"):
+		io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<CompleteMultipartUploadResult><Location>l</Location><Bucket>b</Bucket><Key>k</Key><ETag>"abc-1"</ETag></CompleteMultipartUploadResult>`)
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func TestS3WriterSendsNoChecksumHeaders(t *testing.T) {
+	fake := &fakeMultipartS3{}
+	server := httptest.NewServer(fake)
+	defer server.Close()
+
+	store, err := filestore.NewS3Filestore(context.Background(), newConfig(server.URL))
+	assert.NoError(t, err)
+
+	writer, err := store.WriteFile(path_specs.NewUnsafeFilestorePath("a", "b"))
+	assert.NoError(t, err)
+	_, err = writer.Write([]byte("some data"))
+	assert.NoError(t, err)
+	assert.NoError(t, writer.Close())
+
+	assert.Equal(t, 1, len(fake.partHdrs))
+	for name := range fake.partHdrs[0] {
+		lower := strings.ToLower(name)
+		assert.False(t, strings.HasPrefix(lower, "x-amz-checksum") ||
+			lower == "x-amz-sdk-checksum-algorithm" || lower == "x-amz-trailer",
+			"unexpected checksum header %v", name)
+	}
+	assert.NotEqual(t, "aws-chunked", fake.partHdrs[0].Get("Content-Encoding"))
 }
