@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/utils"
@@ -21,15 +21,15 @@ import (
 
 type S3Filestore struct {
 	config_obj *config.Config
-	session    *session.Session
+	client     *s3.Client
 	bucket     string
 	ctx        context.Context
 }
 
 func (self S3Filestore) ReadFile(filename api.FSPathSpec) (api.FileReader, error) {
-	downloader := s3manager.NewDownloader(self.session)
+	downloader := manager.NewDownloader(self.client)
 	return &S3Reader{
-		session:    self.session,
+		client:     self.client,
 		downloader: downloader,
 		key:        PathspecToKey(self.config_obj, filename),
 		bucket:     self.bucket,
@@ -48,7 +48,7 @@ func (self S3Filestore) WriteFile(filename api.FSPathSpec) (api.FileWriter, erro
 		key:         PathspecToKey(self.config_obj, filename),
 		path_spec:   filename,
 		config_obj:  self.config_obj,
-		session:     self.session,
+		client:      self.client,
 		part_number: 1,
 		part_size:   part_size,
 		ctx:         self.ctx,
@@ -69,10 +69,8 @@ func (self S3Filestore) StatFile(filename api.FSPathSpec) (api.FileInfo, error) 
 }
 
 func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, error) {
-	svc := s3.New(self.session)
-
 	// Get the list of items
-	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := self.client.ListObjectsV2(context.Background(), &s3.ListObjectsV2Input{
 		Bucket: aws.String(self.bucket),
 		Prefix: aws.String(PathspecToKey(self.config_obj,
 			dirname.SetType(api.PATH_TYPE_DATASTORE_DIRECTORY))),
@@ -91,8 +89,8 @@ func (self S3Filestore) ListDirectory(dirname api.FSPathSpec) ([]api.FileInfo, e
 			pathspec: dirname.AddUnsafeChild(
 				utils.UnsanitizeComponent(name)).
 				SetType(name_type),
-			size:     *object.Size,
-			mod_time: *object.LastModified,
+			size:     aws.ToInt64(object.Size),
+			mod_time: aws.ToTime(object.LastModified),
 		})
 	}
 
@@ -106,8 +104,7 @@ func (self S3Filestore) Delete(filename api.FSPathSpec) error {
 	defer cancel()
 
 	key := PathspecToKey(self.config_obj, filename)
-	svc := s3.New(self.session)
-	_, err := svc.DeleteObjectWithContext(
+	_, err := self.client.DeleteObject(
 		subctx, &s3.DeleteObjectInput{
 			Bucket: aws.String(self.bucket),
 			Key:    aws.String(key),
@@ -128,57 +125,56 @@ func NewS3Filestore(
 	ctx context.Context,
 	config_obj *config.Config) (*S3Filestore, error) {
 
-	session, err := GetS3Session(config_obj)
+	client, err := GetS3Client(config_obj)
 	return &S3Filestore{
 		config_obj: config_obj,
-		session:    session,
+		client:     client,
 		bucket:     config_obj.Cloud.Bucket,
 		ctx:        ctx,
 	}, err
 }
 
-func GetS3Session(config_obj *config.Config) (*session.Session, error) {
-	conf := aws.NewConfig()
+func GetS3Client(config_obj *config.Config) (*s3.Client, error) {
+	options := []func(*awsconfig.LoadOptions) error{
+		awsconfig.WithRequestChecksumCalculation(
+			aws.RequestChecksumCalculationWhenRequired),
+		awsconfig.WithResponseChecksumValidation(
+			aws.ResponseChecksumValidationWhenRequired),
+		awsconfig.WithRetryMaxAttempts(4),
+	}
+
 	if config_obj.Cloud.AWSRegion != "" {
-		conf = conf.WithRegion(config_obj.Cloud.AWSRegion)
+		options = append(options,
+			awsconfig.WithRegion(config_obj.Cloud.AWSRegion))
 	}
 
 	if config_obj.Cloud.CredentialsKey != "" &&
 		config_obj.Cloud.CredentialsSecret != "" {
-		token := ""
-		creds := credentials.NewStaticCredentials(
-			config_obj.Cloud.CredentialsKey, config_obj.Cloud.CredentialsSecret, token)
-		_, err := creds.Get()
-		if err != nil {
-			return nil, err
-		}
-
-		conf = conf.WithCredentials(creds)
+		options = append(options, awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				config_obj.Cloud.CredentialsKey,
+				config_obj.Cloud.CredentialsSecret, "")))
 	}
 
-	if config_obj.Cloud.Endpoint != "" {
-		conf = conf.WithEndpoint(config_obj.Cloud.Endpoint).
-			WithS3ForcePathStyle(true)
-
-		if config_obj.Cloud.NoVerifyCert {
-			tr := &http.Transport{
-				Proxy:           networking.GetProxy(),
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
-
-			client := &http.Client{Transport: tr}
-			conf = conf.WithHTTPClient(client)
+	endpoint := config_obj.Cloud.Endpoint
+	if endpoint != "" && config_obj.Cloud.NoVerifyCert {
+		tr := &http.Transport{
+			Proxy:           networking.GetProxy(),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
+		options = append(options,
+			awsconfig.WithHTTPClient(&http.Client{Transport: tr}))
 	}
 
-	sess, err := session.NewSessionWithOptions(
-		session.Options{
-			Config:            *conf,
-			SharedConfigState: session.SharedConfigEnable,
-		})
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background(), options...)
 	if err != nil {
 		return nil, err
 	}
 
-	return sess, nil
+	return s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+			o.UsePathStyle = true
+		}
+	}), nil
 }

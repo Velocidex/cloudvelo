@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/logging"
@@ -20,13 +20,13 @@ const (
 
 type S3Writer struct {
 	config_obj  *config.Config
-	session     *session.Session
+	client      *s3.Client
 	key         string
 	buf         []byte
-	parts       []*s3.CompletedPart
+	parts       []types.CompletedPart
 	size        int64
 	upload_id   string
-	part_number int64
+	part_number int32
 
 	part_size uint64
 
@@ -35,9 +35,8 @@ type S3Writer struct {
 }
 
 func (self *S3Writer) start() error {
-	svc := s3.New(self.session)
-	resp, err := svc.CreateMultipartUpload(
-		&s3.CreateMultipartUploadInput{
+	resp, err := self.client.CreateMultipartUpload(
+		context.Background(), &s3.CreateMultipartUploadInput{
 			Bucket:      aws.String(self.config_obj.Cloud.Bucket),
 			Key:         aws.String(self.key),
 			ContentType: aws.String("application/binary"),
@@ -106,23 +105,21 @@ func (self *S3Writer) writeBuf() (size int, err error) {
 	data := self.buf[:]
 	self.buf = nil
 
-	svc := s3.New(self.session)
-	partInput := &s3.UploadPartInput{
-		Body:          bytes.NewReader(data),
-		Bucket:        aws.String(self.config_obj.Cloud.Bucket),
-		Key:           aws.String(self.key),
-		PartNumber:    aws.Int64(self.part_number),
-		UploadId:      aws.String(self.upload_id),
-		ContentLength: aws.Int64(int64(len(data))),
-	}
-
 	var resp *s3.UploadPartOutput
 	for i := 0; i <= maxRetries; i++ {
-		resp, err = svc.UploadPart(partInput)
+		resp, err = self.client.UploadPart(context.Background(),
+			&s3.UploadPartInput{
+				Body:          bytes.NewReader(data),
+				Bucket:        aws.String(self.config_obj.Cloud.Bucket),
+				Key:           aws.String(self.key),
+				PartNumber:    aws.Int32(self.part_number),
+				UploadId:      aws.String(self.upload_id),
+				ContentLength: aws.Int64(int64(len(data))),
+			})
 		if err == nil {
-			self.parts = append(self.parts, &s3.CompletedPart{
+			self.parts = append(self.parts, types.CompletedPart{
 				ETag:       resp.ETag,
-				PartNumber: aws.Int64(self.part_number),
+				PartNumber: aws.Int32(self.part_number),
 			})
 			self.part_number++
 			return len(data), nil
@@ -145,8 +142,7 @@ func (self *S3Writer) Truncate() error {
 	subctx, cancel := context.WithTimeout(self.ctx, 10*time.Second)
 	defer cancel()
 
-	svc := s3.New(self.session)
-	_, err := svc.DeleteObjectWithContext(subctx,
+	_, err := self.client.DeleteObject(subctx,
 		&s3.DeleteObjectInput{
 			Bucket: aws.String(self.config_obj.Cloud.Bucket),
 			Key:    aws.String(self.key),
@@ -173,16 +169,16 @@ func (self *S3Writer) Flush() error {
 		}
 	}
 
-	svc := s3.New(self.session)
 	completeInput := &s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(self.config_obj.Cloud.Bucket),
 		Key:      aws.String(self.key),
 		UploadId: aws.String(self.upload_id),
-		MultipartUpload: &s3.CompletedMultipartUpload{
+		MultipartUpload: &types.CompletedMultipartUpload{
 			Parts: self.parts,
 		},
 	}
 
-	_, err := svc.CompleteMultipartUpload(completeInput)
+	_, err := self.client.CompleteMultipartUpload(
+		context.Background(), completeInput)
 	return err
 }

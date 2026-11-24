@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/Velocidex/ordereddict"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/suite"
 	crypto_server "www.velocidex.com/golang/cloudvelo/crypto/server"
 	"www.velocidex.com/golang/cloudvelo/filestore"
@@ -478,12 +478,11 @@ func (self *syncBuffer) String() string {
 }
 
 func (self *UploaderTestSuite) clearKeys(filter string) {
-	session, err := filestore.GetS3Session(self.ConfigObj)
+	client, err := filestore.GetS3Client(self.ConfigObj)
 	assert.NoError(self.T(), err)
 
-	svc := s3.New(session)
 	for _, key := range self.checkForKey(filter) {
-		_, err := svc.DeleteObject(&s3.DeleteObjectInput{
+		_, err := client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
 			Bucket: &self.ConfigObj.Cloud.Bucket,
 			Key:    aws.String(key),
 		})
@@ -493,13 +492,12 @@ func (self *UploaderTestSuite) clearKeys(filter string) {
 
 func (self *UploaderTestSuite) checkForKey(filter string) []string {
 	// Check the actual path in the bucket we are in.
-	session, err := filestore.GetS3Session(self.ConfigObj)
+	client, err := filestore.GetS3Client(self.ConfigObj)
 	assert.NoError(self.T(), err)
 
-	svc := s3.New(session)
 	// Only list this org's objects, the bucket is shared by all
 	// test packages.
-	res, err := svc.ListObjects(&s3.ListObjectsInput{
+	res, err := client.ListObjects(context.Background(), &s3.ListObjectsInput{
 		Bucket: &self.ConfigObj.Cloud.Bucket,
 		Prefix: aws.String("orgs/" + self.OrgId + "/"),
 	})

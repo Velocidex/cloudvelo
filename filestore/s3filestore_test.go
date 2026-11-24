@@ -1,13 +1,14 @@
 package filestore_test
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/suite"
 	"www.velocidex.com/golang/cloudvelo/filestore"
 	"www.velocidex.com/golang/cloudvelo/testsuite"
@@ -22,13 +23,12 @@ type S3FilestoreTest struct {
 
 func (self *S3FilestoreTest) checkForKey() []string {
 	// Check the actual path in the bucket we are in.
-	session, err := filestore.GetS3Session(self.ConfigObj)
+	client, err := filestore.GetS3Client(self.ConfigObj)
 	assert.NoError(self.T(), err)
 
-	svc := s3.New(session)
 	// Only list this org's objects, the bucket is shared by all
 	// test packages.
-	res, err := svc.ListObjects(&s3.ListObjectsInput{
+	res, err := client.ListObjects(context.Background(), &s3.ListObjectsInput{
 		Bucket: &self.ConfigObj.Cloud.Bucket,
 		Prefix: aws.String("orgs/" + self.OrgId + "/"),
 	})

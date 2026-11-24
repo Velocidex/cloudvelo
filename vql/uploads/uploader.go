@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/s3"
 	"www.velocidex.com/golang/velociraptor/accessors"
 	actions_proto "www.velocidex.com/golang/velociraptor/actions/proto"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -69,10 +68,15 @@ type UploadPutRequest struct {
 	Part     int    `json:"partNumber"`
 }
 
+type CompletedPart struct {
+	ETag       *string `json:"ETag"`
+	PartNumber *int64  `json:"PartNumber"`
+}
+
 type UploadCompletionRequest struct {
-	Key      string              `json:"key"`
-	UploadId string              `json:"upload_id"`
-	Parts    []*s3.CompletedPart `json:"parts"`
+	Key      string           `json:"key"`
+	UploadId string           `json:"upload_id"`
+	Parts    []*CompletedPart `json:"parts"`
 }
 
 type VeloCloudUploader struct {
@@ -99,7 +103,7 @@ type VeloCloudUploader struct {
 	offset  uint64
 	part    uint64
 
-	parts []*s3.CompletedPart
+	parts []*CompletedPart
 
 	Responder responder.Responder
 
@@ -356,7 +360,7 @@ func (self *VeloCloudUploader) Put(buf []byte) error {
 
 	self.part++
 
-	completed_part := &s3.CompletedPart{}
+	completed_part := &CompletedPart{}
 	err = json.Unmarshal(serialized, completed_part)
 	if err != nil {
 		return err

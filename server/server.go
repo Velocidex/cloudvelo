@@ -11,8 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"www.velocidex.com/golang/cloudvelo/config"
 	"www.velocidex.com/golang/cloudvelo/crypto/server"
 	config_proto "www.velocidex.com/golang/velociraptor/config/proto"
@@ -37,9 +36,7 @@ type Communicator struct {
 	// flush to disk when done.
 	mu sync.Mutex
 
-	session *session.Session
-
-	parts []*s3.CompletedPart
+	s3_client *s3.Client
 
 	crypto_manager *server.ServerCryptoManager
 }

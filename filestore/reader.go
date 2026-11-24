@@ -1,21 +1,22 @@
 package filestore
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
 	"www.velocidex.com/golang/velociraptor/file_store/api"
 	"www.velocidex.com/golang/velociraptor/vtesting"
 )
 
 type S3Reader struct {
-	session    *session.Session
-	downloader *s3manager.Downloader
+	client     *s3.Client
+	downloader *manager.Downloader
 	offset     int64
 	bucket     string
 	key        string
@@ -25,7 +26,8 @@ type S3Reader struct {
 func (self *S3Reader) Read(buff []byte) (int, error) {
 	defer Instrument("S3Reader.Read")()
 
-	n, err := self.downloader.Download(aws.NewWriteAtBuffer(buff),
+	n, err := self.downloader.Download(context.Background(),
+		manager.NewWriteAtBuffer(buff),
 		&s3.GetObjectInput{
 			Bucket: aws.String(self.bucket),
 			Key:    aws.String(self.key),
@@ -35,16 +37,13 @@ func (self *S3Reader) Read(buff []byte) (int, error) {
 		})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case "InvalidRange":
-				// Not really an error - this happens at the end of
-				// the file, just return EOF
-				return 0, io.EOF
-			default:
-				return 0, err
-			}
+		var api_err smithy.APIError
+		if errors.As(err, &api_err) && api_err.ErrorCode() == "InvalidRange" {
+			// Not really an error - this happens at the end of
+			// the file, just return EOF
+			return 0, io.EOF
 		}
+		return 0, err
 	}
 	self.offset += n
 
@@ -61,12 +60,11 @@ func (self *S3Reader) Seek(offset int64, whence int) (int64, error) {
 func (self *S3Reader) Stat() (api.FileInfo, error) {
 	defer Instrument("S3Reader.Read")()
 
-	svc := s3.New(self.session)
 	headObj := s3.HeadObjectInput{
 		Bucket: aws.String(self.bucket),
 		Key:    aws.String(self.key),
 	}
-	result, err := svc.HeadObject(&headObj)
+	result, err := self.client.HeadObject(context.Background(), &headObj)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +72,7 @@ func (self *S3Reader) Stat() (api.FileInfo, error) {
 	return &vtesting.MockFileInfo{
 		Name_:     self.filename.Base(),
 		PathSpec_: self.filename,
-		Size_:     aws.Int64Value(result.ContentLength),
+		Size_:     aws.ToInt64(result.ContentLength),
 	}, nil
 }
 

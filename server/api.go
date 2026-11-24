@@ -11,9 +11,9 @@ func NewCommunicator(
 	crypto_manager *server.ServerCryptoManager,
 	backend CommunicatorBackend) (*Communicator, error) {
 
-	sess, err := filestore.GetS3Session(config_obj)
+	client, err := filestore.GetS3Client(config_obj)
 	return &Communicator{
-		session:        sess,
+		s3_client:      client,
 		config_obj:     config_obj,
 		backend:        backend,
 		crypto_manager: crypto_manager,
